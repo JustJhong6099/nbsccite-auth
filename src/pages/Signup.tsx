@@ -23,7 +23,6 @@ const Signup: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
   });
@@ -46,9 +45,6 @@ const Signup: React.FC = () => {
       });
     }
   };
-
-  const password = watch("password");
-  const confirmPassword = watch("confirmPassword");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/5 flex items-center justify-center p-4">
@@ -114,13 +110,9 @@ const Signup: React.FC = () => {
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <PasswordInput
-                  value={password || ""}
-                  onChange={(e) => {
-                    register("password").onChange(e);
-                  }}
+                  {...register("password")}
                   placeholder="Create a strong password"
                   error={errors.password?.message}
-                  name="password"
                 />
                 {errors.password && (
                   <p className="text-sm text-destructive">{errors.password.message}</p>
@@ -138,13 +130,9 @@ const Signup: React.FC = () => {
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <PasswordInput
-                  value={confirmPassword || ""}
-                  onChange={(e) => {
-                    register("confirmPassword").onChange(e);
-                  }}
+                  {...register("confirmPassword")}
                   placeholder="Confirm your password"
                   error={errors.confirmPassword?.message}
-                  name="confirmPassword"
                 />
                 {errors.confirmPassword && (
                   <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
