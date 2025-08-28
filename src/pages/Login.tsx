@@ -21,7 +21,6 @@ const Login: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
@@ -48,8 +47,6 @@ const Login: React.FC = () => {
       });
     }
   };
-
-  const password = watch("password");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/5 flex items-center justify-center p-4">
@@ -88,13 +85,9 @@ const Login: React.FC = () => {
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <PasswordInput
-                  value={password || ""}
-                  onChange={(e) => {
-                    register("password").onChange(e);
-                  }}
+                  {...register("password")}
                   placeholder="Enter your password"
                   error={errors.password?.message}
-                  name="password"
                 />
                 {errors.password && (
                   <p className="text-sm text-destructive">{errors.password.message}</p>
