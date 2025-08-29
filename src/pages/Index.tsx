@@ -14,10 +14,14 @@ const Index = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-primary rounded-full mb-6 shadow-glow">
             <GraduationCap className="h-10 w-10 text-primary-foreground" />
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-hero bg-clip-text text-transparent">
-            NBSC Entity Extraction System
+          <h1 className="text-3xl md:text-5xl font-bold mb-2 text-white leading-tight">
+            NORTHERN BUKIDNON<br />
+            STATE COLLEGE
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+          <h2 className="text-2xl md:text-4xl font-bold mb-6 text-white">
+            Entity Extraction System
+          </h2>
+          <p className="text-xl text-white mb-8 max-w-2xl mx-auto">
             Advanced research analytics platform for Northern Bukidnon State College - Institute of Computer Studies
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

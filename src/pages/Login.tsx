@@ -58,8 +58,11 @@ const Login: React.FC = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-primary rounded-full mb-4 shadow-glow">
             <GraduationCap className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">NORTHER BUKIDNON STATE COLLEGE</h1>
-          <p className="text-muted-foreground">Entity Extraction System</p>
+          <h1 className="text-2xl font-bold text-white leading-tight">
+            NORTHERN BUKIDNON<br />
+            STATE COLLEGE
+          </h1>
+          <p className="text-white">Entity Extraction System</p>
         </div>
 
         <Card className="shadow-card border-0 bg-gradient-card">
