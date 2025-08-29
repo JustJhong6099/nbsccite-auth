@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "react-router-dom";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PasswordInput } from "@/components/PasswordInput";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import { useAuth } from "@/context/AuthContext";
 import { signupSchema, SignupFormData } from "@/lib/auth-schemas";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +19,7 @@ const Signup: React.FC = () => {
   const { toast } = useToast();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
+  const [pageLoading, setPageLoading] = useState(true);
 
   const {
     register,
@@ -26,6 +28,15 @@ const Signup: React.FC = () => {
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
   });
+
+  useEffect(() => {
+    // Simulate page loading time
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const onSubmit = async (data: SignupFormData) => {
     try {
@@ -46,35 +57,58 @@ const Signup: React.FC = () => {
     }
   };
 
+  // Show loading spinner while page is loading
+  if (pageLoading) {
+    return <LoadingSpinner text="Loading Registration..." />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 bg-cover bg-center bg-no-repeat flex items-center justify-center p-4" style={{backgroundImage: 'url(/background.jpg)'}}>
       {/* Subtle overlay to ensure readability while preserving the NBSC imagery */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-900/40 via-blue-800/30 to-blue-900/50"></div>
-      <div className="w-full max-w-md relative z-10">
-        {/* NBSC Header */}
-        <div className="text-center mb-8">
+      
+      {/* Two-pane layout container */}
+      <div className="w-full max-w-6xl relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+        
+        {/* Left Pane - NBSC Logo and Headers */}
+        <div className="text-center">
           <div className="flex justify-center mb-6">
             <img
               src="/NBSCLOGO.png"
               alt="NBSC Logo"
-              className="w-40 h-40 object-contain drop-shadow-lg"
+              className="w-60 h-60 object-contain drop-shadow-lg"
             />
           </div>
-          <h1 className="text-2xl font-bold text-white leading-tight">
+          <h1 className="text-3xl lg:text-4xl font-bold text-white leading-tight mb-4">
             NORTHERN BUKIDNON<br />
             STATE COLLEGE
           </h1>
-          <p className="text-white">Entity Extraction System</p>
+          <p className="text-xl lg:text-2xl text-white mb-6">Entity Extraction System</p>
+          <p className="text-lg text-white/90 max-w-md mx-auto">
+            Join our academic community and access advanced research analytics tools designed for Northern Bukidnon State College.
+          </p>
         </div>
 
-        <Card className="shadow-card border-0 bg-gradient-card">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Create Account</CardTitle>
-            <CardDescription className="text-center">
-              Register with your official NBSC email address
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {/* Right Pane - Signup Card */}
+        <div className="w-full max-w-md mx-auto lg:mx-0 relative">
+          <Card className="bg-white border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.15)] backdrop-blur-sm transition-all hover:scale-105 hover:border-primary/40 hover:shadow-[0_8px_40px_rgba(0,0,0,0.25)]">
+            {/* Loading Overlay */}
+            {isLoading && (
+              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-lg flex items-center justify-center z-10">
+                <div className="flex flex-col items-center space-y-3">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                  <p className="text-sm font-medium text-gray-700">Creating account...</p>
+                </div>
+              </div>
+            )}
+            
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl text-center">Create Account</CardTitle>
+              <CardDescription className="text-center">
+                Register with your official NBSC email address
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -108,7 +142,7 @@ const Signup: React.FC = () => {
                 <Input
                   {...register("email")}
                   type="email"
-                  placeholder="your.name@nbsc.edu.ph"
+                  placeholder="student.number@nbsc.edu.ph"
                   className={errors.email ? "border-destructive focus:ring-destructive" : ""}
                 />
                 {errors.email && (
@@ -131,7 +165,6 @@ const Signup: React.FC = () => {
                   <ul className="list-disc list-inside space-y-0.5">
                     <li>At least 8 characters long</li>
                     <li>Contains at least one number</li>
-                    <li>Contains at least one special character</li>
                   </ul>
                 </div>
               </div>
@@ -164,7 +197,7 @@ const Signup: React.FC = () => {
               </Button>
             </form>
 
-            <div className="text-center">
+            <div className="text-center space-y-3">
               <p className="text-sm text-muted-foreground">
                 Already have an account?{" "}
                 <Link
@@ -174,9 +207,18 @@ const Signup: React.FC = () => {
                   Sign in here
                 </Link>
               </p>
+              <p className="text-sm text-muted-foreground">
+                <Link
+                  to="/"
+                  className="text-primary hover:text-primary-hover font-medium transition-colors"
+                >
+                  ← Back to Homepage
+                </Link>
+              </p>
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
 
       {/* Success Modal */}
