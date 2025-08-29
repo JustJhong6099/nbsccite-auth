@@ -27,24 +27,21 @@ const Index = () => {
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16 relative z-10">
         <div className="text-center mb-16">
-            <div className="flex justify-center mb-6">
-    <img
-      src="/NBSCLOGO.png"
-      alt="NBSC Logo"
-      className="w-40 h-40 object-contain drop-shadow-lg"
-    />
+          <div className="flex justify-center mb-6">
+            <img
+              src="/NBSCLOGO.png"
+              alt="NBSC Logo"
+              className="w-40 h-40 object-contain drop-shadow-lg"
+            />
           </div>
           <h1 className="text-3xl md:text-5xl font-bold mb-2 text-white leading-tight">
-            NORTHERN BUKIDNON
-            <br />
-            STATE COLLEGE
+            NORTHERN BUKIDNON STATE COLLEGE
           </h1>
           <h2 className="text-2xl md:text-4xl font-bold mb-6 text-white">
             Entity Extraction System
           </h2>
           <p className="text-xl text-white mb-8 max-w-2xl mx-auto">
-            Advanced research analytics platform for Northern Bukidnon State
-            College - Institute of Computer Studies
+            Advanced research analytics platform for Northern Bukidnon State College
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/login">

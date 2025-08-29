@@ -62,18 +62,15 @@ const Login: React.FC = () => {
               className="w-40 h-40 object-contain drop-shadow-lg"
             />
           </div>
-          <h1 className="text-2xl font-bold text-white leading-tight">
-            NORTHERN BUKIDNON<br />
-            STATE COLLEGE
-          </h1>
-          <p className="text-white">Entity Extraction System</p>
+         
+         
         </div>
 
         <Card className="shadow-card border-0 bg-gradient-card">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Sign In</CardTitle>
+            <CardTitle className="text-2xl text-left">Welcome back!</CardTitle>
             <CardDescription className="text-center">
-              Enter your NBSC credentials to access the system
+               Sign in with your NBSC email and password
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
