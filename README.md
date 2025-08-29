@@ -1,6 +1,7 @@
 # 📄 Web-Based Entity Extraction System using Dandelion API  
 
-![Ionic](https://img.shields.io/badge/Ionic-React-blue?logo=ionic&logoColor=white)
+![React](https://img.shields.io/badge/React-JS-blue?logo=react&logoColor=white)
+![shadcn/ui](https://img.shields.io/badge/shadcn--ui-Components-6E40C9)
 ![Supabase](https://img.shields.io/badge/Supabase-Backend-green?logo=supabase&logoColor=white)
 ![Dandelion](https://img.shields.io/badge/Dandelion-API-yellow)
 ![License](https://img.shields.io/badge/License-Academic-lightgrey)
