@@ -5,9 +5,11 @@ import { GraduationCap, UserPlus, LogIn, Brain, FileText, BarChart3 } from "luci
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/5">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 bg-cover bg-center bg-no-repeat" style={{backgroundImage: 'url(/background.jpg)'}}>
+      {/* Subtle overlay to ensure readability while preserving the NBSC imagery */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-blue-800/20 to-blue-900/40"></div>
       {/* Hero Section */}
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 py-16 relative z-10">
         <div className="text-center mb-16">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-primary rounded-full mb-6 shadow-glow">
             <GraduationCap className="h-10 w-10 text-primary-foreground" />
