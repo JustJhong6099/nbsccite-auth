@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PasswordInput } from "@/components/PasswordInput";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import { useAuth } from "@/context/AuthContext";
 import { loginSchema, LoginFormData } from "@/lib/auth-schemas";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +17,7 @@ const Login: React.FC = () => {
   const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [pageLoading, setPageLoading] = useState(true);
 
   const {
     register,
@@ -30,6 +32,15 @@ const Login: React.FC = () => {
       navigate("/admin-dashboard");
     }
   }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    // Simulate page loading time
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const onSubmit = async (data: LoginFormData) => {
     try {
@@ -47,6 +58,11 @@ const Login: React.FC = () => {
       });
     }
   };
+
+  // Show loading spinner while page is loading
+  if (pageLoading) {
+    return <LoadingSpinner text="Loading Sign In..." />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 bg-cover bg-center bg-no-repeat flex items-center justify-center p-4" style={{backgroundImage: 'url(/background.jpg)'}}>
@@ -81,8 +97,18 @@ const Login: React.FC = () => {
         </div>
 
         {/* Right Pane - Login Card */}
-        <div className="w-full max-w-md mx-auto lg:mx-0">
+        <div className="w-full max-w-md mx-auto lg:mx-0 relative">
           <Card className="bg-white border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.15)] backdrop-blur-sm transition-all hover:scale-105 hover:border-primary/40 hover:shadow-[0_8px_40px_rgba(0,0,0,0.25)]">
+            {/* Loading Overlay */}
+            {isLoading && (
+              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-lg flex items-center justify-center z-10">
+                <div className="flex flex-col items-center space-y-3">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                  <p className="text-sm font-medium text-gray-700">Signing in...</p>
+                </div>
+              </div>
+            )}
+            
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl text-center">Welcome back!</CardTitle>
               <CardDescription className="text-center">

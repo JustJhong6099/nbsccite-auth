@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   GraduationCap,
   UserPlus,
@@ -15,8 +16,24 @@ import {
   FileText,
   BarChart3,
 } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const Index = () => {
+  const [pageLoading, setPageLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate page loading time
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Show loading spinner while page is loading
+  if (pageLoading) {
+    return <LoadingSpinner text="Welcome to NBSC..." />;
+  }
   return (
     <div
       className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 bg-cover bg-center bg-no-repeat"
