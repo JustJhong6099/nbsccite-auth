@@ -121,27 +121,6 @@ const Index = () => {
             </CardContent>
           </Card>
         </div>
-
-        {/* CTA Section */}
-        <div className="text-center mt-16 p-8 rounded-2xl bg-gradient-cta shadow-cta">
-          <h2 className="text-2xl font-bold mb-4">Ready to Get Started?</h2>
-          <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
-            Join the NBSC research community and discover valuable insights from
-            academic research with our AI-powered entity extraction system.
-          </p>
-          <Link to="/signup">
-            <Button
-              size="lg"
-              className="bg-gradient-primary hover:bg-primary-hover shadow-elegant"
-            >
-              Register with NBSC Email
-            </Button>
-          </Link>
-          <p className="text-xs text-muted-foreground mt-2">
-            Registration requires a valid NBSC email address (e.g.,
-            yourname@nbsc.edu.ph).
-          </p>
-        </div>
       </div>
     </div>
   );

@@ -75,7 +75,7 @@ const Signup: React.FC = () => {
 
         {/* Right Pane - Signup Card */}
         <div className="w-full max-w-md mx-auto lg:mx-0">
-          <Card className="shadow-card border-0 bg-gradient-card">
+          <Card className="bg-white border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.15)] backdrop-blur-sm transition-all hover:scale-105 hover:border-primary/40 hover:shadow-[0_8px_40px_rgba(0,0,0,0.25)]">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl text-center">Create Account</CardTitle>
               <CardDescription className="text-center">
@@ -116,7 +116,7 @@ const Signup: React.FC = () => {
                 <Input
                   {...register("email")}
                   type="email"
-                  placeholder="your.name@nbsc.edu.ph"
+                  placeholder="student.number@nbsc.edu.ph"
                   className={errors.email ? "border-destructive focus:ring-destructive" : ""}
                 />
                 {errors.email && (
@@ -139,7 +139,6 @@ const Signup: React.FC = () => {
                   <ul className="list-disc list-inside space-y-0.5">
                     <li>At least 8 characters long</li>
                     <li>Contains at least one number</li>
-                    <li>Contains at least one special character</li>
                   </ul>
                 </div>
               </div>
@@ -172,7 +171,7 @@ const Signup: React.FC = () => {
               </Button>
             </form>
 
-            <div className="text-center">
+            <div className="text-center space-y-3">
               <p className="text-sm text-muted-foreground">
                 Already have an account?{" "}
                 <Link
@@ -180,6 +179,14 @@ const Signup: React.FC = () => {
                   className="text-primary hover:text-primary-hover font-medium transition-colors"
                 >
                   Sign in here
+                </Link>
+              </p>
+              <p className="text-sm text-muted-foreground">
+                <Link
+                  to="/"
+                  className="text-primary hover:text-primary-hover font-medium transition-colors"
+                >
+                  ← Back to Homepage
                 </Link>
               </p>
             </div>
