@@ -53,8 +53,12 @@ const Signup: React.FC = () => {
       <div className="w-full max-w-md relative z-10">
         {/* NBSC Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-primary rounded-full mb-4 shadow-glow">
-            <GraduationCap className="h-8 w-8 text-primary-foreground" />
+          <div className="flex justify-center mb-6">
+            <img
+              src="/NBSCLOGO.png"
+              alt="NBSC Logo"
+              className="w-40 h-40 object-contain drop-shadow-lg"
+            />
           </div>
           <h1 className="text-2xl font-bold text-white leading-tight">
             NORTHERN BUKIDNON<br />
