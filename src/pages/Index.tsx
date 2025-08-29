@@ -5,17 +5,23 @@ import { GraduationCap, UserPlus, LogIn, Brain, FileText, BarChart3 } from "luci
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/5">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 bg-cover bg-center bg-no-repeat" style={{backgroundImage: 'url(/background.jpg)'}}>
+      {/* Subtle overlay to ensure readability while preserving the NBSC imagery */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-blue-800/20 to-blue-900/40"></div>
       {/* Hero Section */}
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 py-16 relative z-10">
         <div className="text-center mb-16">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-primary rounded-full mb-6 shadow-glow">
             <GraduationCap className="h-10 w-10 text-primary-foreground" />
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-hero bg-clip-text text-transparent">
-            NBSC Entity Extraction System
+          <h1 className="text-3xl md:text-5xl font-bold mb-2 text-white leading-tight">
+            NORTHERN BUKIDNON<br />
+            STATE COLLEGE
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+          <h2 className="text-2xl md:text-4xl font-bold mb-6 text-white">
+            Entity Extraction System
+          </h2>
+          <p className="text-xl text-white mb-8 max-w-2xl mx-auto">
             Advanced research analytics platform for Northern Bukidnon State College - Institute of Computer Studies
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -80,7 +86,7 @@ const Index = () => {
         </div>
 
         {/* CTA Section */}
-        <div className="text-center mt-16 p-8 rounded-2xl bg-gradient-card shadow-card">
+        <div className="text-center mt-16 p-8 rounded-2xl bg-gradient-cta shadow-cta">
           <h2 className="text-2xl font-bold mb-4">Ready to Get Started?</h2>
           <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
             Join the NBSC research community and discover valuable insights from academic research with our AI-powered entity extraction system.
@@ -90,6 +96,9 @@ const Index = () => {
               Register with NBSC Email
             </Button>
           </Link>
+          <p className="text-xs text-muted-foreground mt-2">
+            Registration requires a valid NBSC email address (e.g., yourname@nbsc.edu.ph).
+          </p>
         </div>
       </div>
     </div>
