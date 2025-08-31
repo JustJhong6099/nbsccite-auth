@@ -13,6 +13,7 @@
   "predeploy": "npm run build && npm run postbuild",
     "deploy": "gh-pages -d dist"
   },
+   "homepage": "https://justjhong609.github.io/Jhong-NBSC",
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
     "@radix-ui/react-accordion": "^1.2.11",
