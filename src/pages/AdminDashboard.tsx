@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Users, 
   FileText, 
@@ -18,21 +19,88 @@ import {
   GraduationCap,
   BarChart3,
   PieChart,
-  Tag
+  Tag,
+  Check,
+  X,
+  Clock,
+  UserCheck,
+  AlertCircle
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { supabase, PendingApproval } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 const AdminDashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshProfile } = useAuth();
+  const { toast } = useToast();
+  const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  if (!user) {
+  if (!user || user.role !== 'admin') {
     return <Navigate to="/login" replace />;
   }
+
+  useEffect(() => {
+    fetchPendingApprovals();
+  }, []);
+
+  const fetchPendingApprovals = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('pending_approvals')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching pending approvals:', error);
+        return;
+      }
+
+      setPendingApprovals(data || []);
+    } catch (error) {
+      console.error('Error fetching pending approvals:', error);
+    }
+  };
+
+  const handleApproval = async (requestId: string, approve: boolean) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.rpc(
+        approve ? 'approve_faculty_request' : 'reject_faculty_request',
+        { request_id: requestId }
+      );
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      toast({
+        title: approve ? "Faculty Request Approved" : "Faculty Request Rejected",
+        description: approve 
+          ? "The faculty member can now sign in with their account."
+          : "The request has been rejected.",
+        variant: "default",
+      });
+
+      // Refresh the pending approvals list
+      await fetchPendingApprovals();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Mock data for the dashboard
   const stats = {
     totalAbstracts: 245,
     totalUsers: 89,
+    pendingFaculty: pendingApprovals.length,
     mostFrequentDomain: "Artificial Intelligence",
     mostFrequentTechnology: "Python",
   };
@@ -95,8 +163,14 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              {pendingApprovals.length > 0 && (
+                <Badge variant="destructive" className="flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {pendingApprovals.length} Pending Approval{pendingApprovals.length > 1 ? 's' : ''}
+                </Badge>
+              )}
               <div className="text-right">
-                <p className="text-sm font-medium">{user.firstName} {user.lastName}</p>
+                <p className="text-sm font-medium">{user.full_name}</p>
                 <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
               </div>
               <Button variant="outline" size="sm" onClick={logout}>
@@ -109,8 +183,18 @@ const AdminDashboard: React.FC = () => {
       </header>
 
       <div className="container mx-auto px-4 py-6">
+        {/* Pending Approvals Alert */}
+        {pendingApprovals.length > 0 && (
+          <Alert className="mb-6 border-yellow-200 bg-yellow-50">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              You have {pendingApprovals.length} faculty approval request{pendingApprovals.length > 1 ? 's' : ''} pending review.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <Card className="shadow-card border-0 bg-gradient-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Abstracts</CardTitle>
@@ -130,6 +214,17 @@ const AdminDashboard: React.FC = () => {
             <CardContent>
               <div className="text-2xl font-bold text-accent">{stats.totalUsers}</div>
               <p className="text-xs text-muted-foreground">Students & Faculty</p>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card border-0 bg-gradient-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending Faculty</CardTitle>
+              <UserCheck className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">{stats.pendingFaculty}</div>
+              <p className="text-xs text-muted-foreground">Awaiting approval</p>
             </CardContent>
           </Card>
 
@@ -157,13 +252,80 @@ const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="abstracts" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-4 lg:w-[600px]">
+        <Tabs defaultValue="approvals" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-5 lg:w-[700px]">
+            <TabsTrigger value="approvals">Faculty Approvals</TabsTrigger>
             <TabsTrigger value="abstracts">Abstract Management</TabsTrigger>
             <TabsTrigger value="analytics">Entity Analytics</TabsTrigger>
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="approvals" className="space-y-6">
+            <Card className="shadow-card border-0 bg-gradient-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserCheck className="h-5 w-5" />
+                  Faculty Approval Requests
+                </CardTitle>
+                <CardDescription>Review and approve faculty account requests</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pendingApprovals.length === 0 ? (
+                  <div className="text-center py-12">
+                    <UserCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Pending Requests</h3>
+                    <p className="text-muted-foreground">
+                      All faculty approval requests have been processed.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingApprovals.map((approval) => (
+                      <div key={approval.id} className="border rounded-lg p-4 bg-background/50">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-foreground">{approval.full_name}</h4>
+                            <p className="text-sm text-muted-foreground">{approval.email}</p>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant="secondary" className="text-xs">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {new Date(approval.created_at).toLocaleDateString()}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                Role: {approval.requested_role}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleApproval(approval.id, false)}
+                              disabled={isLoading}
+                              className="text-red-600 border-red-200 hover:bg-red-50"
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Reject
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleApproval(approval.id, true)}
+                              disabled={isLoading}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <Check className="h-4 w-4 mr-2" />
+                              Approve
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="abstracts" className="space-y-6">
             <Card className="shadow-card border-0 bg-gradient-card">

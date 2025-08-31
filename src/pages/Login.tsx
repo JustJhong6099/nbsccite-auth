@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, GraduationCap } from "lucide-react";
 
 const Login: React.FC = () => {
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, isAuthenticated, user, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [pageLoading, setPageLoading] = useState(true);
@@ -28,10 +28,15 @@ const Login: React.FC = () => {
   });
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/admin-dashboard");
+    if (isAuthenticated && user) {
+      // Redirect based on user role
+      if (user.role === 'admin') {
+        navigate("/admin-dashboard");
+      } else {
+        navigate("/"); // Redirect to homepage for students and faculty
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   useEffect(() => {
     // Simulate page loading time
@@ -50,10 +55,10 @@ const Login: React.FC = () => {
         description: "Welcome back to NBSC Entity Extraction System",
         variant: "default",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Login Failed",
-        description: "Please check your credentials and try again",
+        description: error.message || "Please check your credentials and try again",
         variant: "destructive",
       });
     }

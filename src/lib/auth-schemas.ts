@@ -12,14 +12,10 @@ export const loginSchema = z.object({
 
 export const signupSchema = z
   .object({
-    firstName: z
+    full_name: z
       .string()
-      .min(2, "First name must be at least 2 characters")
-      .max(50, "First name must be less than 50 characters"),
-    lastName: z
-      .string()
-      .min(2, "Last name must be at least 2 characters")
-      .max(50, "Last name must be less than 50 characters"),
+      .min(2, "Full name must be at least 2 characters")
+      .max(100, "Full name must be less than 100 characters"),
     email: z
       .string()
       .email("Please enter a valid email address")
@@ -28,9 +24,12 @@ export const signupSchema = z
       }),
     password: z
       .string()
-      .min(8, "Password must be at least 8 characters")
+      .min(6, "Password must be at least 6 characters")
       .regex(/(?=.*[0-9])/, "Password must contain at least one number"),
     confirmPassword: z.string(),
+    role: z.enum(["student", "faculty"], {
+      message: "Please select your role",
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
