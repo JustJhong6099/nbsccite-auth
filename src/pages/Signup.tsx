@@ -7,27 +7,33 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PasswordInput } from "@/components/PasswordInput";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useAuth } from "@/context/AuthContext";
 import { signupSchema, SignupFormData } from "@/lib/auth-schemas";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, GraduationCap, CheckCircle, Mail } from "lucide-react";
+import { Loader2, GraduationCap, CheckCircle, Mail, Users, BookOpen } from "lucide-react";
 
 const Signup: React.FC = () => {
   const { signup, isLoading } = useAuth();
   const { toast } = useToast();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
+  const [registeredRole, setRegisteredRole] = useState<"student" | "faculty">("student");
   const [pageLoading, setPageLoading] = useState(true);
 
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
   });
+
+  const selectedRole = watch("role");
 
   useEffect(() => {
     // Simulate page loading time
@@ -41,17 +47,18 @@ const Signup: React.FC = () => {
   const onSubmit = async (data: SignupFormData) => {
     try {
       await signup({
-        firstName: data.firstName,
-        lastName: data.lastName,
+        full_name: data.full_name,
         email: data.email,
         password: data.password,
+        role: data.role,
       });
       setRegisteredEmail(data.email);
+      setRegisteredRole(data.role);
       setShowSuccessModal(true);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Registration Failed",
-        description: "Something went wrong. Please try again.",
+        description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
     }
@@ -110,31 +117,17 @@ const Signup: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    {...register("firstName")}
-                    type="text"
-                    placeholder="John"
-                    className={errors.firstName ? "border-destructive focus:ring-destructive" : ""}
-                  />
-                  {errors.firstName && (
-                    <p className="text-sm text-destructive">{errors.firstName.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    {...register("lastName")}
-                    type="text"
-                    placeholder="Doe"
-                    className={errors.lastName ? "border-destructive focus:ring-destructive" : ""}
-                  />
-                  {errors.lastName && (
-                    <p className="text-sm text-destructive">{errors.lastName.message}</p>
-                  )}
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="full_name">Full Name</Label>
+                <Input
+                  {...register("full_name")}
+                  type="text"
+                  placeholder="John Doe"
+                  className={errors.full_name ? "border-destructive focus:ring-destructive" : ""}
+                />
+                {errors.full_name && (
+                  <p className="text-sm text-destructive">{errors.full_name.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -151,6 +144,39 @@ const Signup: React.FC = () => {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Select onValueChange={(value: "student" | "faculty") => setValue("role", value)}>
+                  <SelectTrigger className={errors.role ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Select your role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="student">
+                      <div className="flex items-center gap-2">
+                        <GraduationCap className="h-4 w-4" />
+                        <span>Student</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="faculty">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4" />
+                        <span>Faculty</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.role && (
+                  <p className="text-sm text-destructive">{errors.role.message}</p>
+                )}
+                {selectedRole === "faculty" && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Note:</strong> Faculty accounts require administrator approval before you can sign in.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <PasswordInput
                   {...register("password")}
@@ -163,7 +189,7 @@ const Signup: React.FC = () => {
                 <div className="text-xs text-muted-foreground space-y-1">
                   <p>Password requirements:</p>
                   <ul className="list-disc list-inside space-y-0.5">
-                    <li>At least 8 characters long</li>
+                    <li>At least 6 characters long</li>
                     <li>Contains at least one number</li>
                   </ul>
                 </div>
@@ -235,9 +261,18 @@ const Signup: React.FC = () => {
                 <Mail className="h-4 w-4" />
                 <span className="font-medium">{registeredEmail}</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Please check your email to verify your account before signing in.
-              </p>
+              {registeredRole === "faculty" ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mt-2">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Faculty Account:</strong> Your account is pending administrator approval. 
+                    You will receive an email notification once approved.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Please check your email to verify your account before signing in.
+                </p>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center pt-4">
