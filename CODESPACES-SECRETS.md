@@ -20,11 +20,11 @@ Click **New repository secret** and add these two secrets:
 
 #### Secret 1: VITE_SUPABASE_URL
 - **Name**: `VITE_SUPABASE_URL`
-- **Value**: `https://ynwzukujgqvvxvptzvdc.supabase.co`
+- **Value**: `your_supabase_project_url_here`
 
 #### Secret 2: VITE_SUPABASE_ANON_KEY  
 - **Name**: `VITE_SUPABASE_ANON_KEY`
-- **Value**: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlud3p1a3VqZ3F2dnh2cHR6dmRjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0MzA4NTMsImV4cCI6MjA3MjAwNjg1M30.FpXtPHFOZAu8LHlXONH2b0IhLHw0nVVNyIdYXyod74k`
+- **Value**: `your_supabase_anon_key_here`
 
 ### Step 4: Restart Codespace (if already running)
 If you already have a Codespace running:
