@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,9 +17,12 @@ import {
   BarChart3,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 const Index = () => {
   const [pageLoading, setPageLoading] = useState(true);
+  const { isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Simulate page loading time
@@ -29,6 +32,19 @@ const Index = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Redirect authenticated users to their respective dashboards
+  useEffect(() => {
+    if (isAuthenticated && user && !pageLoading) {
+      if (user.role === 'admin') {
+        navigate("/admin-dashboard");
+      } else if (user.role === 'student') {
+        navigate("/student-dashboard");
+      } else if (user.role === 'faculty') {
+        navigate("/student-dashboard"); // Faculty can use student dashboard for now
+      }
+    }
+  }, [isAuthenticated, user, pageLoading, navigate]);
 
   // Show loading spinner while page is loading
   if (pageLoading) {
