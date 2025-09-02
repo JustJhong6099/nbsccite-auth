@@ -11,7 +11,7 @@
 
 ## 📜 Project Overview  
 
-This capstone project, developed for **Northern Bukidnon State College – Institute of Computer Studies (NBSC–ICS)**, is a **web-based platform** that extracts and organizes **entities** (keywords, technologies, locations, and research domains) from **student research abstracts**.  
+This capstone project, developed for **Northern Bukidnon State College – Institute of Computer Studies (NBSC–ICS)**, is a **web-based platform** that extracts and organizes **entities** (keywords, technologies, and research domains) from **student research abstracts**.  
 
 Using the **Dandelion API** for semantic analysis and **Supabase** for backend services, the system transforms unstructured academic content into a **searchable knowledge base** and visualizes it via **tag clouds and charts**.  
 
@@ -37,7 +37,6 @@ Using the **Dandelion API** for semantic analysis and **Supabase** for backend s
 ### Prerequisites  
 Before you begin, make sure you have:  
 - Node.js and npm installed  
-- Ionic CLI installed globally  
 - Supabase account and project  
 - Dandelion API account and token  
 
