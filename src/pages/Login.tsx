@@ -32,8 +32,12 @@ const Login: React.FC = () => {
       // Redirect based on user role
       if (user.role === 'admin') {
         navigate("/admin-dashboard");
+      } else if (user.role === 'student') {
+        navigate("/student-dashboard");
+      } else if (user.role === 'faculty') {
+        navigate("/student-dashboard"); // Faculty can also use student dashboard for now
       } else {
-        navigate("/"); // Redirect to homepage for students and faculty
+        navigate("/"); // Fallback to homepage
       }
     }
   }, [isAuthenticated, user, navigate]);
