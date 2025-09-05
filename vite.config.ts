@@ -5,7 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: "/nbsccite-auth/",  // Always use the base path for GitHub Pages
+  base: mode === 'production' ? "/nbsccite-auth/" : "/",  // Different base paths for dev and prod
   server: {
     host: "::",
     port: 8080,
