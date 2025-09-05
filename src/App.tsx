@@ -12,12 +12,15 @@ import { StudentDashboard } from "./components/student/StudentDashboard";
 
 const queryClient = new QueryClient();
 
+// Determine basename based on environment
+const basename = import.meta.env.PROD ? "/nbsccite-auth" : "";
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter basename={basename}>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
