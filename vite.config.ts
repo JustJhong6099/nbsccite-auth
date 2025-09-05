@@ -5,7 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: mode === 'production' ? "/Jhong-NBSC/" : "/",  // ✅ fixed repo name
+  base: mode === 'production' ? "/nbsccite-auth/" : "/",  // ✅ Updated to match repository name
   server: {
     host: "::",
     port: 8080,
