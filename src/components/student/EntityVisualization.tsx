@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   GitBranch, 
   Maximize2, 
@@ -12,143 +13,301 @@ import {
   Eye,
   Layers,
   Network,
-  Zap
+  Zap,
+  X,
+  FileText,
+  Save,
+  Send,
+  AlertCircle,
+  CheckCircle,
+  Upload,
+  Camera,
+  Scan,
+  Loader2
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import * as d3 from 'd3';
 
-// Mock data for entity visualization
+// Enhanced mock data - Each group represents one abstract with its extracted entities
 const mockEntityData = {
   nodes: [
-    // Technologies
-    { id: 'ml', label: 'Machine Learning', type: 'technology', size: 25, color: '#3b82f6' },
-    { id: 'python', label: 'Python', type: 'technology', size: 20, color: '#3b82f6' },
-    { id: 'tensorflow', label: 'TensorFlow', type: 'technology', size: 18, color: '#3b82f6' },
-    { id: 'react', label: 'React', type: 'technology', size: 22, color: '#3b82f6' },
-    { id: 'nodejs', label: 'Node.js', type: 'technology', size: 19, color: '#3b82f6' },
-    { id: 'postgresql', label: 'PostgreSQL', type: 'technology', size: 16, color: '#3b82f6' },
-    { id: 'flutter', label: 'Flutter', type: 'technology', size: 17, color: '#3b82f6' },
-    
-    // Domains
-    { id: 'education', label: 'Educational Technology', type: 'domain', size: 28, color: '#10b981' },
-    { id: 'webdev', label: 'Web Development', type: 'domain', size: 26, color: '#10b981' },
-    { id: 'databases', label: 'Database Systems', type: 'domain', size: 24, color: '#10b981' },
-    { id: 'mobile', label: 'Mobile Development', type: 'domain', size: 23, color: '#10b981' },
-    { id: 'ai', label: 'Artificial Intelligence', type: 'domain', size: 27, color: '#10b981' },
-    
-    // Research Papers (Student's abstracts)
-    { id: 'paper1', label: 'ML in Education', type: 'paper', size: 15, color: '#f59e0b' },
-    { id: 'paper2', label: 'E-commerce Platform', type: 'paper', size: 15, color: '#f59e0b' },
-    { id: 'paper3', label: 'DB Optimization', type: 'paper', size: 15, color: '#f59e0b' },
-    { id: 'paper4', label: 'Healthcare App', type: 'paper', size: 15, color: '#f59e0b' },
-    
-    // Authors/Researchers
-    { id: 'john', label: 'John Smith', type: 'author', size: 12, color: '#ef4444' },
-    { id: 'maria', label: 'Maria Garcia', type: 'author', size: 10, color: '#ef4444' },
-    { id: 'ahmed', label: 'Ahmed Hassan', type: 'author', size: 10, color: '#ef4444' },
-    
-    // Institutions
-    { id: 'nbsc', label: 'NBSC-ICS', type: 'institution', size: 30, color: '#8b5cf6' }
+    // Abstract 1: AI & Sustainability
+    { id: 'abstract1', label: '', type: 'abstract', size: 30, color: '#3b82f6', x: 200, y: 200 },
+    { id: 'ai1', label: 'AI', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract1' },
+    { id: 'satellite1', label: 'satellite', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract1' },
+    { id: 'monitoring1', label: 'monitoring', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract1' },
+    { id: 'machine_learning1', label: 'machine learning', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract1' },
+
+    // Abstract 2: Smart Agriculture
+    { id: 'abstract2', label: '', type: 'abstract', size: 30, color: '#3b82f6', x: 600, y: 200 },
+    { id: 'infrastructure2', label: 'infrastructure', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract2' },
+    { id: 'ai2', label: 'AI', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract2' },
+    { id: 'satellite2', label: 'satellite', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract2' },
+    { id: 'irrigation2', label: 'irrigation', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract2' },
+    { id: 'monitoring2', label: 'monitoring', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract2' },
+    { id: 'machine_learning2', label: 'machine learning', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract2' },
+    { id: 'sustainable2', label: 'sustainable', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract2' },
+
+    // Abstract 3: Citizen Science & Biodiversity
+    { id: 'abstract3', label: '', type: 'abstract', size: 30, color: '#3b82f6', x: 200, y: 500 },
+    { id: 'citizen3', label: 'citizen', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract3' },
+    { id: 'mapping3', label: 'mapping', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract3' },
+    { id: 'biodiversity3', label: 'biodiversity', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract3' },
+    { id: 'mobile3', label: 'mobile', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract3' },
+    { id: 'crowdsourced3', label: 'crowdsourced', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract3' }
   ],
   links: [
-    // Technology-Domain relationships
-    { source: 'ml', target: 'education', strength: 0.9, type: 'uses' },
-    { source: 'ml', target: 'ai', strength: 0.8, type: 'uses' },
-    { source: 'python', target: 'ml', strength: 0.9, type: 'implements' },
-    { source: 'tensorflow', target: 'ml', strength: 0.8, type: 'implements' },
-    { source: 'react', target: 'webdev', strength: 0.9, type: 'implements' },
-    { source: 'nodejs', target: 'webdev', strength: 0.8, type: 'implements' },
-    { source: 'postgresql', target: 'databases', strength: 0.9, type: 'implements' },
-    { source: 'flutter', target: 'mobile', strength: 0.9, type: 'implements' },
-    
-    // Paper-Technology relationships
-    { source: 'paper1', target: 'ml', strength: 0.9, type: 'uses' },
-    { source: 'paper1', target: 'python', strength: 0.8, type: 'uses' },
-    { source: 'paper1', target: 'tensorflow', strength: 0.7, type: 'uses' },
-    { source: 'paper2', target: 'react', strength: 0.9, type: 'uses' },
-    { source: 'paper2', target: 'nodejs', strength: 0.8, type: 'uses' },
-    { source: 'paper3', target: 'postgresql', strength: 0.9, type: 'uses' },
-    { source: 'paper4', target: 'flutter', strength: 0.9, type: 'uses' },
-    
-    // Paper-Domain relationships
-    { source: 'paper1', target: 'education', strength: 0.9, type: 'contributes' },
-    { source: 'paper1', target: 'ai', strength: 0.7, type: 'contributes' },
-    { source: 'paper2', target: 'webdev', strength: 0.9, type: 'contributes' },
-    { source: 'paper3', target: 'databases', strength: 0.9, type: 'contributes' },
-    { source: 'paper4', target: 'mobile', strength: 0.9, type: 'contributes' },
-    
-    // Author-Paper relationships
-    { source: 'john', target: 'paper1', strength: 1.0, type: 'authored' },
-    { source: 'john', target: 'paper2', strength: 1.0, type: 'authored' },
-    { source: 'john', target: 'paper3', strength: 1.0, type: 'authored' },
-    { source: 'john', target: 'paper4', strength: 1.0, type: 'authored' },
-    
-    // Institution relationships
-    { source: 'john', target: 'nbsc', strength: 1.0, type: 'affiliated' },
-    { source: 'maria', target: 'nbsc', strength: 1.0, type: 'affiliated' },
-    { source: 'ahmed', target: 'nbsc', strength: 1.0, type: 'affiliated' }
+    // Abstract 1 connections
+    { source: 'abstract1', target: 'ai1', strength: 1.0, type: 'contains' },
+    { source: 'abstract1', target: 'satellite1', strength: 1.0, type: 'contains' },
+    { source: 'abstract1', target: 'monitoring1', strength: 1.0, type: 'contains' },
+    { source: 'abstract1', target: 'machine_learning1', strength: 1.0, type: 'contains' },
+
+    // Abstract 2 connections
+    { source: 'abstract2', target: 'infrastructure2', strength: 1.0, type: 'contains' },
+    { source: 'abstract2', target: 'ai2', strength: 1.0, type: 'contains' },
+    { source: 'abstract2', target: 'satellite2', strength: 1.0, type: 'contains' },
+    { source: 'abstract2', target: 'irrigation2', strength: 1.0, type: 'contains' },
+    { source: 'abstract2', target: 'monitoring2', strength: 1.0, type: 'contains' },
+    { source: 'abstract2', target: 'machine_learning2', strength: 1.0, type: 'contains' },
+    { source: 'abstract2', target: 'sustainable2', strength: 1.0, type: 'contains' },
+
+    // Abstract 3 connections
+    { source: 'abstract3', target: 'citizen3', strength: 1.0, type: 'contains' },
+    { source: 'abstract3', target: 'mapping3', strength: 1.0, type: 'contains' },
+    { source: 'abstract3', target: 'biodiversity3', strength: 1.0, type: 'contains' },
+    { source: 'abstract3', target: 'mobile3', strength: 1.0, type: 'contains' },
+    { source: 'abstract3', target: 'crowdsourced3', strength: 1.0, type: 'contains' }
+  ],
+  abstracts: [
+    {
+      id: 'abstract1',
+      title: 'AI-Powered Sustainability Monitoring',
+      content: 'AI technologies offer promising solutions in sustainability monitoring, using satellite imagery and machine learning.',
+      keywords: ['AI', 'machine learning', 'satellite', 'monitoring']
+    },
+    {
+      id: 'abstract2', 
+      title: 'Smart Agricultural Infrastructure',
+      content: 'Development of intelligent infrastructure systems for sustainable agricultural practices using AI and satellite monitoring.',
+      keywords: ['infrastructure', 'AI', 'satellite', 'irrigation', 'monitoring', 'machine learning', 'sustainable']
+    },
+    {
+      id: 'abstract3',
+      title: 'Citizen Science for Biodiversity Conservation', 
+      content: 'Mobile crowdsourced mapping applications for citizen science initiatives in biodiversity conservation.',
+      keywords: ['citizen', 'mapping', 'biodiversity', 'mobile', 'crowdsourced']
+    }
   ]
 };
 
 // Mock tag cloud data
 const mockTagCloud = [
-  { text: 'Machine Learning', weight: 45, category: 'technology' },
-  { text: 'Python', weight: 38, category: 'technology' },
-  { text: 'React', weight: 35, category: 'technology' },
-  { text: 'Web Development', weight: 32, category: 'domain' },
-  { text: 'Educational Technology', weight: 30, category: 'domain' },
-  { text: 'Data Science', weight: 28, category: 'domain' },
-  { text: 'TensorFlow', weight: 25, category: 'technology' },
-  { text: 'Node.js', weight: 24, category: 'technology' },
-  { text: 'JavaScript', weight: 22, category: 'technology' },
-  { text: 'Mobile Development', weight: 20, category: 'domain' },
-  { text: 'Flutter', weight: 18, category: 'technology' },
-  { text: 'PostgreSQL', weight: 16, category: 'technology' },
-  { text: 'Database Systems', weight: 15, category: 'domain' },
-  { text: 'Artificial Intelligence', weight: 14, category: 'domain' },
-  { text: 'Firebase', weight: 12, category: 'technology' }
+  { text: 'AI', weight: 45, category: 'technology' },
+  { text: 'machine learning', weight: 38, category: 'technology' },
+  { text: 'satellite', weight: 35, category: 'technology' },
+  { text: 'monitoring', weight: 32, category: 'technology' },
+  { text: 'sustainable', weight: 30, category: 'technology' },
+  { text: 'infrastructure', weight: 28, category: 'technology' },
+  { text: 'irrigation', weight: 25, category: 'technology' },
+  { text: 'bamboo', weight: 24, category: 'technology' },
+  { text: 'citizen', weight: 22, category: 'technology' },
+  { text: 'biodiversity', weight: 20, category: 'technology' },
+  { text: 'mobile', weight: 18, category: 'technology' },
+  { text: 'mapping', weight: 16, category: 'technology' },
+  { text: 'crowdsourced', weight: 15, category: 'technology' }
 ];
 
 // Mock frequency data
 const mockFrequencyData = [
-  { category: 'Machine Learning', count: 45, trend: 'up', percentage: 18.2 },
-  { category: 'Web Development', count: 38, trend: 'up', percentage: 15.4 },
-  { category: 'Data Science', count: 32, trend: 'up', percentage: 13.0 },
-  { category: 'Mobile Development', count: 28, trend: 'stable', percentage: 11.4 },
-  { category: 'Artificial Intelligence', count: 25, trend: 'up', percentage: 10.1 },
-  { category: 'Database Systems', count: 22, trend: 'down', percentage: 8.9 },
-  { category: 'Cybersecurity', count: 18, trend: 'up', percentage: 7.3 },
-  { category: 'Computer Networks', count: 15, trend: 'stable', percentage: 6.1 }
+  { category: 'AI & Machine Learning', count: 45, trend: 'up', percentage: 18.2 },
+  { category: 'Satellite Technology', count: 38, trend: 'up', percentage: 15.4 },
+  { category: 'Environmental Monitoring', count: 32, trend: 'up', percentage: 13.0 },
+  { category: 'Sustainable Technology', count: 28, trend: 'stable', percentage: 11.4 },
+  { category: 'Infrastructure Systems', count: 25, trend: 'up', percentage: 10.1 },
+  { category: 'Mobile Applications', count: 22, trend: 'down', percentage: 8.9 },
+  { category: 'Citizen Science', count: 18, trend: 'up', percentage: 7.3 },
+  { category: 'Biodiversity Conservation', count: 15, trend: 'stable', percentage: 6.1 }
 ];
 
 export const EntityVisualization: React.FC = () => {
   const [activeTab, setActiveTab] = useState('graph');
   const [selectedNodeType, setSelectedNodeType] = useState('all');
   const [selectedNode, setSelectedNode] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
-  // Simulate D3.js force-directed graph (placeholder implementation)
-  const renderForceGraph = () => {
-    // This would be replaced with actual D3.js implementation
-    return (
-      <div className="relative w-full h-96 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
-        <div className="text-center">
-          <Network className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Interactive Force-Directed Graph</h3>
-          <p className="text-gray-600 mb-4">
-            D3.js visualization showing entity relationships will be rendered here
-          </p>
-          <div className="space-y-2 text-sm text-gray-500">
-            <p>• Blue nodes: Technologies (Python, React, etc.)</p>
-            <p>• Green nodes: Research domains (ML, Web Dev, etc.)</p>
-            <p>• Orange nodes: Your research papers</p>
-            <p>• Red nodes: Authors and researchers</p>
-            <p>• Purple nodes: Institutions</p>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  // D3.js Force-Directed Graph Implementation
+  const renderForceGraph = useCallback(() => {
+    if (!svgRef.current) return;
+
+    const svg = d3.select(svgRef.current);
+    svg.selectAll("*").remove();
+
+    const width = dimensions.width;
+    const height = dimensions.height;
+
+    // Create separate force simulations for each abstract group
+    const abstractNodes = mockEntityData.nodes.filter(n => n.type === 'abstract');
+    const entityNodes = mockEntityData.nodes.filter(n => n.type === 'entity');
+
+    // Create force simulation with custom forces for grouping
+    const simulation = d3.forceSimulation(mockEntityData.nodes as any)
+      .force("link", d3.forceLink(mockEntityData.links).id((d: any) => d.id).distance(80).strength(0.8))
+      .force("charge", d3.forceManyBody().strength((d: any) => d.type === 'abstract' ? -800 : -200))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide().radius((d: any) => d.size + 10))
+      .force("group", d3.forceRadial(100, width / 2, height / 2).strength(0.1));
+
+    // Add grouping force to keep entities close to their abstract
+    simulation.force("grouping", () => {
+      entityNodes.forEach(entity => {
+        const abstract = abstractNodes.find(a => a.id === (entity as any).abstractId);
+        if (abstract) {
+          const dx = (abstract as any).x - (entity as any).x;
+          const dy = (abstract as any).y - (entity as any).y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance > 120) {
+            (entity as any).vx += dx * 0.1;
+            (entity as any).vy += dy * 0.1;
+          }
+        }
+      });
+    });
+
+    // Create links (edges)
+    const link = svg.append("g")
+      .attr("class", "links")
+      .selectAll("line")
+      .data(mockEntityData.links)
+      .enter().append("line")
+      .attr("stroke", "#999")
+      .attr("stroke-opacity", 0.6)
+      .attr("stroke-width", 2);
+
+    // Create node groups
+    const node = svg.append("g")
+      .attr("class", "nodes")
+      .selectAll("g")
+      .data(mockEntityData.nodes)
+      .enter().append("g")
+      .attr("class", "node")
+      .style("cursor", "pointer")
+      .call(d3.drag()
+        .on("start", (event, d: any) => {
+          if (!event.active) simulation.alphaTarget(0.3).restart();
+          d.fx = d.x;
+          d.fy = d.y;
+        })
+        .on("drag", (event, d: any) => {
+          d.fx = event.x;
+          d.fy = event.y;
+        })
+        .on("end", (event, d: any) => {
+          if (!event.active) simulation.alphaTarget(0);
+          d.fx = null;
+          d.fy = null;
+        }) as any);
+
+    // Add circles to nodes
+    node.append("circle")
+      .attr("r", (d: any) => d.size)
+      .attr("fill", (d: any) => d.color)
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 2)
+      .on("click", (event, d: any) => {
+        // Find the abstract for this entity or use the node itself if it's an abstract
+        const abstractData = d.type === 'abstract' 
+          ? mockEntityData.abstracts.find(a => a.id === d.id)
+          : mockEntityData.abstracts.find(a => a.id === d.abstractId);
+        
+        setSelectedNode({ ...d, abstract: abstractData });
+        setIsModalOpen(true);
+      })
+      .on("mouseover", function(event, d: any) {
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr("r", (d: any) => d.size + 3)
+          .attr("stroke-width", 3);
+        
+        // Highlight connected nodes
+        const connectedLinks = mockEntityData.links.filter(l => l.source === d.id || l.target === d.id);
+        const connectedNodeIds = connectedLinks.map(l => l.source === d.id ? l.target : l.source);
+        
+        node.selectAll("circle")
+          .style("opacity", (n: any) => connectedNodeIds.includes(n.id) || n.id === d.id ? 1 : 0.3);
+        
+        link.style("opacity", (l: any) => l.source.id === d.id || l.target.id === d.id ? 0.8 : 0.1);
+      })
+      .on("mouseout", function(event, d: any) {
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr("r", (d: any) => d.size)
+          .attr("stroke-width", 2);
+        
+        // Reset all nodes and links opacity
+        node.selectAll("circle").style("opacity", 1);
+        link.style("opacity", 0.6);
+      });
+
+    // Add labels beside nodes (not inside)
+    node.append("text")
+      .text((d: any) => d.label)
+      .attr("font-size", 12)
+      .attr("font-family", "Arial, sans-serif")
+      .attr("text-anchor", "start")
+      .attr("dx", (d: any) => d.size + 8) // Position text beside the node
+      .attr("dy", ".35em")
+      .attr("fill", "#333")
+      .attr("font-weight", (d: any) => d.type === 'abstract' ? 'bold' : 'normal')
+      .style("pointer-events", "none")
+      .style("user-select", "none");
+
+    // Update positions on each tick
+    simulation.on("tick", () => {
+      link
+        .attr("x1", (d: any) => d.source.x)
+        .attr("y1", (d: any) => d.source.y)
+        .attr("x2", (d: any) => d.target.x)
+        .attr("y2", (d: any) => d.target.y);
+
+      node.attr("transform", (d: any) => `translate(${d.x},${d.y})`);
+    });
+
+    // Add zoom behavior
+    const zoom = d3.zoom()
+      .scaleExtent([0.3, 3])
+      .on("zoom", (event) => {
+        svg.select("g.links").attr("transform", event.transform);
+        svg.select("g.nodes").attr("transform", event.transform);
+      });
+
+    svg.call(zoom as any);
+
+  }, [dimensions]);
+
+  useEffect(() => {
+    renderForceGraph();
+  }, [renderForceGraph]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const container = svgRef.current?.parentElement;
+      if (container) {
+        setDimensions({
+          width: container.clientWidth,
+          height: 600
+        });
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const getNodeTypeColor = (type: string) => {
     switch (type) {
@@ -211,7 +370,7 @@ export const EntityVisualization: React.FC = () => {
               <div className="flex justify-between items-center">
                 <div>
                   <CardTitle>Interactive Entity Graph</CardTitle>
-                  <CardDescription>Explore connections between your research entities</CardDescription>
+                  <CardDescription>Explore connections between your research entities. Click on nodes to view details.</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                   <Select value={selectedNodeType} onValueChange={setSelectedNodeType}>
@@ -231,7 +390,25 @@ export const EntityVisualization: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {renderForceGraph()}
+              <div className="relative w-full bg-white rounded-lg border overflow-hidden">
+                <svg 
+                  ref={svgRef} 
+                  width={dimensions.width} 
+                  height={dimensions.height}
+                  className="w-full h-full"
+                >
+                </svg>
+                {/* Instructions overlay */}
+                <div className="absolute top-4 left-4 bg-white/90 p-3 rounded-lg shadow-sm border max-w-xs">
+                  <h4 className="text-sm font-medium mb-2">Interactive Controls:</h4>
+                  <ul className="text-xs text-gray-600 space-y-1">
+                    <li>• Click any node to view abstract details</li>
+                    <li>• Drag nodes to rearrange groups</li>
+                    <li>• Scroll to zoom in/out</li>
+                    <li>• Hover to highlight connections</li>
+                  </ul>
+                </div>
+              </div>
               
               {/* Graph Controls */}
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -239,52 +416,76 @@ export const EntityVisualization: React.FC = () => {
                   <h4 className="font-medium mb-3">Graph Statistics</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span>Total Entities:</span>
-                      <span className="font-medium">{mockEntityData.nodes.length}</span>
+                      <span>Total Abstracts:</span>
+                      <span className="font-medium">{mockEntityData.abstracts.length}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Connections:</span>
-                      <span className="font-medium">{mockEntityData.links.length}</span>
+                      <span>Extracted Entities:</span>
+                      <span className="font-medium">{mockEntityData.nodes.filter(n => n.type === 'entity').length}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Your Papers:</span>
-                      <span className="font-medium">{mockEntityData.nodes.filter(n => n.type === 'paper').length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Technologies Used:</span>
-                      <span className="font-medium">{mockEntityData.nodes.filter(n => n.type === 'technology').length}</span>
+                      <span>Total Keywords:</span>
+                      <span className="font-medium">{mockEntityData.abstracts.reduce((acc, abs) => acc + abs.keywords.length, 0)}</span>
                     </div>
                   </div>
                 </Card>
 
                 <Card className="p-4">
                   <h4 className="font-medium mb-3">Legend</h4>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                      <span className="text-sm">Technologies</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                      <span className="text-sm">Research Domains</span>
+                      <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+                      <span className="text-sm">Abstract Centers</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                      <span className="text-sm">Your Papers</span>
+                      <span className="text-sm">Extracted Entities</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                      <span className="text-sm">Authors</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                      <span className="text-sm">Institutions</span>
+                    <div className="text-xs text-gray-500">
+                      Each blue node represents one abstract with its connected orange entity nodes showing extracted keywords and concepts.
                     </div>
                   </div>
                 </Card>
               </div>
             </CardContent>
           </Card>
+
+          {/* Entity Details Modal */}
+          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Abstract Details</DialogTitle>
+              </DialogHeader>
+              
+              {selectedNode && selectedNode.abstract && (
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-sm text-gray-700 mb-2">Abstract</h4>
+                    <p className="text-sm text-gray-600">
+                      {selectedNode.abstract.content}
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-sm text-gray-700 mb-2">Keywords</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedNode.abstract.keywords.map((keyword: string, index: number) => (
+                        <div key={index} className="px-3 py-1 border-b border-gray-200 text-sm">
+                          {keyword}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         {/* Entity Explorer Tab */}
