@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { 
   User,
   BookOpen,
@@ -16,7 +18,8 @@ import {
   Award,
   Users,
   Lightbulb,
-  Target
+  Target,
+  LogOut
 } from "lucide-react";
 
 import { AbstractSubmission } from './AbstractSubmission';
@@ -39,9 +42,7 @@ const mockStudentData = {
     totalAbstracts: 4,
     acceptedPapers: 3,
     pendingReviews: 1,
-    citations: 12,
-    hIndex: 2,
-    collaborations: 3
+    hIndex: 2
   },
   recentActivity: [
     {
@@ -60,53 +61,43 @@ const mockStudentData = {
     },
     {
       id: 3,
-      type: 'citation',
-      title: 'Your paper was cited by "Advanced Educational Technologies"',
+      type: 'other',
+      title: 'Research Progress Review scheduled',
       date: '2024-01-08',
-      status: 'cited'
+      status: 'scheduled'
     },
     {
       id: 4,
-      type: 'collaboration',
-      title: 'Invited to collaborate on "Smart Campus Initiative"',
+      type: 'other',
+      title: 'Updated research profile',
       date: '2024-01-05',
-      status: 'invitation'
-    }
-  ],
-  upcomingDeadlines: [
-    {
-      id: 1,
-      title: 'NBSC-ICS 2024 Abstract Submission',
-      date: '2024-02-15',
-      daysLeft: 12,
-      type: 'submission'
-    },
-    {
-      id: 2,
-      title: 'Conference Presentation Preparation',
-      date: '2024-03-01',
-      daysLeft: 26,
-      type: 'presentation'
-    },
-    {
-      id: 3,
-      title: 'Research Progress Review',
-      date: '2024-02-20',
-      daysLeft: 17,
-      type: 'review'
+      status: 'completed'
     }
   ]
 };
 
 export const StudentDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      // Redirect to login page after successful logout
+      navigate('/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      // Still try to redirect even if there's an error, since user might be logged out
+      navigate('/login');
+    }
+  };
 
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'submission': return <Upload className="h-4 w-4 text-blue-600" />;
       case 'acceptance': return <Award className="h-4 w-4 text-green-600" />;
-      case 'citation': return <TrendingUp className="h-4 w-4 text-purple-600" />;
-      case 'collaboration': return <Users className="h-4 w-4 text-orange-600" />;
+      case 'other': return <FileText className="h-4 w-4 text-gray-600" />;
       default: return <FileText className="h-4 w-4 text-gray-600" />;
     }
   };
@@ -115,16 +106,10 @@ export const StudentDashboard: React.FC = () => {
     switch (status) {
       case 'accepted': return 'bg-green-100 text-green-800';
       case 'under_review': return 'bg-yellow-100 text-yellow-800';
-      case 'cited': return 'bg-purple-100 text-purple-800';
-      case 'invitation': return 'bg-blue-100 text-blue-800';
+      case 'scheduled': return 'bg-blue-100 text-blue-800';
+      case 'completed': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
-  };
-
-  const getDeadlineUrgency = (daysLeft: number) => {
-    if (daysLeft <= 7) return 'bg-red-100 text-red-800 border-red-300';
-    if (daysLeft <= 14) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-    return 'bg-green-100 text-green-800 border-green-300';
   };
 
   return (
@@ -140,6 +125,10 @@ export const StudentDashboard: React.FC = () => {
             <Button>
               <Upload className="h-4 w-4 mr-2" />
               Quick Submit
+            </Button>
+            <Button onClick={handleLogout} variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
             </Button>
             <Avatar className="h-10 w-10">
               <AvatarImage src={mockStudentData.avatar || undefined} />
@@ -214,7 +203,7 @@ export const StudentDashboard: React.FC = () => {
             </Card>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -243,18 +232,6 @@ export const StudentDashboard: React.FC = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Total Citations</p>
-                      <p className="text-3xl font-bold text-purple-600">{mockStudentData.stats.citations}</p>
-                    </div>
-                    <TrendingUp className="h-12 w-12 text-purple-500" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
                       <p className="text-sm text-gray-600">H-Index</p>
                       <p className="text-3xl font-bold text-orange-600">{mockStudentData.stats.hIndex}</p>
                     </div>
@@ -274,76 +251,35 @@ export const StudentDashboard: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
+            </div>
 
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Collaborations</p>
-                      <p className="text-3xl font-bold text-indigo-600">{mockStudentData.stats.collaborations}</p>
+            {/* Recent Activity */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+                <CardDescription>Your latest research activities and updates</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {mockStudentData.recentActivity.map((activity) => (
+                    <div key={activity.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg">
+                      <div className="mt-1">
+                        {getActivityIcon(activity.type)}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-xs text-gray-500">{activity.date}</p>
+                          <Badge className={`text-xs ${getActivityBadgeColor(activity.status)}`}>
+                            {activity.status.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
-                    <Users className="h-12 w-12 text-indigo-500" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Recent Activity and Upcoming Deadlines */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Recent Activity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>Your latest research activities and updates</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {mockStudentData.recentActivity.map((activity) => (
-                      <div key={activity.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg">
-                        <div className="mt-1">
-                          {getActivityIcon(activity.type)}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{activity.title}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <p className="text-xs text-gray-500">{activity.date}</p>
-                            <Badge className={`text-xs ${getActivityBadgeColor(activity.status)}`}>
-                              {activity.status.replace('_', ' ')}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Upcoming Deadlines */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Upcoming Deadlines</CardTitle>
-                  <CardDescription>Important dates and deadlines to remember</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {mockStudentData.upcomingDeadlines.map((deadline) => (
-                      <div key={deadline.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Calendar className="h-5 w-5 text-gray-500" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{deadline.title}</p>
-                            <p className="text-xs text-gray-500">{deadline.date}</p>
-                          </div>
-                        </div>
-                        <Badge className={getDeadlineUrgency(deadline.daysLeft)}>
-                          {deadline.daysLeft} days
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Quick Actions */}
             <Card>
