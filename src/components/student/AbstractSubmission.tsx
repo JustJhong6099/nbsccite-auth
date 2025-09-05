@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { 
   Upload, 
   FileText, 
@@ -12,10 +13,14 @@ import {
   Send, 
   AlertCircle, 
   CheckCircle,
-  Eye
+  Eye,
+  Camera,
+  Scan,
+  Loader2
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import Tesseract from 'tesseract.js';
 
 interface AbstractFormData {
   title: string;
@@ -36,6 +41,9 @@ export const AbstractSubmission: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDraft, setIsDraft] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState(0);
+  const [isProcessingOCR, setIsProcessingOCR] = useState(false);
+  const [ocrImage, setOcrImage] = useState<string | null>(null);
 
   const handleKeywordAdd = () => {
     if (keywordInput.trim() && !formData.keywords.includes(keywordInput.trim())) {
@@ -62,6 +70,55 @@ export const AbstractSubmission: React.FC = () => {
     }
   };
 
+  const handleImageUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const imageUrl = URL.createObjectURL(file);
+      setOcrImage(imageUrl);
+      setIsProcessingOCR(true);
+      setOcrProgress(0);
+
+      try {
+        const result = await Tesseract.recognize(file, 'eng', {
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              setOcrProgress(Math.round(m.progress * 100));
+            }
+          }
+        });
+
+        const extractedText = result.data.text.trim();
+        if (extractedText) {
+          // If abstract is empty, fill it with OCR text
+          if (!formData.abstract.trim()) {
+            setFormData(prev => ({ ...prev, abstract: extractedText }));
+            toast.success("Text extracted and added to abstract!");
+          } else {
+            // Ask user if they want to append or replace
+            const append = window.confirm("Abstract already has content. Would you like to append the extracted text? (Cancel to replace)");
+            if (append) {
+              setFormData(prev => ({ ...prev, abstract: prev.abstract + '\n\n' + extractedText }));
+              toast.success("Text extracted and appended to abstract!");
+            } else {
+              setFormData(prev => ({ ...prev, abstract: extractedText }));
+              toast.success("Text extracted and replaced abstract content!");
+            }
+          }
+        } else {
+          toast.error("No text could be extracted from the image");
+        }
+      } catch (error) {
+        console.error('OCR Error:', error);
+        toast.error("Failed to extract text from image");
+      } finally {
+        setIsProcessingOCR(false);
+        setOcrProgress(0);
+      }
+    } else {
+      toast.error("Please select a valid image file");
+    }
+  }, [formData.abstract]);
+
   const handleSaveDraft = () => {
     setIsDraft(true);
     setTimeout(() => {
@@ -87,6 +144,7 @@ export const AbstractSubmission: React.FC = () => {
         keywords: [],
         year: '2025'
       });
+      setOcrImage(null);
     }, 2000);
   };
 
@@ -208,9 +266,9 @@ export const AbstractSubmission: React.FC = () => {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Main Form */}
-        <div className="lg:col-span-3 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Pane - Abstract Content */}
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
@@ -252,17 +310,17 @@ export const AbstractSubmission: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle>Abstract Content</CardTitle>
-              <CardDescription>Provide the detailed abstract of your research</CardDescription>
+              <CardDescription>Write your abstract or use OCR to extract text from an image</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="abstract">Abstract Text *</Label>
                 <Textarea
                   id="abstract"
-                  placeholder="Write your research abstract here..."
+                  placeholder="Write your research abstract here or use the OCR feature to extract text from an image..."
                   value={formData.abstract}
                   onChange={(e) => setFormData(prev => ({ ...prev, abstract: e.target.value }))}
-                  className="mt-1 min-h-[200px]"
+                  className="mt-1 min-h-[300px]"
                 />
                 <div className="mt-1 text-sm text-gray-500">
                   {formData.abstract.length}/500 words maximum
@@ -297,6 +355,121 @@ export const AbstractSubmission: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4">
+                <Button onClick={handleSubmit} disabled={isSubmitting || !formData.title || !formData.abstract} className="flex-1">
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Submit for Review
+                    </>
+                  )}
+                </Button>
+                <Button variant="outline" onClick={handleSaveDraft} disabled={isDraft}>
+                  {isDraft ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save as Draft
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Pane - OCR Picture Upload */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Scan className="h-5 w-5" />
+                OCR Text Extraction
+              </CardTitle>
+              <CardDescription>Upload an image containing text to automatically extract and add to your abstract</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <Camera className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">
+                    Upload an image with text to extract
+                  </p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="image-upload"
+                    disabled={isProcessingOCR}
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => document.getElementById('image-upload')?.click()}
+                    disabled={isProcessingOCR}
+                  >
+                    {isProcessingOCR ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Choose Image
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-gray-500">
+                    Supports JPG, PNG, GIF, WebP
+                  </p>
+                </div>
+              </div>
+
+              {isProcessingOCR && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Extracting text...</span>
+                    <span>{ocrProgress}%</span>
+                  </div>
+                  <Progress value={ocrProgress} className="w-full" />
+                </div>
+              )}
+
+              {ocrImage && (
+                <div className="space-y-3">
+                  <Label>Uploaded Image Preview</Label>
+                  <div className="border rounded-lg overflow-hidden">
+                    <img 
+                      src={ocrImage} 
+                      alt="OCR Preview" 
+                      className="w-full h-48 object-contain bg-gray-50"
+                    />
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setOcrImage(null);
+                      URL.revokeObjectURL(ocrImage);
+                    }}
+                    className="w-full"
+                  >
+                    Remove Image
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -307,10 +480,10 @@ export const AbstractSubmission: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <div className="space-y-2">
                   <p className="text-sm text-gray-600">
-                    Drag and drop your file here, or click to browse
+                    Upload your research document
                   </p>
                   <input
                     type="file"
@@ -320,6 +493,7 @@ export const AbstractSubmission: React.FC = () => {
                     id="file-upload"
                   />
                   <Button variant="outline" onClick={() => document.getElementById('file-upload')?.click()}>
+                    <Upload className="h-4 w-4 mr-2" />
                     Choose File
                   </Button>
                   <p className="text-xs text-gray-500">
@@ -335,64 +509,24 @@ export const AbstractSubmission: React.FC = () => {
               )}
             </CardContent>
           </Card>
-        </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Submission Status</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className={`w-3 h-3 rounded-full ${formData.title ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                <span className={`text-sm ${formData.title ? 'text-green-700' : 'text-gray-500'}`}>
-                  Title provided
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className={`w-3 h-3 rounded-full ${formData.abstract ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                <span className={`text-sm ${formData.abstract ? 'text-green-700' : 'text-gray-500'}`}>
-                  Abstract written
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className={`w-3 h-3 rounded-full ${formData.keywords.length > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                <span className={`text-sm ${formData.keywords.length > 0 ? 'text-green-700' : 'text-gray-500'}`}>
-                  Keywords added
-                </span>
+          {/* OCR Usage Tips */}
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-blue-900 text-sm">OCR Tips</h4>
+                  <ul className="mt-2 text-xs text-blue-800 space-y-1">
+                    <li>• Use clear, high-resolution images</li>
+                    <li>• Ensure good contrast between text and background</li>
+                    <li>• Avoid blurry or skewed images</li>
+                    <li>• Review extracted text for accuracy</li>
+                  </ul>
+                </div>
               </div>
             </CardContent>
           </Card>
-
-          <div className="flex flex-col gap-2">
-            <Button onClick={handleSubmit} disabled={isSubmitting || !formData.title || !formData.abstract}>
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Submit for Review
-                </>
-              )}
-            </Button>
-            <Button variant="outline" onClick={handleSaveDraft} disabled={isDraft}>
-              {isDraft ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save as Draft
-                </>
-              )}
-            </Button>
-          </div>
         </div>
       </div>
     </div>

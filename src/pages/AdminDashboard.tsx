@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,8 +46,19 @@ import { OCRExtractor } from "@/components/ocr/OCRExtractor";
 
 const AdminDashboard: React.FC = () => {
   const { user, logout, refreshProfile } = useAuth();
+  const navigate = useNavigate();
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      navigate('/login');
+    }
+  };
 
   if (!user || user.role !== 'admin') {
     return <Navigate to="/login" replace />;
@@ -182,7 +193,7 @@ const AdminDashboard: React.FC = () => {
                 <p className="text-sm font-medium">{user.full_name}</p>
                 <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
               </div>
-              <Button variant="outline" size="sm" onClick={logout}>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
               </Button>
