@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -1595,6 +1596,7 @@ const FacultyReports: React.FC = () => {
 const ProfileManagement: React.FC = () => {
   const { user, profile, logout, refreshProfile } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [profileForm, setProfileForm] = useState({
     full_name: profile?.full_name || "",
@@ -1647,6 +1649,7 @@ const ProfileManagement: React.FC = () => {
         title: "Logged Out",
         description: "You have been successfully logged out.",
       });
+      navigate("/login");
     } catch (error) {
       toast({
         title: "Logout Failed",
@@ -1914,6 +1917,7 @@ const FacultyDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const { user, profile, logout } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Mock data for overview cards
   const overviewStats = {
@@ -1997,6 +2001,7 @@ const FacultyDashboard: React.FC = () => {
                         title: "Logged Out",
                         description: "You have been successfully logged out.",
                       });
+                      navigate("/login");
                     } catch (error) {
                       toast({
                         title: "Logout Failed",
