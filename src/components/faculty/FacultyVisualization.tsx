@@ -130,7 +130,7 @@ const mockFrequencyData = [
   { category: 'Biodiversity Conservation', count: 15, trend: 'stable', percentage: 6.1 }
 ];
 
-export const EntityVisualization: React.FC = () => {
+export const FacultyVisualization: React.FC = () => {
   const [activeTab, setActiveTab] = useState('graph');
   const [selectedNodeType, setSelectedNodeType] = useState('all');
   const [selectedNode, setSelectedNode] = useState<any>(null);

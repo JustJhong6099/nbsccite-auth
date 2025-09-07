@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 import * as d3 from "d3";
 import { FacultyVisualization } from "./FacultyVisualization";
 import { 
@@ -49,7 +50,13 @@ import {
   Target,
   Database,
   Brain,
-  Zap
+  Zap,
+  LogOut,
+  UserCircle,
+  Mail,
+  Phone,
+  MapPin,
+  Briefcase
 } from "lucide-react";
 
 // Interfaces for data types
@@ -1584,8 +1591,329 @@ const FacultyReports: React.FC = () => {
   );
 };
 
+// Profile Management Component
+const ProfileManagement: React.FC = () => {
+  const { user, profile, logout, refreshProfile } = useAuth();
+  const { toast } = useToast();
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    full_name: profile?.full_name || "",
+    email: user?.email || "",
+    phone: (profile as any)?.phone || "",
+    address: (profile as any)?.address || "",
+    department: (profile as any)?.department || "",
+    position: (profile as any)?.position || "",
+    bio: (profile as any)?.bio || "",
+    research_interests: (profile as any)?.research_interests || [],
+  });
+
+  useEffect(() => {
+    if (profile) {
+      setProfileForm({
+        full_name: profile.full_name || "",
+        email: user?.email || "",
+        phone: (profile as any).phone || "",
+        address: (profile as any).address || "",
+        department: (profile as any).department || "",
+        position: (profile as any).position || "",
+        bio: (profile as any).bio || "",
+        research_interests: (profile as any).research_interests || [],
+      });
+    }
+  }, [profile, user]);
+
+  const handleUpdateProfile = async () => {
+    try {
+      // Here you would typically make an API call to update the profile
+      await refreshProfile();
+      setIsEditDialogOpen(false);
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error) {
+      toast({
+        title: "Logout Failed",
+        description: "Failed to logout. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Profile Management</h2>
+          <p className="text-gray-600">Manage your account settings and personal information</p>
+        </div>
+        <Button variant="destructive" onClick={handleLogout} className="flex items-center space-x-2">
+          <LogOut className="w-4 h-4" />
+          <span>Logout</span>
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Profile Overview Card */}
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <UserCircle className="w-5 h-5" />
+              <span>Profile Overview</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-center">
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                  <UserCircle className="w-16 h-16 text-white" />
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <h3 className="text-xl font-semibold text-gray-900">{profile?.full_name || "Faculty Member"}</h3>
+                <p className="text-gray-600">{(profile as any)?.position || "Faculty"}</p>
+                <Badge variant="secondary" className="mt-2">
+                  {(profile as any)?.department || "Department"}
+                </Badge>
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <div className="flex items-center space-x-2 text-sm">
+                  <Mail className="w-4 h-4 text-gray-400" />
+                  <span className="text-gray-600">{user?.email}</span>
+                </div>
+                {(profile as any)?.phone && (
+                  <div className="flex items-center space-x-2 text-sm">
+                    <Phone className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-600">{(profile as any).phone}</span>
+                  </div>
+                )}
+                {(profile as any)?.address && (
+                  <div className="flex items-center space-x-2 text-sm">
+                    <MapPin className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-600">{(profile as any).address}</span>
+                  </div>
+                )}
+              </div>
+
+              <Button 
+                onClick={() => setIsEditDialogOpen(true)} 
+                className="w-full mt-4"
+                variant="outline"
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Profile
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Detailed Information Cards */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Briefcase className="w-5 h-5" />
+                <span>Professional Information</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Department</Label>
+                  <p className="text-gray-900">{(profile as any)?.department || "Not specified"}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Position</Label>
+                  <p className="text-gray-900">{(profile as any)?.position || "Not specified"}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Biography</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-700">
+                {(profile as any)?.bio || "No biography available. Click 'Edit Profile' to add your professional background and interests."}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Research Interests</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {(profile as any)?.research_interests && (profile as any).research_interests.length > 0 ? (
+                  (profile as any).research_interests.map((interest: string, index: number) => (
+                    <Badge key={index} variant="outline">
+                      {interest}
+                    </Badge>
+                  ))
+                ) : (
+                  <p className="text-gray-600">No research interests specified</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>
+              Update your personal and professional information
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="full_name">Full Name</Label>
+                <Input
+                  id="full_name"
+                  value={profileForm.full_name}
+                  onChange={(e) => setProfileForm({...profileForm, full_name: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  value={profileForm.email}
+                  disabled
+                  className="bg-gray-100"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  value={profileForm.phone}
+                  onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  value={profileForm.address}
+                  onChange={(e) => setProfileForm({...profileForm, address: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="department">Department</Label>
+                <Select 
+                  value={profileForm.department} 
+                  onValueChange={(value) => setProfileForm({...profileForm, department: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Computer Science">Computer Science</SelectItem>
+                    <SelectItem value="Engineering">Engineering</SelectItem>
+                    <SelectItem value="Mathematics">Mathematics</SelectItem>
+                    <SelectItem value="Physics">Physics</SelectItem>
+                    <SelectItem value="Chemistry">Chemistry</SelectItem>
+                    <SelectItem value="Biology">Biology</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="position">Position</Label>
+                <Select 
+                  value={profileForm.position} 
+                  onValueChange={(value) => setProfileForm({...profileForm, position: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select position" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Professor">Professor</SelectItem>
+                    <SelectItem value="Associate Professor">Associate Professor</SelectItem>
+                    <SelectItem value="Assistant Professor">Assistant Professor</SelectItem>
+                    <SelectItem value="Lecturer">Lecturer</SelectItem>
+                    <SelectItem value="Instructor">Instructor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bio">Biography</Label>
+              <Textarea
+                id="bio"
+                placeholder="Tell us about your background, expertise, and interests..."
+                className="min-h-32"
+                value={profileForm.bio}
+                onChange={(e) => setProfileForm({...profileForm, bio: e.target.value})}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="research_interests">Research Interests (comma-separated)</Label>
+              <Input
+                id="research_interests"
+                placeholder="Machine Learning, Data Science, Computer Vision"
+                value={profileForm.research_interests.join(", ")}
+                onChange={(e) => setProfileForm({
+                  ...profileForm, 
+                  research_interests: e.target.value.split(",").map(item => item.trim()).filter(Boolean)
+                })}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateProfile}>
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
 const FacultyDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const { user, profile, logout } = useAuth();
+  const { toast } = useToast();
 
   // Mock data for overview cards
   const overviewStats = {
@@ -1633,7 +1961,7 @@ const FacultyDashboard: React.FC = () => {
               Manage research abstracts, review submissions, and analyze academic trends
             </p>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
             <Badge variant="secondary" className="px-3 py-1">
               <Users className="w-4 h-4 mr-1" />
               Faculty Portal
@@ -1642,12 +1970,54 @@ const FacultyDashboard: React.FC = () => {
               <Calendar className="w-4 h-4 mr-1" />
               Academic Year 2024-2025
             </Badge>
+            
+            {/* User Profile Dropdown */}
+            <div className="flex items-center space-x-3 border-l pl-4">
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-900">{profile?.full_name || "Faculty Member"}</p>
+                <p className="text-xs text-gray-600">{user?.email}</p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setActiveTab("profile")}
+                  className="flex items-center space-x-1"
+                >
+                  <UserCircle className="w-4 h-4" />
+                  <span className="hidden sm:inline">Profile</span>
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await logout();
+                      toast({
+                        title: "Logged Out",
+                        description: "You have been successfully logged out.",
+                      });
+                    } catch (error) {
+                      toast({
+                        title: "Logout Failed",
+                        description: "Failed to logout. Please try again.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className="flex items-center space-x-1"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Logout</span>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:w-fit lg:grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7 lg:w-fit lg:grid-cols-7">
             <TabsTrigger value="overview" className="flex items-center space-x-2">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -1671,6 +2041,10 @@ const FacultyDashboard: React.FC = () => {
             <TabsTrigger value="reports" className="flex items-center space-x-2">
               <FileBarChart className="w-4 h-4" />
               <span className="hidden sm:inline">Reports</span>
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="flex items-center space-x-2">
+              <UserCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">Profile</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1868,6 +2242,10 @@ const FacultyDashboard: React.FC = () => {
 
           <TabsContent value="reports">
             <FacultyReports />
+          </TabsContent>
+
+          <TabsContent value="profile">
+            <ProfileManagement />
           </TabsContent>
         </Tabs>
       </div>
