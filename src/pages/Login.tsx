@@ -35,7 +35,7 @@ const Login: React.FC = () => {
       } else if (user.role === 'student') {
         navigate("/student-dashboard");
       } else if (user.role === 'faculty') {
-        navigate("/student-dashboard"); // Faculty can also use student dashboard for now
+        navigate("/faculty-dashboard");
       } else {
         navigate("/"); // Fallback to homepage
       }
