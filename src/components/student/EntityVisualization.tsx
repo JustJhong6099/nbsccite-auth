@@ -8,22 +8,8 @@ import {
   GitBranch, 
   Maximize2, 
   Download, 
-  Filter,
-  Search,
-  Eye,
-  Layers,
   Network,
-  Zap,
-  X,
-  FileText,
-  Save,
-  Send,
-  AlertCircle,
-  CheckCircle,
-  Upload,
-  Camera,
-  Scan,
-  Loader2
+  Zap
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import * as d3 from 'd3';
@@ -101,23 +87,6 @@ const mockEntityData = {
   ]
 };
 
-// Mock tag cloud data
-const mockTagCloud = [
-  { text: 'AI', weight: 45, category: 'technology' },
-  { text: 'machine learning', weight: 38, category: 'technology' },
-  { text: 'satellite', weight: 35, category: 'technology' },
-  { text: 'monitoring', weight: 32, category: 'technology' },
-  { text: 'sustainable', weight: 30, category: 'technology' },
-  { text: 'infrastructure', weight: 28, category: 'technology' },
-  { text: 'irrigation', weight: 25, category: 'technology' },
-  { text: 'bamboo', weight: 24, category: 'technology' },
-  { text: 'citizen', weight: 22, category: 'technology' },
-  { text: 'biodiversity', weight: 20, category: 'technology' },
-  { text: 'mobile', weight: 18, category: 'technology' },
-  { text: 'mapping', weight: 16, category: 'technology' },
-  { text: 'crowdsourced', weight: 15, category: 'technology' }
-];
-
 // Mock frequency data
 const mockFrequencyData = [
   { category: 'AI & Machine Learning', count: 45, trend: 'up', percentage: 18.2 },
@@ -132,7 +101,6 @@ const mockFrequencyData = [
 
 export const EntityVisualization: React.FC = () => {
   const [activeTab, setActiveTab] = useState('graph');
-  const [selectedNodeType, setSelectedNodeType] = useState('all');
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -297,8 +265,11 @@ export const EntityVisualization: React.FC = () => {
     const handleResize = () => {
       const container = svgRef.current?.parentElement;
       if (container) {
+        // Calculate width for 2/3 of the container in lg screens
+        const containerWidth = container.clientWidth;
+        const leftPaneWidth = window.innerWidth >= 1024 ? containerWidth * 0.66 : containerWidth;
         setDimensions({
-          width: container.clientWidth,
+          width: leftPaneWidth - 24, // Account for padding
           height: 600
         });
       }
@@ -308,21 +279,6 @@ export const EntityVisualization: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  const getNodeTypeColor = (type: string) => {
-    switch (type) {
-      case 'technology': return 'bg-blue-100 text-blue-800';
-      case 'domain': return 'bg-green-100 text-green-800';
-      case 'paper': return 'bg-orange-100 text-orange-800';
-      case 'author': return 'bg-red-100 text-red-800';
-      case 'institution': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const filteredNodes = selectedNodeType === 'all' 
-    ? mockEntityData.nodes 
-    : mockEntityData.nodes.filter(node => node.type === selectedNodeType);
 
   return (
     <div className="space-y-6">
@@ -344,18 +300,10 @@ export const EntityVisualization: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="graph" className="flex items-center gap-2">
             <GitBranch className="h-4 w-4" />
             Force Graph
-          </TabsTrigger>
-          <TabsTrigger value="nodes" className="flex items-center gap-2">
-            <Layers className="h-4 w-4" />
-            Entity Explorer
-          </TabsTrigger>
-          <TabsTrigger value="cloud" className="flex items-center gap-2">
-            <Eye className="h-4 w-4" />
-            Tag Cloud
           </TabsTrigger>
           <TabsTrigger value="frequency" className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
@@ -372,80 +320,97 @@ export const EntityVisualization: React.FC = () => {
                   <CardTitle>Interactive Entity Graph</CardTitle>
                   <CardDescription>Explore connections between your research entities. Click on nodes to view details.</CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Select value={selectedNodeType} onValueChange={setSelectedNodeType}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Filter nodes" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Entities</SelectItem>
-                      <SelectItem value="technology">Technologies</SelectItem>
-                      <SelectItem value="domain">Domains</SelectItem>
-                      <SelectItem value="paper">Papers</SelectItem>
-                      <SelectItem value="author">Authors</SelectItem>
-                      <SelectItem value="institution">Institutions</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="relative w-full bg-white rounded-lg border overflow-hidden">
-                <svg 
-                  ref={svgRef} 
-                  width={dimensions.width} 
-                  height={dimensions.height}
-                  className="w-full h-full"
-                >
-                </svg>
-                {/* Instructions overlay */}
-                <div className="absolute top-4 left-4 bg-white/90 p-3 rounded-lg shadow-sm border max-w-xs">
-                  <h4 className="text-sm font-medium mb-2">Interactive Controls:</h4>
-                  <ul className="text-xs text-gray-600 space-y-1">
-                    <li>• Click any node to view abstract details</li>
-                    <li>• Drag nodes to rearrange groups</li>
-                    <li>• Scroll to zoom in/out</li>
-                    <li>• Hover to highlight connections</li>
-                  </ul>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left pane - Visualization (2/3 width) */}
+                <div className="lg:col-span-2">
+                  <div className="relative w-full bg-white rounded-lg border overflow-hidden">
+                    <svg 
+                      ref={svgRef} 
+                      width={dimensions.width} 
+                      height={dimensions.height}
+                      className="w-full h-full"
+                    >
+                    </svg>
+                    {/* Instructions overlay */}
+                    <div className="absolute top-4 left-4 bg-white/90 p-3 rounded-lg shadow-sm border max-w-xs">
+                      <h4 className="text-sm font-medium mb-2">Interactive Controls:</h4>
+                      <ul className="text-xs text-gray-600 space-y-1">
+                        <li>• Click any node to view abstract details</li>
+                        <li>• Drag nodes to rearrange groups</li>
+                        <li>• Scroll to zoom in/out</li>
+                        <li>• Hover to highlight connections</li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              
-              {/* Graph Controls */}
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="p-4">
-                  <h4 className="font-medium mb-3">Graph Statistics</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Total Abstracts:</span>
-                      <span className="font-medium">{mockEntityData.abstracts.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Extracted Entities:</span>
-                      <span className="font-medium">{mockEntityData.nodes.filter(n => n.type === 'entity').length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Total Keywords:</span>
-                      <span className="font-medium">{mockEntityData.abstracts.reduce((acc, abs) => acc + abs.keywords.length, 0)}</span>
-                    </div>
-                  </div>
-                </Card>
 
-                <Card className="p-4">
-                  <h4 className="font-medium mb-3">Legend</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full bg-blue-500"></div>
-                      <span className="text-sm">Abstract Centers</span>
+                {/* Right pane - Legend and Statistics (1/3 width) */}
+                <div className="space-y-4">
+                  {/* Graph Statistics */}
+                  <Card className="p-4">
+                    <h4 className="font-medium mb-3">Graph Statistics</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Total Abstracts:</span>
+                        <span className="font-medium">{mockEntityData.abstracts.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Extracted Entities:</span>
+                        <span className="font-medium">{mockEntityData.nodes.filter(n => n.type === 'entity').length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Total Keywords:</span>
+                        <span className="font-medium">{mockEntityData.abstracts.reduce((acc, abs) => acc + abs.keywords.length, 0)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Connections:</span>
+                        <span className="font-medium">{mockEntityData.links.length}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                      <span className="text-sm">Extracted Entities</span>
+                  </Card>
+
+                  {/* Legend */}
+                  <Card className="p-4">
+                    <h4 className="font-medium mb-3">Legend</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+                        <span className="text-sm">Abstract Centers</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                        <span className="text-sm">Extracted Entities</span>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Each blue node represents one abstract with its connected orange entity nodes showing extracted keywords and concepts.
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">
-                      Each blue node represents one abstract with its connected orange entity nodes showing extracted keywords and concepts.
+                  </Card>
+
+                  {/* Abstract List */}
+                  <Card className="p-4">
+                    <h4 className="font-medium mb-3">Abstracts</h4>
+                    <div className="space-y-2">
+                      {mockEntityData.abstracts.map((abstract, index) => (
+                        <div key={abstract.id} className="p-2 bg-gray-50 rounded text-xs">
+                          <div className="font-medium text-blue-600 mb-1">
+                            {abstract.title}
+                          </div>
+                          <div className="text-gray-600 text-xs overflow-hidden" style={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical'
+                          }}>
+                            {abstract.content}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                </Card>
+                  </Card>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -486,101 +451,6 @@ export const EntityVisualization: React.FC = () => {
               </div>
             </DialogContent>
           </Dialog>
-        </TabsContent>
-
-        {/* Entity Explorer Tab */}
-        <TabsContent value="nodes" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Entity Explorer</CardTitle>
-              <CardDescription>Browse and analyze individual entities and their properties</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                {['all', 'technology', 'domain', 'paper', 'author'].map((type) => (
-                  <Button
-                    key={type}
-                    variant={selectedNodeType === type ? 'default' : 'outline'}
-                    onClick={() => setSelectedNodeType(type)}
-                    className="capitalize"
-                  >
-                    {type === 'all' ? 'All Types' : `${type}s`}
-                  </Button>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredNodes.map((node) => (
-                  <Card key={node.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium">{node.label}</h4>
-                        <Badge className={getNodeTypeColor(node.type)}>
-                          {node.type}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div className="flex justify-between">
-                          <span>Connections:</span>
-                          <span>{mockEntityData.links.filter(l => l.source === node.id || l.target === node.id).length}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Relevance:</span>
-                          <div className="flex items-center gap-1">
-                            <div className="w-12 h-1 bg-gray-200 rounded">
-                              <div 
-                                className="h-1 bg-blue-500 rounded"
-                                style={{ width: `${(node.size / 30) * 100}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-xs">{Math.round((node.size / 30) * 100)}%</span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Tag Cloud Tab */}
-        <TabsContent value="cloud" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Research Tag Cloud</CardTitle>
-              <CardDescription>Visual representation of your most used research terms</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-gray-50 rounded-lg p-8 min-h-96 flex items-center justify-center">
-                <div className="text-center space-y-4">
-                  <Eye className="h-16 w-16 text-gray-400 mx-auto" />
-                  <h3 className="text-lg font-medium text-gray-900">Interactive Tag Cloud</h3>
-                  <p className="text-gray-600">
-                    Word cloud visualization showing frequency of terms in your research
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-2 max-w-md">
-                    {mockTagCloud.slice(0, 10).map((tag, index) => (
-                      <Badge 
-                        key={index} 
-                        variant="outline"
-                        className={`text-${Math.floor(tag.weight / 15) + 1}xl ${
-                          tag.category === 'technology' ? 'border-blue-300 text-blue-700' : 'border-green-300 text-green-700'
-                        }`}
-                        style={{ 
-                          fontSize: `${Math.max(12, tag.weight / 3)}px`,
-                          opacity: tag.weight / 50
-                        }}
-                      >
-                        {tag.text}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         {/* Frequency Chart Tab */}

@@ -11,8 +11,7 @@ import {
   FileText, 
   Save, 
   Send, 
-  AlertCircle, 
-  CheckCircle,
+  AlertCircle,
   Eye,
   Camera,
   Scan,
@@ -27,7 +26,6 @@ interface AbstractFormData {
   abstract: string;
   keywords: string[];
   year: string;
-  file?: File;
 }
 
 export const AbstractSubmission: React.FC = () => {
@@ -60,14 +58,6 @@ export const AbstractSubmission: React.FC = () => {
       ...prev,
       keywords: prev.keywords.filter(k => k !== keyword)
     }));
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setFormData(prev => ({ ...prev, file }));
-      toast.success(`File "${file.name}" uploaded successfully`);
-    }
   };
 
   const handleImageUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,16 +180,6 @@ export const AbstractSubmission: React.FC = () => {
               </div>
             </div>
 
-            {formData.file && (
-              <div>
-                <Label className="text-sm font-medium text-gray-700">Attached File</Label>
-                <div className="mt-2 p-3 bg-blue-50 rounded-lg flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm text-blue-700">{formData.file.name}</span>
-                </div>
-              </div>
-            )}
-
             <div className="flex gap-4">
               <Button onClick={handleSubmit} disabled={isSubmitting} className="flex-1">
                 {isSubmitting ? (
@@ -271,8 +251,8 @@ export const AbstractSubmission: React.FC = () => {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-              <CardDescription>Provide the essential details about your research</CardDescription>
+              <CardTitle>Abstract Submission</CardTitle>
+              <CardDescription>Provide your research details and abstract content</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -304,15 +284,7 @@ export const AbstractSubmission: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Abstract Content</CardTitle>
-              <CardDescription>Write your abstract or use OCR to extract text from an image</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="abstract">Abstract Text *</Label>
                 <Textarea
@@ -400,6 +372,24 @@ export const AbstractSubmission: React.FC = () => {
               <CardDescription>Upload an image containing text to automatically extract and add to your abstract</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* OCR Usage Tips */}
+              <Card className="border-blue-200 bg-blue-50">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-medium text-blue-900 text-sm">OCR Tips</h4>
+                      <ul className="mt-2 text-xs text-blue-800 space-y-1">
+                        <li>• Use clear, high-resolution images</li>
+                        <li>• Ensure good contrast between text and background</li>
+                        <li>• Avoid blurry or skewed images</li>
+                        <li>• Review extracted text for accuracy</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                 <Camera className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <div className="space-y-2">
@@ -470,61 +460,6 @@ export const AbstractSubmission: React.FC = () => {
                   </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>File Upload (Optional)</CardTitle>
-              <CardDescription>Upload your research paper or supporting documents</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">
-                    Upload your research document
-                  </p>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    id="file-upload"
-                  />
-                  <Button variant="outline" onClick={() => document.getElementById('file-upload')?.click()}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Choose File
-                  </Button>
-                  <p className="text-xs text-gray-500">
-                    Supports PDF, DOC, DOCX (Max 10MB)
-                  </p>
-                </div>
-              </div>
-              {formData.file && (
-                <div className="mt-4 p-3 bg-green-50 rounded-lg flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm text-green-700">File uploaded: {formData.file.name}</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* OCR Usage Tips */}
-          <Card className="border-blue-200 bg-blue-50">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-medium text-blue-900 text-sm">OCR Tips</h4>
-                  <ul className="mt-2 text-xs text-blue-800 space-y-1">
-                    <li>• Use clear, high-resolution images</li>
-                    <li>• Ensure good contrast between text and background</li>
-                    <li>• Avoid blurry or skewed images</li>
-                    <li>• Review extracted text for accuracy</li>
-                  </ul>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>

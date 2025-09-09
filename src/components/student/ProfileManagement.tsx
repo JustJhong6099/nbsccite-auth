@@ -21,7 +21,6 @@ import {
   Camera,
   Eye,
   EyeOff,
-  Bell,
   Shield,
   Globe,
   Download,
@@ -88,14 +87,6 @@ const mockUserProfile = {
     showPublications: true,
     allowCollaboration: true,
     indexInSearch: true
-  },
-  notifications: {
-    emailDigest: true,
-    paperReminders: true,
-    collaborationRequests: true,
-    systemUpdates: false,
-    researchUpdates: true,
-    weeklyDigest: true
   }
 };
 
@@ -187,16 +178,6 @@ export const ProfileManagement: React.FC = () => {
     }));
   };
 
-  const updateNotificationField = (field: string, value: boolean) => {
-    setProfile(prev => ({
-      ...prev,
-      notifications: {
-        ...prev.notifications,
-        [field]: value
-      }
-    }));
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -282,7 +263,7 @@ export const ProfileManagement: React.FC = () => {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="personal" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Personal
@@ -298,10 +279,6 @@ export const ProfileManagement: React.FC = () => {
           <TabsTrigger value="privacy" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
             Privacy
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            Notifications
           </TabsTrigger>
         </TabsList>
 
@@ -707,95 +684,6 @@ export const ProfileManagement: React.FC = () => {
                     onCheckedChange={(checked) => updatePrivacyField('indexInSearch', checked)}
                   />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notifications Tab */}
-        <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Settings</CardTitle>
-              <CardDescription>Manage how and when you receive notifications</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Email Digest</h4>
-                    <p className="text-sm text-gray-600">Receive daily digest of platform activity</p>
-                  </div>
-                  <Switch
-                    checked={profile.notifications.emailDigest}
-                    onCheckedChange={(checked) => updateNotificationField('emailDigest', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Paper Submission Reminders</h4>
-                    <p className="text-sm text-gray-600">Get reminded about submission deadlines</p>
-                  </div>
-                  <Switch
-                    checked={profile.notifications.paperReminders}
-                    onCheckedChange={(checked) => updateNotificationField('paperReminders', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Collaboration Requests</h4>
-                    <p className="text-sm text-gray-600">Notifications for collaboration invitations</p>
-                  </div>
-                  <Switch
-                    checked={profile.notifications.collaborationRequests}
-                    onCheckedChange={(checked) => updateNotificationField('collaborationRequests', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">System Updates</h4>
-                    <p className="text-sm text-gray-600">Platform maintenance and feature announcements</p>
-                  </div>
-                  <Switch
-                    checked={profile.notifications.systemUpdates}
-                    onCheckedChange={(checked) => updateNotificationField('systemUpdates', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Research Updates</h4>
-                    <p className="text-sm text-gray-600">New papers in your research areas</p>
-                  </div>
-                  <Switch
-                    checked={profile.notifications.researchUpdates}
-                    onCheckedChange={(checked) => updateNotificationField('researchUpdates', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Weekly Research Digest</h4>
-                    <p className="text-sm text-gray-600">Weekly summary of relevant research and insights</p>
-                  </div>
-                  <Switch
-                    checked={profile.notifications.weeklyDigest}
-                    onCheckedChange={(checked) => updateNotificationField('weeklyDigest', checked)}
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <Button variant="destructive" className="flex items-center gap-2">
-                  <Trash2 className="h-4 w-4" />
-                  Delete Account
-                </Button>
-                <p className="text-sm text-gray-500 mt-2">
-                  Permanently delete your account and all associated data. This action cannot be undone.
-                </p>
               </div>
             </CardContent>
           </Card>

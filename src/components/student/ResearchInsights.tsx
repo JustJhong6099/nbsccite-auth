@@ -10,13 +10,8 @@ import {
   Minus,
   Brain,
   Target,
-  Award,
-  BookOpen,
   Calendar,
-  Users,
-  Lightbulb,
   BarChart3,
-  PieChart,
   Activity
 } from "lucide-react";
 
@@ -129,72 +124,6 @@ const mockTrendAnalysis = [
   }
 ];
 
-const mockCollaborationData = [
-  {
-    collaborator: 'Dr. Sarah Johnson',
-    institution: 'NBSC-ICS',
-    sharedThemes: ['Educational Technology', 'Machine Learning'],
-    jointPapers: 3,
-    connectionStrength: 'strong'
-  },
-  {
-    collaborator: 'Prof. Michael Chen',
-    institution: 'Tech University',
-    sharedThemes: ['Web Development', 'Database Systems'],
-    jointPapers: 2,
-    connectionStrength: 'medium'
-  },
-  {
-    collaborator: 'Dr. Aisha Patel',
-    institution: 'Health Institute',
-    sharedThemes: ['Mobile Development', 'Healthcare Technology'],
-    jointPapers: 2,
-    connectionStrength: 'medium'
-  },
-  {
-    collaborator: 'Research Group Alpha',
-    institution: 'NBSC-ICS',
-    sharedThemes: ['AI Research', 'Data Science'],
-    jointPapers: 5,
-    connectionStrength: 'strong'
-  }
-];
-
-const mockRecommendations = [
-  {
-    type: 'research_direction',
-    title: 'Explore Quantum Computing Applications',
-    description: 'Based on your AI and educational technology work, consider exploring quantum computing applications in machine learning algorithms.',
-    confidence: 85,
-    impact: 'high',
-    effort: 'medium'
-  },
-  {
-    type: 'collaboration',
-    title: 'Connect with IoT Research Groups',
-    description: 'Your mobile health applications could benefit from IoT integration. Consider collaborating with hardware-focused researchers.',
-    confidence: 78,
-    impact: 'medium',
-    effort: 'low'
-  },
-  {
-    type: 'skill_development',
-    title: 'Advanced Security Frameworks',
-    description: 'Security is becoming increasingly important in your research areas. Consider deepening your knowledge in cybersecurity.',
-    confidence: 92,
-    impact: 'high',
-    effort: 'medium'
-  },
-  {
-    type: 'publication',
-    title: 'Cross-Domain Review Paper',
-    description: 'Your diverse research portfolio would make an excellent foundation for a comprehensive review paper on AI in education.',
-    confidence: 88,
-    impact: 'high',
-    effort: 'high'
-  }
-];
-
 export const ResearchInsights: React.FC = () => {
   const [activeTab, setActiveTab] = useState('themes');
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
@@ -213,15 +142,6 @@ export const ResearchInsights: React.FC = () => {
       case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
       case 'low': return 'bg-gray-100 text-gray-800 border-gray-300';
       default: return 'bg-gray-100 text-gray-800 border-gray-300';
-    }
-  };
-
-  const getConnectionStrengthColor = (strength: string) => {
-    switch (strength) {
-      case 'strong': return 'bg-green-500';
-      case 'medium': return 'bg-yellow-500';
-      case 'weak': return 'bg-red-500';
-      default: return 'bg-gray-500';
     }
   };
 
@@ -245,7 +165,7 @@ export const ResearchInsights: React.FC = () => {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -269,34 +189,10 @@ export const ResearchInsights: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Collaborators</p>
-                <p className="text-2xl font-bold">{mockCollaborationData.length}</p>
-              </div>
-              <Users className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Opportunities</p>
-                <p className="text-2xl font-bold">{mockRecommendations.length}</p>
-              </div>
-              <Lightbulb className="h-8 w-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="themes" className="flex items-center gap-2">
             <Brain className="h-4 w-4" />
             Research Themes
@@ -304,14 +200,6 @@ export const ResearchInsights: React.FC = () => {
           <TabsTrigger value="trends" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
             Trend Analysis
-          </TabsTrigger>
-          <TabsTrigger value="collaboration" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Collaboration
-          </TabsTrigger>
-          <TabsTrigger value="recommendations" className="flex items-center gap-2">
-            <Lightbulb className="h-4 w-4" />
-            Recommendations
           </TabsTrigger>
         </TabsList>
 
@@ -446,131 +334,6 @@ export const ResearchInsights: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Collaboration Tab */}
-        <TabsContent value="collaboration" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Research Collaboration Network</CardTitle>
-              <CardDescription>
-                Your research connections and collaborative opportunities
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4">
-                {mockCollaborationData.map((collab, index) => (
-                  <Card key={index} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold">{collab.collaborator}</h3>
-                          <p className="text-sm text-gray-600">{collab.institution}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${getConnectionStrengthColor(collab.connectionStrength)}`}></div>
-                          <span className="text-sm capitalize">{collab.connectionStrength}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="font-medium text-sm text-gray-700 mb-2">Shared Themes</h4>
-                          <div className="flex flex-wrap gap-1">
-                            {collab.sharedThemes.map((theme, themeIndex) => (
-                              <Badge key={themeIndex} variant="outline" className="text-xs">
-                                {theme}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h4 className="font-medium text-sm text-gray-700 mb-2">Joint Publications</h4>
-                          <div className="flex items-center gap-2">
-                            <BookOpen className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm">{collab.jointPapers} papers</span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Recommendations Tab */}
-        <TabsContent value="recommendations" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>AI-Powered Research Recommendations</CardTitle>
-              <CardDescription>
-                Personalized suggestions based on your research portfolio and trends
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4">
-                {mockRecommendations.map((rec, index) => (
-                  <Card key={index} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            {rec.type === 'research_direction' && <Brain className="h-5 w-5 text-blue-600" />}
-                            {rec.type === 'collaboration' && <Users className="h-5 w-5 text-blue-600" />}
-                            {rec.type === 'skill_development' && <Award className="h-5 w-5 text-blue-600" />}
-                            {rec.type === 'publication' && <BookOpen className="h-5 w-5 text-blue-600" />}
-                          </div>
-                          <div>
-                            <h3 className="font-semibold">{rec.title}</h3>
-                            <Badge variant="outline" className="text-xs mt-1">
-                              {rec.type.replace('_', ' ')}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm text-gray-600">Confidence</div>
-                          <div className="font-semibold text-blue-600">{rec.confidence}%</div>
-                        </div>
-                      </div>
-
-                      <p className="text-gray-600 mb-4">{rec.description}</p>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <div className="text-sm text-gray-600">Expected Impact</div>
-                          <Badge variant={rec.impact === 'high' ? 'default' : rec.impact === 'medium' ? 'secondary' : 'outline'}>
-                            {rec.impact}
-                          </Badge>
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-600">Effort Required</div>
-                          <Badge variant={rec.effort === 'low' ? 'default' : rec.effort === 'medium' ? 'secondary' : 'outline'}>
-                            {rec.effort}
-                          </Badge>
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-600">Confidence</div>
-                          <Progress value={rec.confidence} className="h-2" />
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2 mt-4">
-                        <Button size="sm">
-                          Learn More
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          Save for Later
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
                 ))}
               </div>
             </CardContent>
