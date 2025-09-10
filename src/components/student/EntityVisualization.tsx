@@ -390,24 +390,19 @@ export const EntityVisualization: React.FC = () => {
                     </div>
                   </Card>
 
-                  {/* Abstract List */}
+                  {/* Quick Info */}
                   <Card className="p-4">
-                    <h4 className="font-medium mb-3">Abstracts</h4>
-                    <div className="space-y-2">
-                      {mockEntityData.abstracts.map((abstract, index) => (
-                        <div key={abstract.id} className="p-2 bg-gray-50 rounded text-xs">
-                          <div className="font-medium text-blue-600 mb-1">
-                            {abstract.title}
-                          </div>
-                          <div className="text-gray-600 text-xs overflow-hidden" style={{
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical'
-                          }}>
-                            {abstract.content}
-                          </div>
-                        </div>
-                      ))}
+                    <h4 className="font-medium mb-3">Quick Info</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="p-2 bg-blue-50 rounded text-blue-800">
+                        <strong>Abstracts:</strong> {mockEntityData.abstracts.length} research papers
+                      </div>
+                      <div className="p-2 bg-orange-50 rounded text-orange-800">
+                        <strong>Entities:</strong> {mockEntityData.nodes.filter(n => n.type === 'entity').length} unique keywords
+                      </div>
+                      <div className="p-2 bg-green-50 rounded text-green-800">
+                        <strong>Connections:</strong> {mockEntityData.links.length} relationships
+                      </div>
                     </div>
                   </Card>
                 </div>
