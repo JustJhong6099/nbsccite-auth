@@ -795,377 +795,6 @@ const StudentAbstractReview: React.FC = () => {
   );
 };
 
-// Entity Validation Component
-const EntityValidation: React.FC = () => {
-  const { toast } = useToast();
-  const [entities, setEntities] = useState<Entity[]>([
-    {
-      id: "1",
-      value: "Machine Learning",
-      type: "technology",
-      confidence: 0.95,
-      status: "validated",
-      source: "abstract-1",
-      sourceTitle: "ML Applications in Agriculture",
-      extractedBy: "nlp",
-      validatedBy: "Dr. Maria Santos",
-      validatedAt: "2024-09-07",
-      category: "Artificial Intelligence",
-    },
-    {
-      id: "2",
-      value: "Precision Agriculture",
-      type: "research-field",
-      confidence: 0.88,
-      status: "pending",
-      source: "abstract-1",
-      sourceTitle: "ML Applications in Agriculture",
-      extractedBy: "nlp",
-      category: "Agriculture Technology",
-    },
-    {
-      id: "3",
-      value: "Deep Neural Networks",
-      type: "methodology",
-      confidence: 0.92,
-      status: "pending",
-      source: "abstract-2",
-      sourceTitle: "Medical Image Analysis",
-      extractedBy: "nlp",
-      alternatives: ["Deep Learning", "Neural Networks", "CNN"],
-    }
-  ]);
-
-  const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
-  const [isValidationDialogOpen, setIsValidationDialogOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-
-  const [validationForm, setValidationForm] = useState({
-    status: "",
-    value: "",
-    type: "",
-    category: "",
-    alternatives: "",
-    notes: ""
-  });
-
-  const openValidationDialog = (entity: Entity) => {
-    setSelectedEntity(entity);
-    setValidationForm({
-      status: entity.status,
-      value: entity.value,
-      type: entity.type,
-      category: entity.category || "",
-      alternatives: entity.alternatives?.join(", ") || "",
-      notes: entity.notes || ""
-    });
-    setIsValidationDialogOpen(true);
-  };
-
-  const handleValidateEntity = () => {
-    if (!selectedEntity) return;
-
-    const updatedEntities = entities.map(entity =>
-      entity.id === selectedEntity.id
-        ? {
-            ...entity,
-            status: validationForm.status as any,
-            value: validationForm.value,
-            type: validationForm.type as any,
-            category: validationForm.category,
-            alternatives: validationForm.alternatives.split(",").map(alt => alt.trim()).filter(Boolean),
-            notes: validationForm.notes,
-            validatedBy: "Dr. Maria Santos",
-            validatedAt: new Date().toISOString().split('T')[0],
-          }
-        : entity
-    );
-
-    setEntities(updatedEntities);
-    setIsValidationDialogOpen(false);
-    setSelectedEntity(null);
-    
-    toast({
-      title: "Entity Validated",
-      description: `"${validationForm.value}" has been ${validationForm.status} successfully.`,
-    });
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "validated": return "default";
-      case "pending": return "secondary";
-      case "rejected": return "destructive";
-      case "modified": return "outline";
-      default: return "secondary";
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "keyword": return <Tag className="w-4 h-4" />;
-      case "research-field": return <BookOpen className="w-4 h-4" />;
-      case "technology": return <Zap className="w-4 h-4" />;
-      case "methodology": return <Brain className="w-4 h-4" />;
-      default: return <Tag className="w-4 h-4" />;
-    }
-  };
-
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.9) return "text-green-600 bg-green-50";
-    if (confidence >= 0.8) return "text-yellow-600 bg-yellow-50";
-    return "text-red-600 bg-red-50";
-  };
-
-  const filteredEntities = entities.filter(entity => {
-    const matchesSearch = entity.value.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === "all" || entity.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
-
-  const statsData = {
-    total: entities.length,
-    pending: entities.filter(e => e.status === "pending").length,
-    validated: entities.filter(e => e.status === "validated").length,
-    rejected: entities.filter(e => e.status === "rejected").length,
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Entity Validation</h2>
-          <p className="text-gray-600">Verify and validate extracted research entities</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Entities</p>
-                <p className="text-2xl font-bold text-gray-900">{statsData.total}</p>
-              </div>
-              <Database className="w-8 h-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-orange-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-gray-900">{statsData.pending}</p>
-              </div>
-              <AlertCircle className="w-8 h-8 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Validated</p>
-                <p className="text-2xl font-bold text-gray-900">{statsData.validated}</p>
-              </div>
-              <Check className="w-8 h-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Rejected</p>
-                <p className="text-2xl font-bold text-gray-900">{statsData.rejected}</p>
-              </div>
-              <X className="w-8 h-8 text-red-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Filter & Search</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="Search entities..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="validated">Validated</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Entities for Validation ({filteredEntities.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Entity</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>Confidence</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredEntities.map((entity) => (
-                <TableRow key={entity.id}>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="font-medium">{entity.value}</div>
-                      {entity.category && (
-                        <Badge variant="outline" className="text-xs">
-                          {entity.category}
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="flex items-center space-x-1 w-fit">
-                      {getTypeIcon(entity.type)}
-                      <span>{entity.type.replace("-", " ")}</span>
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">{entity.sourceTitle}</div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={`${getConfidenceColor(entity.confidence)} border-0`}>
-                      {(entity.confidence * 100).toFixed(0)}%
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusColor(entity.status)}>
-                      {entity.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openValidationDialog(entity)}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <Dialog open={isValidationDialogOpen} onOpenChange={setIsValidationDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Validate Entity</DialogTitle>
-          </DialogHeader>
-          
-          {selectedEntity && (
-            <div className="space-y-4 py-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="space-y-2">
-                  <div><strong>Source:</strong> {selectedEntity.sourceTitle}</div>
-                  <div><strong>Confidence:</strong> {(selectedEntity.confidence * 100).toFixed(0)}%</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={validationForm.status} onValueChange={(value) => setValidationForm({...validationForm, status: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="validated">Validated</SelectItem>
-                      <SelectItem value="modified">Modified</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <Select value={validationForm.type} onValueChange={(value) => setValidationForm({...validationForm, type: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="keyword">Keyword</SelectItem>
-                      <SelectItem value="research-field">Research Field</SelectItem>
-                      <SelectItem value="technology">Technology</SelectItem>
-                      <SelectItem value="methodology">Methodology</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Entity Value</Label>
-                <Input
-                  value={validationForm.value}
-                  onChange={(e) => setValidationForm({...validationForm, value: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Input
-                  placeholder="e.g., Artificial Intelligence"
-                  value={validationForm.category}
-                  onChange={(e) => setValidationForm({...validationForm, category: e.target.value})}
-                />
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button variant="outline" onClick={() => setIsValidationDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleValidateEntity}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Validation
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
 // Faculty Reports Component
 const FacultyReports: React.FC = () => {
   const { toast } = useToast();
@@ -2022,7 +1651,7 @@ const FacultyDashboard: React.FC = () => {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7 lg:w-fit lg:grid-cols-7">
+          <TabsList className="grid w-full grid-cols-6 lg:w-fit lg:grid-cols-6">
             <TabsTrigger value="overview" className="flex items-center space-x-2">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -2034,10 +1663,6 @@ const FacultyDashboard: React.FC = () => {
             <TabsTrigger value="reviews" className="flex items-center space-x-2">
               <FileText className="w-4 h-4" />
               <span className="hidden sm:inline">Student Reviews</span>
-            </TabsTrigger>
-            <TabsTrigger value="validation" className="flex items-center space-x-2">
-              <CheckCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">Entity Validation</span>
             </TabsTrigger>
             <TabsTrigger value="visualization" className="flex items-center space-x-2">
               <TrendingUp className="w-4 h-4" />
@@ -2056,7 +1681,7 @@ const FacultyDashboard: React.FC = () => {
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Card className="border-l-4 border-l-blue-500">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium text-gray-600">
@@ -2091,25 +1716,6 @@ const FacultyDashboard: React.FC = () => {
                   </div>
                   <p className="text-sm text-gray-500 mt-1">
                     Avg: {overviewStats.avgReviewTime}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4 border-l-green-500">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">
-                    Validated Entities
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-gray-900">
-                      {overviewStats.validatedEntities}
-                    </span>
-                    <CheckCircle className="w-8 h-8 text-green-500" />
-                  </div>
-                  <p className="text-sm text-green-600 mt-1">
-                    98% accuracy
                   </p>
                 </CardContent>
               </Card>
@@ -2190,7 +1796,7 @@ const FacultyDashboard: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <Button 
                     variant="outline" 
                     className="h-20 flex-col space-y-2"
@@ -2206,14 +1812,6 @@ const FacultyDashboard: React.FC = () => {
                   >
                     <FileText className="w-6 h-6" />
                     <span>Review Submissions</span>
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="h-20 flex-col space-y-2"
-                    onClick={() => setActiveTab("validation")}
-                  >
-                    <CheckCircle className="w-6 h-6" />
-                    <span>Validate Entities</span>
                   </Button>
                   <Button 
                     variant="outline" 
@@ -2235,10 +1833,6 @@ const FacultyDashboard: React.FC = () => {
 
           <TabsContent value="reviews">
             <StudentAbstractReview />
-          </TabsContent>
-
-          <TabsContent value="validation">
-            <EntityValidation />
           </TabsContent>
 
           <TabsContent value="visualization">
