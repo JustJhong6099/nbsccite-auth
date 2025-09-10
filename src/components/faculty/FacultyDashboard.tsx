@@ -1295,10 +1295,6 @@ const ProfileManagement: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">Profile Management</h2>
           <p className="text-gray-600">Manage your account settings and personal information</p>
         </div>
-        <Button variant="destructive" onClick={handleLogout} className="flex items-center space-x-2">
-          <LogOut className="w-4 h-4" />
-          <span>Logout</span>
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
