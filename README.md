@@ -7,6 +7,9 @@
 ![License](https://img.shields.io/badge/License-Academic-lightgrey)
 ![Status](https://img.shields.io/badge/Status-In%20Development-orange)
 
+## 🌐 Live Demo
+**🚀 [View Live Application](https://www.nbsc-xtract.tech/)**
+
 ---
 
 ## 📜 Project Overview  
