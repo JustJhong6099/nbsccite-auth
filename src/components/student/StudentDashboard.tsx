@@ -84,13 +84,18 @@ export const StudentDashboard: React.FC = () => {
 
   const handleLogout = async () => {
     try {
+      console.log('🔄 Dashboard: Starting logout...');
       await logout();
-      // Redirect to login page after successful logout
-      navigate('/login');
+      console.log('✅ Dashboard: Logout successful, redirecting...');
+      navigate('/login', { replace: true });
     } catch (error) {
-      console.error('Error logging out:', error);
-      // Still try to redirect even if there's an error, since user might be logged out
-      navigate('/login');
+      console.warn('⚠️ Dashboard: Logout had issues but continuing:', error);
+      // Force redirect even if logout had issues
+      // Clear any cached data and redirect
+      window.localStorage.clear();
+      navigate('/login', { replace: true });
+      // Force a page reload to clear any remaining state
+      window.location.reload();
     }
   };
 
