@@ -24,6 +24,7 @@ import { EntityVisualization } from "@/components/student/EntityVisualization";
 import { ResearchInsights } from "@/components/student/ResearchInsights";
 import { ProfileManagement } from "@/components/student/ProfileManagement";
 import { MyAbstracts } from "@/components/student/MyAbstracts";
+import { useAuth } from "@/context/AuthContext";
 
 // Mock student data
 const mockStudent = {
@@ -44,6 +45,7 @@ const mockStudent = {
 
 const StudentDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -56,7 +58,7 @@ const StudentDashboard: React.FC = () => {
                 <User className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Welcome back, {mockStudent.full_name}!</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Welcome back, {user?.full_name || 'Student'}!</h1>
                 <p className="text-gray-600">{mockStudent.program} • {mockStudent.year_level}</p>
               </div>
             </div>

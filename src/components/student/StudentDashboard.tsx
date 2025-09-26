@@ -79,7 +79,7 @@ const mockStudentData = {
 
 export const StudentDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const { logout } = useAuth();
+  const { logout, user, profile } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -120,7 +120,7 @@ export const StudentDashboard: React.FC = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Student Dashboard</h1>
-            <p className="text-gray-600">Welcome back, {mockStudentData.name}</p>
+            <p className="text-gray-600">Welcome back, {user?.full_name || 'Student'}</p>
           </div>
           <div className="flex items-center gap-4">
             <Button>
@@ -134,7 +134,7 @@ export const StudentDashboard: React.FC = () => {
             <Avatar className="h-10 w-10">
               <AvatarImage src={mockStudentData.avatar || undefined} />
               <AvatarFallback>
-                {mockStudentData.name.split(' ').map(n => n[0]).join('')}
+                {user?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
               </AvatarFallback>
             </Avatar>
           </div>
@@ -181,12 +181,12 @@ export const StudentDashboard: React.FC = () => {
                   <Avatar className="h-20 w-20">
                     <AvatarImage src={mockStudentData.avatar || undefined} />
                     <AvatarFallback className="text-xl">
-                      {mockStudentData.name.split(' ').map(n => n[0]).join('')}
+                      {user?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   
                   <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-gray-900">{mockStudentData.name}</h2>
+                    <h2 className="text-2xl font-bold text-gray-900">{user?.full_name || 'Student'}</h2>
                     <p className="text-gray-600">{mockStudentData.program}</p>
                     <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                       <span>ID: {mockStudentData.studentId}</span>
