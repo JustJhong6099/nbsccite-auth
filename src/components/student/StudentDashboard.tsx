@@ -27,6 +27,7 @@ import { MyAbstracts } from './MyAbstracts';
 import { EntityVisualization } from './EntityVisualization';
 import { ResearchInsights } from './ResearchInsights';
 import { ProfileManagement } from './ProfileManagement';
+import { AbstractUploadAndVisualization } from './AbstractUploadAndVisualization';
 
 // Mock student data
 const mockStudentData = {
@@ -78,7 +79,7 @@ const mockStudentData = {
 
 export const StudentDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const { logout } = useAuth();
+  const { logout, user, profile } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -119,7 +120,7 @@ export const StudentDashboard: React.FC = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Student Dashboard</h1>
-            <p className="text-gray-600">Welcome back, {mockStudentData.name}</p>
+            <p className="text-gray-600">Welcome back, {user?.full_name || 'Student'}</p>
           </div>
           <div className="flex items-center gap-4">
             <Button>
@@ -133,14 +134,14 @@ export const StudentDashboard: React.FC = () => {
             <Avatar className="h-10 w-10">
               <AvatarImage src={mockStudentData.avatar || undefined} />
               <AvatarFallback>
-                {mockStudentData.name.split(' ').map(n => n[0]).join('')}
+                {user?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
               </AvatarFallback>
             </Avatar>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Overview
@@ -149,13 +150,17 @@ export const StudentDashboard: React.FC = () => {
               <Upload className="h-4 w-4" />
               Submit Abstract
             </TabsTrigger>
-            <TabsTrigger value="abstracts" className="flex items-center gap-2">
+            <TabsTrigger value="upload-analyze" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
+              Upload & Analyze
+            </TabsTrigger>
+            <TabsTrigger value="abstracts" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
               My Abstracts
             </TabsTrigger>
             <TabsTrigger value="visualization" className="flex items-center gap-2">
               <Brain className="h-4 w-4" />
-              Entity Visualization
+              Entity Network
             </TabsTrigger>
             <TabsTrigger value="insights" className="flex items-center gap-2">
               <Lightbulb className="h-4 w-4" />
@@ -176,12 +181,12 @@ export const StudentDashboard: React.FC = () => {
                   <Avatar className="h-20 w-20">
                     <AvatarImage src={mockStudentData.avatar || undefined} />
                     <AvatarFallback className="text-xl">
-                      {mockStudentData.name.split(' ').map(n => n[0]).join('')}
+                      {user?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   
                   <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-gray-900">{mockStudentData.name}</h2>
+                    <h2 className="text-2xl font-bold text-gray-900">{user?.full_name || 'Student'}</h2>
                     <p className="text-gray-600">{mockStudentData.program}</p>
                     <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                       <span>ID: {mockStudentData.studentId}</span>
@@ -293,13 +298,13 @@ export const StudentDashboard: React.FC = () => {
                     <Upload className="h-6 w-6" />
                     Submit New Abstract
                   </Button>
-                  <Button onClick={() => setActiveTab('abstracts')} variant="outline" className="h-20 flex flex-col gap-2">
+                  <Button onClick={() => setActiveTab('upload-analyze')} variant="outline" className="h-20 flex flex-col gap-2">
                     <FileText className="h-6 w-6" />
-                    View My Papers
+                    Upload & Analyze
                   </Button>
                   <Button onClick={() => setActiveTab('visualization')} variant="outline" className="h-20 flex flex-col gap-2">
                     <Brain className="h-6 w-6" />
-                    Explore Entities
+                    Entity Network
                   </Button>
                   <Button onClick={() => setActiveTab('insights')} variant="outline" className="h-20 flex flex-col gap-2">
                     <Lightbulb className="h-6 w-6" />
@@ -313,6 +318,11 @@ export const StudentDashboard: React.FC = () => {
           {/* Submit Abstract Tab */}
           <TabsContent value="submit">
             <AbstractSubmission />
+          </TabsContent>
+
+          {/* Upload & Analyze Tab */}
+          <TabsContent value="upload-analyze">
+            <AbstractUploadAndVisualization />
           </TabsContent>
 
           {/* My Abstracts Tab */}
