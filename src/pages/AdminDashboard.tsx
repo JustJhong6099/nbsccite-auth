@@ -52,11 +52,16 @@ const AdminDashboard: React.FC = () => {
 
   const handleLogout = async () => {
     try {
+      console.log('🔄 Admin: Starting logout...');
       await logout();
-      navigate('/login');
+      console.log('✅ Admin: Logout successful, redirecting...');
+      navigate('/login', { replace: true });
     } catch (error) {
-      console.error('Error logging out:', error);
-      navigate('/login');
+      console.warn('⚠️ Admin: Logout had issues but continuing:', error);
+      // Force redirect even if logout had issues
+      window.localStorage.clear();
+      navigate('/login', { replace: true });
+      window.location.reload();
     }
   };
 

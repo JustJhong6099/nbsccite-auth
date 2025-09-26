@@ -1273,18 +1273,25 @@ const ProfileManagement: React.FC = () => {
 
   const handleLogout = async () => {
     try {
+      console.log('🔄 Faculty: Starting logout...');
       await logout();
       toast({
         title: "Logged Out",
         description: "You have been successfully logged out.",
       });
-      navigate("/login");
+      console.log('✅ Faculty: Logout successful, redirecting...');
+      navigate("/login", { replace: true });
     } catch (error) {
+      console.warn('⚠️ Faculty: Logout had issues but continuing:', error);
       toast({
-        title: "Logout Failed",
-        description: "Failed to logout. Please try again.",
-        variant: "destructive",
+        title: "Logged Out",
+        description: "Session cleared. Redirecting to login...",
+        variant: "default",
       });
+      // Force redirect even if logout had issues
+      window.localStorage.clear();
+      navigate("/login", { replace: true });
+      window.location.reload();
     }
   };
 
