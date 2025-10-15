@@ -6,7 +6,7 @@ interface User {
   id: string;
   email: string;
   full_name: string;
-  role: "admin" | "faculty" | "student";
+  role: "faculty" | "student"; // v2.0: admin role removed
   status: "active" | "pending" | "rejected";
 }
 
@@ -219,12 +219,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           throw new Error("Your account has been rejected. Please contact administrator.");
         }
 
-        if (userProfile.status === 'pending' && userProfile.role === 'faculty') {
-          console.log('⏳ Faculty account pending approval');
-          await supabase.auth.signOut();
-          throw new Error("Your faculty account is pending approval. Please wait for administrator approval.");
-        }
-
         console.log('✅ Login successful, setting user state');
         setProfile(userProfile);
         setUser({
@@ -272,13 +266,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         console.log('✅ User created, email confirmation required');
         // Email confirmation required
         return;
-      }
-
-      if (userData.role === 'faculty') {
-        console.log('👨‍🏫 Faculty signup, signing out and showing approval message');
-        // Faculty accounts need approval
-        await supabase.auth.signOut();
-        throw new Error("Faculty account created successfully. Please wait for administrator approval before signing in.");
       }
 
       console.log('✅ Signup completed successfully');

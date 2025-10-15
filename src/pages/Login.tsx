@@ -29,10 +29,8 @@ const Login: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Redirect based on user role
-      if (user.role === 'admin') {
-        navigate("/admin-dashboard");
-      } else if (user.role === 'student') {
+      // v2.0: Redirect based on user role (admin role removed)
+      if (user.role === 'student') {
         navigate("/student-dashboard");
       } else if (user.role === 'faculty') {
         navigate("/faculty-dashboard");

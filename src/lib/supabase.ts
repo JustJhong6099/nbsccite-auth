@@ -14,7 +14,7 @@ export interface Profile {
   id: string
   email: string
   full_name: string
-  role: 'admin' | 'faculty' | 'student'
+  role: 'faculty' | 'student' // v2.0: admin role removed, faculty has admin privileges
   status: 'active' | 'pending' | 'rejected'
   created_at: string
   updated_at: string
