@@ -27,6 +27,7 @@ import { UserManagement } from "@/components/analytics/UserManagement";
 import { AbstractManagement as AdminAbstractManagement } from "@/components/analytics/AbstractManagement";
 import { SystemMonitoring } from "@/components/analytics/SystemMonitoring";
 import { OCRExtractor } from "@/components/ocr/OCRExtractor";
+import { SimpleEntityGraph } from "@/components/student/SimpleEntityGraph";
 import { 
   BookOpen, 
   FileText, 
@@ -1540,6 +1541,29 @@ const FacultyDashboard: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // OCR Visualization state
+  const [visualizationData, setVisualizationData] = useState<{
+    text: string;
+    entities: Array<{
+      id: string;
+      label: string;
+      types: string[];
+      confidence: number;
+      abstract?: string;
+      uri?: string;
+    }>;
+  } | null>(null);
+  const [isVisualizationModalOpen, setIsVisualizationModalOpen] = useState(false);
+
+  const handleVisualizationData = (data: { text: string; entities: any[] }) => {
+    setVisualizationData(data);
+    setIsVisualizationModalOpen(true);
+  };
+
+  const handleCloseVisualizationModal = () => {
+    setIsVisualizationModalOpen(false);
+  };
+
   // Mock data for overview cards
   const overviewStats = {
     totalAbstracts: 24,
@@ -2005,9 +2029,18 @@ const FacultyDashboard: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <OCRExtractor />
+                <OCRExtractor onVisualizationData={handleVisualizationData} />
               </CardContent>
             </Card>
+
+            {/* Entity Visualization Modal */}
+            {visualizationData && visualizationData.entities && visualizationData.entities.length > 0 && (
+              <SimpleEntityGraph
+                data={visualizationData}
+                isOpen={isVisualizationModalOpen}
+                onClose={handleCloseVisualizationModal}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
