@@ -12,8 +12,22 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 import * as d3 from "d3";
 import { FacultyVisualization } from "./FacultyVisualization";
+
+// Import analytics components (v2.0: Faculty now has admin privileges)
+import { UserRetentionChart } from "@/components/analytics/UserRetentionChart";
+import { UserDistributionChart } from "@/components/analytics/UserDistributionChart";
+import { AdminStatsCards } from "@/components/analytics/AdminStatsCards";
+import { SubmissionsChart } from "@/components/analytics/SubmissionsChart";
+import { EntityAnalyticsChart } from "@/components/analytics/EntityAnalyticsChart";
+import { ResearchDomainChart } from "@/components/analytics/ResearchDomainChart";
+import { UserManagement } from "@/components/analytics/UserManagement";
+import { AbstractManagement as AdminAbstractManagement } from "@/components/analytics/AbstractManagement";
+import { SystemMonitoring } from "@/components/analytics/SystemMonitoring";
+import { OCRExtractor } from "@/components/ocr/OCRExtractor";
+import { SimpleEntityGraph } from "@/components/student/SimpleEntityGraph";
 import { 
   BookOpen, 
   FileText, 
@@ -57,7 +71,10 @@ import {
   Mail,
   Phone,
   MapPin,
-  Briefcase
+  Briefcase,
+  Scan,
+  Activity,
+  PieChart
 } from "lucide-react";
 
 // Interfaces for data types
@@ -1230,12 +1247,10 @@ const ProfileManagement: React.FC = () => {
   const [profileForm, setProfileForm] = useState({
     full_name: profile?.full_name || "",
     email: user?.email || "",
-    phone: (profile as any)?.phone || "",
-    address: (profile as any)?.address || "",
-    department: (profile as any)?.department || "",
-    position: (profile as any)?.position || "",
-    bio: (profile as any)?.bio || "",
-    research_interests: (profile as any)?.research_interests || [],
+    department: profile?.department || "",
+    position: profile?.position || "",
+    bio: profile?.biography || "",
+    research_interests: profile?.research_interests || [],
   });
 
   useEffect(() => {
@@ -1243,26 +1258,44 @@ const ProfileManagement: React.FC = () => {
       setProfileForm({
         full_name: profile.full_name || "",
         email: user?.email || "",
-        phone: (profile as any).phone || "",
-        address: (profile as any).address || "",
-        department: (profile as any).department || "",
-        position: (profile as any).position || "",
-        bio: (profile as any).bio || "",
-        research_interests: (profile as any).research_interests || [],
+        department: profile.department || "",
+        position: profile.position || "",
+        bio: profile.biography || "",
+        research_interests: profile.research_interests || [],
       });
     }
   }, [profile, user]);
 
   const handleUpdateProfile = async () => {
     try {
-      // Here you would typically make an API call to update the profile
+      if (!user?.id) {
+        throw new Error("User not found");
+      }
+
+      // Update profile in database
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: profileForm.full_name,
+          department: profileForm.department,
+          position: profileForm.position,
+          biography: profileForm.bio,
+          research_interests: profileForm.research_interests,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // Refresh profile to get updated data
       await refreshProfile();
+      
       setIsEditDialogOpen(false);
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated.",
       });
     } catch (error) {
+      console.error("Profile update error:", error);
       toast({
         title: "Update Failed",
         description: "Failed to update profile. Please try again.",
@@ -1323,9 +1356,9 @@ const ProfileManagement: React.FC = () => {
               
               <div className="text-center">
                 <h3 className="text-xl font-semibold text-gray-900">{profile?.full_name || "Faculty Member"}</h3>
-                <p className="text-gray-600">{(profile as any)?.position || "Faculty"}</p>
+                <p className="text-gray-600">{profile?.position || "Faculty"}</p>
                 <Badge variant="secondary" className="mt-2">
-                  {(profile as any)?.department || "Department"}
+                  {profile?.department || "Department"}
                 </Badge>
               </div>
 
@@ -1334,18 +1367,6 @@ const ProfileManagement: React.FC = () => {
                   <Mail className="w-4 h-4 text-gray-400" />
                   <span className="text-gray-600">{user?.email}</span>
                 </div>
-                {(profile as any)?.phone && (
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-600">{(profile as any).phone}</span>
-                  </div>
-                )}
-                {(profile as any)?.address && (
-                  <div className="flex items-center space-x-2 text-sm">
-                    <MapPin className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-600">{(profile as any).address}</span>
-                  </div>
-                )}
               </div>
 
               <Button 
@@ -1373,11 +1394,11 @@ const ProfileManagement: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Department</Label>
-                  <p className="text-gray-900">{(profile as any)?.department || "Not specified"}</p>
+                  <p className="text-gray-900">{profile?.department || "Not specified"}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Position</Label>
-                  <p className="text-gray-900">{(profile as any)?.position || "Not specified"}</p>
+                  <p className="text-gray-900">{profile?.position || "Not specified"}</p>
                 </div>
               </div>
             </CardContent>
@@ -1389,7 +1410,7 @@ const ProfileManagement: React.FC = () => {
             </CardHeader>
             <CardContent>
               <p className="text-gray-700">
-                {(profile as any)?.bio || "No biography available. Click 'Edit Profile' to add your professional background and interests."}
+                {profile?.biography || "No biography available. Click 'Edit Profile' to add your professional background and interests."}
               </p>
             </CardContent>
           </Card>
@@ -1400,8 +1421,8 @@ const ProfileManagement: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {(profile as any)?.research_interests && (profile as any).research_interests.length > 0 ? (
-                  (profile as any).research_interests.map((interest: string, index: number) => (
+                {profile?.research_interests && profile.research_interests.length > 0 ? (
+                  profile.research_interests.map((interest: string, index: number) => (
                     <Badge key={index} variant="outline">
                       {interest}
                     </Badge>
@@ -1448,25 +1469,6 @@ const ProfileManagement: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  value={profileForm.phone}
-                  onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  value={profileForm.address}
-                  onChange={(e) => setProfileForm({...profileForm, address: e.target.value})}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
                 <Label htmlFor="department">Department</Label>
                 <Select 
                   value={profileForm.department} 
@@ -1476,32 +1478,20 @@ const ProfileManagement: React.FC = () => {
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Computer Science">Computer Science</SelectItem>
-                    <SelectItem value="Engineering">Engineering</SelectItem>
-                    <SelectItem value="Mathematics">Mathematics</SelectItem>
-                    <SelectItem value="Physics">Physics</SelectItem>
-                    <SelectItem value="Chemistry">Chemistry</SelectItem>
-                    <SelectItem value="Biology">Biology</SelectItem>
+                    <SelectItem value="Institute for Business Management">Institute for Business Management</SelectItem>
+                    <SelectItem value="Institute for Computer Studies">Institute for Computer Studies</SelectItem>
+                    <SelectItem value="Institute for Teacher Education">Institute for Teacher Education</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="position">Position</Label>
-                <Select 
-                  value={profileForm.position} 
-                  onValueChange={(value) => setProfileForm({...profileForm, position: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select position" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Professor">Professor</SelectItem>
-                    <SelectItem value="Associate Professor">Associate Professor</SelectItem>
-                    <SelectItem value="Assistant Professor">Assistant Professor</SelectItem>
-                    <SelectItem value="Lecturer">Lecturer</SelectItem>
-                    <SelectItem value="Instructor">Instructor</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="position"
+                  placeholder="Enter your position"
+                  value={profileForm.position}
+                  onChange={(e) => setProfileForm({...profileForm, position: e.target.value})}
+                />
               </div>
             </div>
 
@@ -1550,6 +1540,29 @@ const FacultyDashboard: React.FC = () => {
   const { user, profile, logout } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // OCR Visualization state
+  const [visualizationData, setVisualizationData] = useState<{
+    text: string;
+    entities: Array<{
+      id: string;
+      label: string;
+      types: string[];
+      confidence: number;
+      abstract?: string;
+      uri?: string;
+    }>;
+  } | null>(null);
+  const [isVisualizationModalOpen, setIsVisualizationModalOpen] = useState(false);
+
+  const handleVisualizationData = (data: { text: string; entities: any[] }) => {
+    setVisualizationData(data);
+    setIsVisualizationModalOpen(true);
+  };
+
+  const handleCloseVisualizationModal = () => {
+    setIsVisualizationModalOpen(false);
+  };
 
   // Mock data for overview cards
   const overviewStats = {
@@ -1654,7 +1667,7 @@ const FacultyDashboard: React.FC = () => {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:w-fit lg:grid-cols-6">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 lg:grid-cols-10 lg:w-fit gap-1">
             <TabsTrigger value="overview" className="flex items-center space-x-2">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -1675,70 +1688,149 @@ const FacultyDashboard: React.FC = () => {
               <FileBarChart className="w-4 h-4" />
               <span className="hidden sm:inline">Reports</span>
             </TabsTrigger>
+            {/* v2.0: New Admin Features for Faculty */}
+            <TabsTrigger value="analytics" className="flex items-center space-x-2">
+              <Activity className="w-4 h-4" />
+              <span className="hidden sm:inline">Analytics</span>
+            </TabsTrigger>
+            <TabsTrigger value="all-abstracts" className="flex items-center space-x-2">
+              <Database className="w-4 h-4" />
+              <span className="hidden sm:inline">All Abstracts</span>
+            </TabsTrigger>
+            <TabsTrigger value="ocr" className="flex items-center space-x-2">
+              <Scan className="w-4 h-4" />
+              <span className="hidden sm:inline">OCR</span>
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center space-x-2">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
             <TabsTrigger value="profile" className="flex items-center space-x-2">
               <UserCircle className="w-4 h-4" />
               <span className="hidden sm:inline">Profile</span>
             </TabsTrigger>
           </TabsList>
 
-          {/* Overview Tab */}
+          {/* Overview Tab - v2.0: Enhanced with system-wide admin statistics */}
           <TabsContent value="overview" className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Card className="border-l-4 border-l-blue-500">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">
-                    Total Abstracts
-                  </CardTitle>
+            {/* System-Wide Statistics (Admin-level view) */}
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">System Overview</h2>
+              <AdminStatsCards />
+            </div>
+
+            {/* Personal Faculty Stats */}
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">My Statistics</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card className="border-l-4 border-l-blue-500">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">
+                      My Abstracts
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold text-gray-900">
+                        {overviewStats.totalAbstracts}
+                      </span>
+                      <BookOpen className="w-8 h-8 text-blue-500" />
+                    </div>
+                    <p className="text-sm text-green-600 mt-1">
+                      +{overviewStats.newThisMonth} this month
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-orange-500">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">
+                      Pending Reviews
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold text-gray-900">
+                        {overviewStats.pendingReviews}
+                      </span>
+                      <MessageCircle className="w-8 h-8 text-orange-500" />
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Avg: {overviewStats.avgReviewTime}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-purple-500">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">
+                      Students Supervised
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold text-gray-900">
+                        {overviewStats.studentsSupervised}
+                      </span>
+                      <Users className="w-8 h-8 text-purple-500" />
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Active supervision
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-green-500">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">
+                      Approved Abstracts
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold text-gray-900">
+                        {overviewStats.totalAbstracts - overviewStats.pendingReviews}
+                      </span>
+                      <CheckCircle className="w-8 h-8 text-green-500" />
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Published & Approved
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Submission Trends</CardTitle>
+                  <CardDescription>
+                    Abstract submissions over time and user distribution
+                  </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-gray-900">
-                      {overviewStats.totalAbstracts}
-                    </span>
-                    <BookOpen className="w-8 h-8 text-blue-500" />
+                <CardContent className="space-y-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Monthly Submissions</h4>
+                    <SubmissionsChart />
                   </div>
-                  <p className="text-sm text-green-600 mt-1">
-                    +{overviewStats.newThisMonth} this month
-                  </p>
+                  <div className="border-t pt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">User Distribution</h4>
+                    <UserDistributionChart />
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-orange-500">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">
-                    Pending Reviews
-                  </CardTitle>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Research Domain Distribution</CardTitle>
+                  <CardDescription>
+                    Breakdown by research category
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-gray-900">
-                      {overviewStats.pendingReviews}
-                    </span>
-                    <MessageCircle className="w-8 h-8 text-orange-500" />
-                  </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Avg: {overviewStats.avgReviewTime}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4 border-l-purple-500">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">
-                    Students Supervised
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-gray-900">
-                      {overviewStats.studentsSupervised}
-                    </span>
-                    <Users className="w-8 h-8 text-purple-500" />
-                  </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Active supervision
-                  </p>
+                  <ResearchDomainChart />
                 </CardContent>
               </Card>
             </div>
@@ -1748,7 +1840,7 @@ const FacultyDashboard: React.FC = () => {
               <CardHeader>
                 <CardTitle>Recent Activities</CardTitle>
                 <CardDescription>
-                  Your latest actions and updates
+                  Latest system-wide actions and updates
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1795,18 +1887,18 @@ const FacultyDashboard: React.FC = () => {
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
                 <CardDescription>
-                  Common tasks and shortcuts
+                  Common tasks and administrative shortcuts
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   <Button 
                     variant="outline" 
                     className="h-20 flex-col space-y-2"
                     onClick={() => setActiveTab("abstracts")}
                   >
                     <Upload className="w-6 h-6" />
-                    <span>Upload Abstract</span>
+                    <span className="text-xs text-center">Upload Abstract</span>
                   </Button>
                   <Button 
                     variant="outline" 
@@ -1814,7 +1906,7 @@ const FacultyDashboard: React.FC = () => {
                     onClick={() => setActiveTab("reviews")}
                   >
                     <FileText className="w-6 h-6" />
-                    <span>Review Submissions</span>
+                    <span className="text-xs text-center">Review Submissions</span>
                   </Button>
                   <Button 
                     variant="outline" 
@@ -1822,7 +1914,31 @@ const FacultyDashboard: React.FC = () => {
                     onClick={() => setActiveTab("reports")}
                   >
                     <FileBarChart className="w-6 h-6" />
-                    <span>Generate Report</span>
+                    <span className="text-xs text-center">Generate Report</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="h-20 flex-col space-y-2"
+                    onClick={() => setActiveTab("analytics")}
+                  >
+                    <Activity className="w-6 h-6" />
+                    <span className="text-xs text-center">View Analytics</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="h-20 flex-col space-y-2"
+                    onClick={() => setActiveTab("users")}
+                  >
+                    <Users className="w-6 h-6" />
+                    <span className="text-xs text-center">Manage Users</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="h-20 flex-col space-y-2"
+                    onClick={() => setActiveTab("ocr")}
+                  >
+                    <Scan className="w-6 h-6" />
+                    <span className="text-xs text-center">OCR Extraction</span>
                   </Button>
                 </div>
               </CardContent>
@@ -1848,6 +1964,101 @@ const FacultyDashboard: React.FC = () => {
 
           <TabsContent value="profile">
             <ProfileManagement />
+          </TabsContent>
+
+          {/* v2.0: New Admin Feature Tabs for Faculty */}
+          <TabsContent value="analytics" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  System Analytics
+                </CardTitle>
+                <CardDescription>
+                  Comprehensive analytics and insights across the entire system
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            {/* Stats Overview */}
+            <AdminStatsCards />
+
+            {/* Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <UserRetentionChart />
+              <UserDistributionChart />
+            </div>
+            
+            <div className="grid grid-cols-1 gap-6">
+              <SubmissionsChart />
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
+              <EntityAnalyticsChart />
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
+              <ResearchDomainChart />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="all-abstracts" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="h-5 w-5" />
+                  All Abstracts Management
+                </CardTitle>
+                <CardDescription>
+                  Manage all abstracts from students and faculty across the system
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <AdminAbstractManagement />
+          </TabsContent>
+
+          <TabsContent value="ocr" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Scan className="h-5 w-5" />
+                  OCR & Entity Extraction
+                </CardTitle>
+                <CardDescription>
+                  Extract text from images and identify research entities using AI
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <OCRExtractor onVisualizationData={handleVisualizationData} />
+              </CardContent>
+            </Card>
+
+            {/* Entity Visualization Modal */}
+            {visualizationData && visualizationData.entities && visualizationData.entities.length > 0 && (
+              <SimpleEntityGraph
+                data={visualizationData}
+                isOpen={isVisualizationModalOpen}
+                onClose={handleCloseVisualizationModal}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="users" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  User Management
+                </CardTitle>
+                <CardDescription>
+                  Manage all users, view activity, and monitor system access
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <UserManagement />
+            
+            {/* System Monitoring */}
+            <SystemMonitoring />
           </TabsContent>
         </Tabs>
       </div>

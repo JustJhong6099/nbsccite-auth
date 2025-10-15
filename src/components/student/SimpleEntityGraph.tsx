@@ -96,27 +96,26 @@ export const SimpleEntityGraph: React.FC<SimpleEntityGraphProps> = ({
         target: entity.id
       }));
 
-      // Create simulation
+      // Create simulation with simpler forces for cleaner layout
       const simulation = d3.forceSimulation<GraphNode>(nodes)
         .force('link', d3.forceLink<GraphNode, GraphLink>(links)
           .id(d => d.id)
-          .distance(80)
+          .distance(150) // Increased distance for cleaner spacing
         )
-        .force('charge', d3.forceManyBody().strength(-200))
+        .force('charge', d3.forceManyBody().strength(-400)) // Stronger repulsion for spread
         .force('center', d3.forceCenter(width / 2, height / 2))
-        .force('collision', d3.forceCollide().radius(25));
+        .force('collision', d3.forceCollide().radius(50)); // Larger collision radius
 
-      // Create links with visual relationship indicators
+      // Create simple, clean links
       const link = svg.selectAll('.link')
         .data(links)
         .enter().append('line')
         .attr('class', 'link')
-        .attr('stroke', '#4f46e5')
+        .attr('stroke', '#94a3b8') // Light gray color
         .attr('stroke-width', 2)
-        .attr('stroke-opacity', 0.7)
-        .attr('stroke-dasharray', '3,2');
+        .attr('stroke-opacity', 0.6);
 
-      // Create node groups for enhanced visuals
+      // Create simple node groups
       const nodeGroup = svg.selectAll('.node-group')
         .data(nodes)
         .enter().append('g')
@@ -124,124 +123,37 @@ export const SimpleEntityGraph: React.FC<SimpleEntityGraphProps> = ({
         .style('cursor', 'pointer')
         .on('click', (event, d) => {
           setSelectedNode(d);
-          // Highlight connections
-          highlightConnections(d.id);
         })
         .on('mouseover', function(event, d) {
-          // Highlight on hover
+          // Simple hover effect
           d3.select(this).select('circle')
             .transition()
             .duration(200)
-            .attr('r', d.type === 'abstract' ? 25 : 15)
-            .attr('stroke-width', 3);
-          
-          // Highlight connected links
-          link.attr('stroke-opacity', l => 
-            (l.source as GraphNode).id === d.id || (l.target as GraphNode).id === d.id ? 1 : 0.2
-          );
+            .attr('r', d.type === 'abstract' ? 55 : 28);
         })
         .on('mouseout', function(event, d) {
           // Reset on mouse leave
           d3.select(this).select('circle')
             .transition()
             .duration(200)
-            .attr('r', d.type === 'abstract' ? 20 : 12)
-            .attr('stroke-width', 2);
-          
-          // Reset links
-          link.attr('stroke-opacity', 0.7);
+            .attr('r', d.type === 'abstract' ? 50 : 25);
         });
 
-      // Add circles to node groups
+      // Add simple circles - no extra decorations
       const node = nodeGroup.append('circle')
-        .attr('r', d => d.type === 'abstract' ? 20 : 12)
+        .attr('r', d => d.type === 'abstract' ? 50 : 25)
         .attr('fill', d => d.type === 'abstract' ? '#3b82f6' : '#f97316')
-        .attr('stroke', '#fff')
-        .attr('stroke-width', 2);
+        .attr('stroke', 'none'); // Remove stroke for cleaner look
 
-      // Add visual indicators for entity types
-      nodeGroup.each(function(d) {
-        if (d.type === 'entity' && d.entityData) {
-          const group = d3.select(this);
-          
-          // Add type indicator ring
-          group.append('circle')
-            .attr('r', 16)
-            .attr('fill', 'none')
-            .attr('stroke', getEntityTypeColor(d.entityData.types[0]))
-            .attr('stroke-width', 1)
-            .attr('stroke-dasharray', '2,2')
-            .attr('opacity', 0.8);
-        }
-      });
-
-      // Function to get color based on entity type
-      function getEntityTypeColor(type: string): string {
-        const typeColors: Record<string, string> = {
-          'Person': '#ef4444',
-          'Organization': '#10b981',
-          'Location': '#8b5cf6',
-          'Technology': '#f59e0b',
-          'Concept': '#06b6d4',
-          'Event': '#ec4899',
-          'default': '#6b7280'
-        };
-        return typeColors[type] || typeColors.default;
-      }
-
-      // Function to highlight connections
-      function highlightConnections(nodeId: string) {
-        // Reset all
-        node.attr('opacity', 0.3);
-        link.attr('stroke-opacity', 0.1);
-        
-        // Highlight selected node and its connections
-        nodeGroup.filter((d: GraphNode) => d.id === nodeId)
-          .select('circle')
-          .attr('opacity', 1);
-        
-        // Highlight connected nodes and links
-        link.filter((l: GraphLink) => 
-          (l.source as GraphNode).id === nodeId || (l.target as GraphNode).id === nodeId
-        )
-        .attr('stroke-opacity', 1)
-        .attr('stroke-width', 3)
-        .each(function(l) {
-          const connectedId = (l.source as GraphNode).id === nodeId ? 
-            (l.target as GraphNode).id : (l.source as GraphNode).id;
-          
-          nodeGroup.filter((d: GraphNode) => d.id === connectedId)
-            .select('circle')
-            .attr('opacity', 1);
-        });
-        
-        // Reset after 3 seconds
-        setTimeout(() => {
-          node.attr('opacity', 1);
-          link.attr('stroke-opacity', 0.7).attr('stroke-width', 2);
-        }, 3000);
-      }
-
-      // Add labels with enhanced styling
+      // Add simple labels
       const labels = nodeGroup.append('text')
         .attr('class', 'label')
-        .text(d => d.label.length > 12 ? d.label.substring(0, 12) + '...' : d.label)
-        .attr('font-size', d => d.type === 'abstract' ? '11px' : '9px')
+        .text(d => d.label.length > 15 ? d.label.substring(0, 15) + '...' : d.label)
+        .attr('font-size', d => d.type === 'abstract' ? '14px' : '11px')
         .attr('font-weight', d => d.type === 'abstract' ? 'bold' : 'normal')
         .attr('text-anchor', 'middle')
-        .attr('dy', d => d.type === 'abstract' ? 35 : 28)
+        .attr('dy', d => d.type === 'abstract' ? 65 : 38)
         .attr('fill', '#1f2937')
-        .style('pointer-events', 'none');
-
-      // Add confidence indicators for entities
-      nodeGroup.filter((d: GraphNode) => d.type === 'entity' && !!d.entityData)
-        .append('text')
-        .attr('class', 'confidence')
-        .text((d: GraphNode) => `${Math.round((d.entityData?.confidence || 0) * 100)}%`)
-        .attr('font-size', '7px')
-        .attr('text-anchor', 'middle')
-        .attr('dy', 40)
-        .attr('fill', '#6b7280')
         .style('pointer-events', 'none');
 
       // Update positions on tick

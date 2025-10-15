@@ -10,11 +10,14 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   full_name TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('admin', 'faculty', 'student')) DEFAULT 'student',
+  role TEXT NOT NULL CHECK (role IN ('faculty', 'student')) DEFAULT 'student',
   status TEXT NOT NULL CHECK (status IN ('active', 'pending', 'rejected')) DEFAULT 'active',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+
+COMMENT ON TABLE public.profiles IS 'v2.0: Faculty have admin privileges. Admin role removed.';
+COMMENT ON COLUMN public.profiles.role IS 'User role: faculty (with admin privileges) or student';
 
 -- Create pending approvals table for faculty requests
 CREATE TABLE IF NOT EXISTS public.pending_approvals (
@@ -41,28 +44,15 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
+  -- Version 2.0: Faculty accounts are now active by default (no admin approval needed)
   INSERT INTO public.profiles (id, email, full_name, role, status)
   VALUES (
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'full_name', 'Unknown'),
     COALESCE(NEW.raw_user_meta_data->>'role', 'student'),
-    CASE 
-      WHEN COALESCE(NEW.raw_user_meta_data->>'role', 'student') = 'faculty' THEN 'pending'
-      ELSE 'active'
-    END
+    'active'  -- All users (including faculty) are active by default
   );
-  
-  -- If user is requesting faculty role, add to pending approvals
-  IF COALESCE(NEW.raw_user_meta_data->>'role', 'student') = 'faculty' THEN
-    INSERT INTO public.pending_approvals (user_id, full_name, email, requested_role)
-    VALUES (
-      NEW.id,
-      COALESCE(NEW.raw_user_meta_data->>'full_name', 'Unknown'),
-      NEW.email,
-      'faculty'
-    );
-  END IF;
   
   RETURN NEW;
 END;

@@ -167,13 +167,6 @@ const Signup: React.FC = () => {
                 {errors.role && (
                   <p className="text-sm text-destructive">{errors.role.message}</p>
                 )}
-                {selectedRole === "faculty" && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-                    <p className="text-sm text-yellow-800">
-                      <strong>Note:</strong> Faculty accounts require administrator approval before you can sign in.
-                    </p>
-                  </div>
-                )}
               </div>
 
               <div className="space-y-2">
@@ -261,18 +254,9 @@ const Signup: React.FC = () => {
                 <Mail className="h-4 w-4" />
                 <span className="font-medium">{registeredEmail}</span>
               </div>
-              {registeredRole === "faculty" ? (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mt-2">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Faculty Account:</strong> Your account is pending administrator approval. 
-                    You will receive an email notification once approved.
-                  </p>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  Please check your email to verify your account before signing in.
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Please check your email to verify your account before signing in.
+              </p>
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center pt-4">

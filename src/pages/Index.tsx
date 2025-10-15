@@ -36,12 +36,11 @@ const Index = () => {
   // Redirect authenticated users to their respective dashboards
   useEffect(() => {
     if (isAuthenticated && user && !pageLoading) {
-      if (user.role === 'admin') {
-        navigate("/admin-dashboard");
-      } else if (user.role === 'student') {
+      // v2.0: Admin role removed, faculty now has full privileges
+      if (user.role === 'student') {
         navigate("/student-dashboard");
       } else if (user.role === 'faculty') {
-        navigate("/student-dashboard"); // Faculty can use student dashboard for now
+        navigate("/faculty-dashboard");
       }
     }
   }, [isAuthenticated, user, pageLoading, navigate]);

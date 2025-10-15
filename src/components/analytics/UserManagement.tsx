@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from '@/lib/supabase';
 import { 
   Users, 
   Search, 
@@ -41,68 +42,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-// Mock data for users
-const mockStudents = [
-  {
-    id: '1',
-    full_name: 'John Smith',
-    email: 'john.smith@student.nbsc.edu',
-    role: 'student',
-    created_at: '2024-01-15',
-    last_login: '2024-01-20',
-    status: 'active',
-    abstracts_count: 3,
-    phone: '+1-555-0123'
-  },
-  {
-    id: '2',
-    full_name: 'Maria Garcia',
-    email: 'maria.garcia@student.nbsc.edu',
-    role: 'student',
-    created_at: '2024-01-10',
-    last_login: '2024-01-19',
-    status: 'active',
-    abstracts_count: 2,
-    phone: '+1-555-0124'
-  },
-  {
-    id: '3',
-    full_name: 'Ahmed Hassan',
-    email: 'ahmed.hassan@student.nbsc.edu',
-    role: 'student',
-    created_at: '2024-01-08',
-    last_login: '2024-01-18',
-    status: 'inactive',
-    abstracts_count: 1,
-    phone: '+1-555-0125'
-  },
-];
-
-const mockFaculty = [
-  {
-    id: '4',
-    full_name: 'Dr. Sarah Johnson',
-    email: 'sarah.johnson@nbsc.edu',
-    role: 'faculty',
-    created_at: '2023-12-15',
-    last_login: '2024-01-20',
-    status: 'active',
-    department: 'Computer Science',
-    phone: '+1-555-0200'
-  },
-  {
-    id: '5',
-    full_name: 'Prof. Michael Chen',
-    email: 'michael.chen@nbsc.edu',
-    role: 'faculty',
-    created_at: '2023-11-20',
-    last_login: '2024-01-19',
-    status: 'active',
-    department: 'Information Technology',
-    phone: '+1-555-0201'
-  },
-];
+import { useToast } from "@/hooks/use-toast";
 
 interface User {
   id: string;
@@ -110,14 +50,14 @@ interface User {
   email: string;
   role: string;
   created_at: string;
-  last_login: string;
+  updated_at: string;
   status: string;
-  phone: string;
-  abstracts_count?: number;
   department?: string;
+  position?: string;
 }
 
 export const UserManagement: React.FC = () => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('students');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -125,10 +65,47 @@ export const UserManagement: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [students, setStudents] = useState<User[]>([]);
+  const [faculty, setFaculty] = useState<User[]>([]);
 
-  const allUsers = [...mockStudents, ...mockFaculty];
-  const students = mockStudents;
-  const faculty = mockFaculty;
+  // Fetch users from database
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all profiles
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        const studentUsers = data.filter(user => user.role === 'student');
+        const facultyUsers = data.filter(user => user.role === 'faculty');
+        
+        setStudents(studentUsers);
+        setFaculty(facultyUsers);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load users. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const allUsers = [...students, ...faculty];
 
   const getUsersForTab = () => {
     switch (activeTab) {
@@ -205,8 +182,8 @@ export const UserManagement: React.FC = () => {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <Button variant="outline" onClick={fetchUsers} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>
@@ -310,7 +287,7 @@ export const UserManagement: React.FC = () => {
                       <TableHead>User</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Last Login</TableHead>
+                      <TableHead>Joined</TableHead>
                       {activeTab === 'students' && <TableHead>Abstracts</TableHead>}
                       {activeTab === 'faculty' && <TableHead>Department</TableHead>}
                       {activeTab === 'all' && <TableHead>Details</TableHead>}
@@ -318,7 +295,21 @@ export const UserManagement: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredUsers.map((user) => (
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8">
+                          <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
+                          <p className="text-gray-500">Loading users...</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredUsers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8">
+                          <p className="text-gray-500">No users found</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredUsers.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell>
                           <div>
@@ -327,10 +318,6 @@ export const UserManagement: React.FC = () => {
                               <Mail className="h-3 w-3" />
                               {user.email}
                             </div>
-                            <div className="text-sm text-gray-500 flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {user.phone}
-                            </div>
                           </div>
                         </TableCell>
                         <TableCell>{getRoleBadge(user.role)}</TableCell>
@@ -338,7 +325,7 @@ export const UserManagement: React.FC = () => {
                         <TableCell>
                           <div className="flex items-center gap-1 text-sm">
                             <Calendar className="h-3 w-3" />
-                            {formatDate(user.last_login)}
+                            {formatDate(user.created_at)}
                           </div>
                         </TableCell>
                         {activeTab === 'students' && (
@@ -348,7 +335,7 @@ export const UserManagement: React.FC = () => {
                         )}
                         {activeTab === 'faculty' && (
                           <TableCell>
-                            <Badge variant="outline">{(user as any).department || 'N/A'}</Badge>
+                            <Badge variant="outline">{user.department || 'Not specified'}</Badge>
                           </TableCell>
                         )}
                         {activeTab === 'all' && (
@@ -405,7 +392,8 @@ export const UserManagement: React.FC = () => {
                           </DropdownMenu>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -446,12 +434,12 @@ export const UserManagement: React.FC = () => {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="phone" className="text-right">
-                  Phone
+                <Label htmlFor="department" className="text-right">
+                  Department
                 </Label>
                 <Input
-                  id="phone"
-                  defaultValue={selectedUser.phone}
+                  id="department"
+                  defaultValue={selectedUser.department || ''}
                   className="col-span-3"
                 />
               </div>
