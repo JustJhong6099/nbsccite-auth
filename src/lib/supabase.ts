@@ -18,6 +18,10 @@ export interface Profile {
   status: 'active' | 'pending' | 'rejected'
   created_at: string
   updated_at: string
+  department?: string
+  position?: string
+  biography?: string
+  research_interests?: string[]
 }
 
 export interface PendingApproval {
