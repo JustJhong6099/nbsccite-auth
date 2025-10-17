@@ -34,6 +34,22 @@ export const signupSchema = z
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
+  })
+  .refine((data) => {
+    // Extract the local part of the email (before @)
+    const emailLocalPart = data.email.split("@")[0];
+    // Check if email starts with a number (student email pattern)
+    const isStudentEmail = /^\d/.test(emailLocalPart);
+    
+    // If the email starts with a number (student email) but role is faculty, reject
+    if (isStudentEmail && data.role === "faculty") {
+      return false;
+    }
+    
+    return true;
+  }, {
+    message: "Student emails (starting with numbers) cannot be used for faculty registration. Please select 'Student' as your role.",
+    path: ["role"],
   });
 
 export type LoginFormData = z.infer<typeof loginSchema>;
