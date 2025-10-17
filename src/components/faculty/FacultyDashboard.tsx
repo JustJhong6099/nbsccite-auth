@@ -1667,7 +1667,7 @@ const FacultyDashboard: React.FC = () => {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 lg:grid-cols-10 lg:w-fit gap-1">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 lg:grid-cols-9 lg:w-fit gap-1">
             <TabsTrigger value="overview" className="flex items-center space-x-2">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -1689,10 +1689,6 @@ const FacultyDashboard: React.FC = () => {
               <span className="hidden sm:inline">Reports</span>
             </TabsTrigger>
             {/* v2.0: New Admin Features for Faculty */}
-            <TabsTrigger value="analytics" className="flex items-center space-x-2">
-              <Activity className="w-4 h-4" />
-              <span className="hidden sm:inline">Analytics</span>
-            </TabsTrigger>
             <TabsTrigger value="all-abstracts" className="flex items-center space-x-2">
               <Database className="w-4 h-4" />
               <span className="hidden sm:inline">All Abstracts</span>
@@ -1835,6 +1831,21 @@ const FacultyDashboard: React.FC = () => {
               </Card>
             </div>
 
+            {/* Entity Analytics and Research Trends */}
+            <div className="grid grid-cols-1 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Entity Analytics</CardTitle>
+                  <CardDescription>
+                    Extracted entities and their distribution across abstracts
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <EntityAnalyticsChart />
+                </CardContent>
+              </Card>
+            </div>
+
             {/* Recent Activities */}
             <Card>
               <CardHeader>
@@ -1891,7 +1902,7 @@ const FacultyDashboard: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   <Button 
                     variant="outline" 
                     className="h-20 flex-col space-y-2"
@@ -1915,14 +1926,6 @@ const FacultyDashboard: React.FC = () => {
                   >
                     <FileBarChart className="w-6 h-6" />
                     <span className="text-xs text-center">Generate Report</span>
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="h-20 flex-col space-y-2"
-                    onClick={() => setActiveTab("analytics")}
-                  >
-                    <Activity className="w-6 h-6" />
-                    <span className="text-xs text-center">View Analytics</span>
                   </Button>
                   <Button 
                     variant="outline" 
@@ -1967,41 +1970,6 @@ const FacultyDashboard: React.FC = () => {
           </TabsContent>
 
           {/* v2.0: New Admin Feature Tabs for Faculty */}
-          <TabsContent value="analytics" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  System Analytics
-                </CardTitle>
-                <CardDescription>
-                  Comprehensive analytics and insights across the entire system
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            {/* Stats Overview */}
-            <AdminStatsCards />
-
-            {/* Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <UserRetentionChart />
-              <UserDistributionChart />
-            </div>
-            
-            <div className="grid grid-cols-1 gap-6">
-              <SubmissionsChart />
-            </div>
-
-            <div className="grid grid-cols-1 gap-6">
-              <EntityAnalyticsChart />
-            </div>
-
-            <div className="grid grid-cols-1 gap-6">
-              <ResearchDomainChart />
-            </div>
-          </TabsContent>
-
           <TabsContent value="all-abstracts" className="space-y-6">
             <Card>
               <CardHeader>
