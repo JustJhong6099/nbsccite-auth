@@ -1239,7 +1239,18 @@ const FacultyReports: React.FC = () => {
 };
 
 // Profile Management Component
-const ProfileManagement: React.FC = () => {
+interface ProfileManagementProps {
+  overviewStats: {
+    totalAbstracts: number;
+    pendingReviews: number;
+    validatedEntities: number;
+    studentsSupervised: number;
+    newThisMonth: number;
+    avgReviewTime: string;
+  };
+}
+
+const ProfileManagement: React.FC<ProfileManagementProps> = ({ overviewStats }) => {
   const { user, profile, logout, refreshProfile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -1334,6 +1345,88 @@ const ProfileManagement: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Profile Management</h2>
           <p className="text-gray-600">Manage your account settings and personal information</p>
+        </div>
+      </div>
+
+      {/* My Statistics Section */}
+      <div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-4">My Statistics</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="border-l-4 border-l-blue-500">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                My Abstracts
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-bold text-gray-900">
+                  {overviewStats.totalAbstracts}
+                </span>
+                <BookOpen className="w-8 h-8 text-blue-500" />
+              </div>
+              <p className="text-sm text-green-600 mt-1">
+                +{overviewStats.newThisMonth} this month
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-orange-500">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Pending Reviews
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-bold text-gray-900">
+                  {overviewStats.pendingReviews}
+                </span>
+                <MessageCircle className="w-8 h-8 text-orange-500" />
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Avg: {overviewStats.avgReviewTime}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-purple-500">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Students Supervised
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-bold text-gray-900">
+                  {overviewStats.studentsSupervised}
+                </span>
+                <Users className="w-8 h-8 text-purple-500" />
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Active supervision
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-green-500">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Approved Abstracts
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-bold text-gray-900">
+                  {overviewStats.totalAbstracts - overviewStats.pendingReviews}
+                </span>
+                <CheckCircle className="w-8 h-8 text-green-500" />
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Published & Approved
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
@@ -1715,88 +1808,6 @@ const FacultyDashboard: React.FC = () => {
               <AdminStatsCards />
             </div>
 
-            {/* Personal Faculty Stats */}
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">My Statistics</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="border-l-4 border-l-blue-500">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-600">
-                      My Abstracts
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-gray-900">
-                        {overviewStats.totalAbstracts}
-                      </span>
-                      <BookOpen className="w-8 h-8 text-blue-500" />
-                    </div>
-                    <p className="text-sm text-green-600 mt-1">
-                      +{overviewStats.newThisMonth} this month
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-orange-500">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-600">
-                      Pending Reviews
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-gray-900">
-                        {overviewStats.pendingReviews}
-                      </span>
-                      <MessageCircle className="w-8 h-8 text-orange-500" />
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Avg: {overviewStats.avgReviewTime}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-purple-500">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-600">
-                      Students Supervised
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-gray-900">
-                        {overviewStats.studentsSupervised}
-                      </span>
-                      <Users className="w-8 h-8 text-purple-500" />
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Active supervision
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-green-500">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-600">
-                      Approved Abstracts
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-gray-900">
-                        {overviewStats.totalAbstracts - overviewStats.pendingReviews}
-                      </span>
-                      <CheckCircle className="w-8 h-8 text-green-500" />
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Published & Approved
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
@@ -1966,7 +1977,7 @@ const FacultyDashboard: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="profile">
-            <ProfileManagement />
+            <ProfileManagement overviewStats={overviewStats} />
           </TabsContent>
 
           {/* v2.0: New Admin Feature Tabs for Faculty */}

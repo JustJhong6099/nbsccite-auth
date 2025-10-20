@@ -24,6 +24,7 @@ import {
 
 import { AbstractSubmission } from './AbstractSubmission';
 import { MyAbstracts } from './MyAbstracts';
+import { AbstractsLibrary } from './AbstractsLibrary';
 import { EntityVisualization } from './EntityVisualization';
 import { ResearchInsights } from './ResearchInsights';
 import { ProfileManagement } from './ProfileManagement';
@@ -146,7 +147,7 @@ export const StudentDashboard: React.FC = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Overview
@@ -162,6 +163,10 @@ export const StudentDashboard: React.FC = () => {
             <TabsTrigger value="abstracts" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
               My Abstracts
+            </TabsTrigger>
+            <TabsTrigger value="library" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Library
             </TabsTrigger>
             <TabsTrigger value="visualization" className="flex items-center gap-2">
               <Brain className="h-4 w-4" />
@@ -333,6 +338,11 @@ export const StudentDashboard: React.FC = () => {
           {/* My Abstracts Tab */}
           <TabsContent value="abstracts">
             <MyAbstracts />
+          </TabsContent>
+
+          {/* Abstracts Library Tab */}
+          <TabsContent value="library">
+            <AbstractsLibrary />
           </TabsContent>
 
           {/* Entity Visualization Tab */}
