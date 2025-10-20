@@ -1093,43 +1093,6 @@ const FacultyReports: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Research Trends</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium">Machine Learning</span>
-                  <span className="text-sm text-gray-600">45 papers</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full" style={{width: '90%'}}></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium">Data Science</span>
-                  <span className="text-sm text-gray-600">32 papers</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{width: '64%'}}></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium">Web Development</span>
-                  <span className="text-sm text-gray-600">28 papers</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-orange-500 h-2 rounded-full" style={{width: '56%'}}></div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
             <CardTitle>Quality Metrics</CardTitle>
           </CardHeader>
           <CardContent>
@@ -1842,17 +1805,86 @@ const FacultyDashboard: React.FC = () => {
               </Card>
             </div>
 
-            {/* Entity Analytics and Research Trends */}
-            <div className="grid grid-cols-1 gap-6">
+            {/* Entity Analytics and Research Trends - Two Pane Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Pane - Research Trends Graph */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Entity Analytics</CardTitle>
+                  <CardTitle>Research Trends (2020-2025)</CardTitle>
                   <CardDescription>
-                    Extracted entities and their distribution across abstracts
+                    Yearly growth of entities, keywords, and research domains
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <EntityAnalyticsChart />
+                </CardContent>
+              </Card>
+
+              {/* Right Pane - Research Trends Bar Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Research Trends</CardTitle>
+                  <CardDescription>
+                    Top research categories by paper count (2025)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">Machine Learning</span>
+                        <span className="text-sm text-gray-600">45 papers</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-blue-500 h-2 rounded-full" style={{width: '90%'}}></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">Web Development</span>
+                        <span className="text-sm text-gray-600">38 papers</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-green-500 h-2 rounded-full" style={{width: '76%'}}></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">Data Science</span>
+                        <span className="text-sm text-gray-600">32 papers</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-orange-500 h-2 rounded-full" style={{width: '64%'}}></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">Mobile Development</span>
+                        <span className="text-sm text-gray-600">28 papers</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-purple-500 h-2 rounded-full" style={{width: '56%'}}></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">Artificial Intelligence</span>
+                        <span className="text-sm text-gray-600">25 papers</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-indigo-500 h-2 rounded-full" style={{width: '50%'}}></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">Cybersecurity</span>
+                        <span className="text-sm text-gray-600">22 papers</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-pink-500 h-2 rounded-full" style={{width: '44%'}}></div>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
