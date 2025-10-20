@@ -17,7 +17,13 @@ import {
   Tag,
   Eye,
   Download,
-  Network
+  Network,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Play,
+  Pause,
+  RotateCcw
 } from "lucide-react";
 
 // Mock data for approved abstracts
@@ -144,6 +150,12 @@ export const AbstractsLibrary: React.FC = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
 
+  // Interactive visualization controls
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [isSimulationRunning, setIsSimulationRunning] = useState(true);
+  const simulationRef = useRef<d3.Simulation<Node, undefined> | null>(null);
+  const zoomBehaviorRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+
   // Get unique years for filter
   const availableYears = Array.from(new Set(mockApprovedAbstracts.map(a => a.year))).sort((a, b) => b - a);
 
@@ -238,6 +250,107 @@ ${new Date().toLocaleDateString()}
     }
   };
 
+  // Interactive control functions
+  const handleZoomIn = () => {
+    if (zoomBehaviorRef.current && svgRef.current) {
+      d3.select(svgRef.current)
+        .transition()
+        .duration(300)
+        .call(zoomBehaviorRef.current.scaleBy, 1.3);
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (zoomBehaviorRef.current && svgRef.current) {
+      d3.select(svgRef.current)
+        .transition()
+        .duration(300)
+        .call(zoomBehaviorRef.current.scaleBy, 0.7);
+    }
+  };
+
+  const handleResetView = () => {
+    if (zoomBehaviorRef.current && svgRef.current) {
+      d3.select(svgRef.current)
+        .transition()
+        .duration(500)
+        .call(zoomBehaviorRef.current.transform, d3.zoomIdentity);
+      setZoomLevel(1);
+    }
+  };
+
+  const handleToggleSimulation = () => {
+    if (simulationRef.current) {
+      if (isSimulationRunning) {
+        simulationRef.current.stop();
+        setIsSimulationRunning(false);
+      } else {
+        simulationRef.current.alpha(0.3).restart();
+        setIsSimulationRunning(true);
+      }
+    }
+  };
+
+  const handleFitToScreen = () => {
+    if (svgRef.current) {
+      const svg = d3.select(svgRef.current);
+      const bounds = (svg.node() as SVGSVGElement).getBBox();
+      const parent = (svg.node() as SVGSVGElement).parentElement;
+      
+      if (parent) {
+        const fullWidth = parent.clientWidth;
+        const fullHeight = parent.clientHeight;
+        const width = bounds.width;
+        const height = bounds.height;
+        const midX = bounds.x + width / 2;
+        const midY = bounds.y + height / 2;
+        
+        if (width === 0 || height === 0) return;
+        
+        const scale = 0.85 / Math.max(width / fullWidth, height / fullHeight);
+        const translate = [fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY];
+        
+        const transform = d3.zoomIdentity
+          .translate(translate[0], translate[1])
+          .scale(scale);
+        
+        if (zoomBehaviorRef.current) {
+          svg.transition()
+            .duration(750)
+            .call(zoomBehaviorRef.current.transform, transform);
+        }
+      }
+    }
+  };
+
+  // Function to calculate IT relevance score for keywords
+  const calculateKeywordITRelevance = (keyword: string): number => {
+    const itKeywords = [
+      'computer', 'software', 'hardware', 'algorithm', 'data', 'network', 'system',
+      'programming', 'code', 'application', 'database', 'technology', 'digital',
+      'machine learning', 'ai', 'artificial intelligence', 'cloud', 'security',
+      'web', 'mobile', 'api', 'framework', 'development', 'server', 'client',
+      'javascript', 'python', 'java', 'react', 'node', 'innovation', 'blockchain',
+      'iot', 'analytics', 'platform', 'architecture', 'interface', 'automation',
+      'neural', 'deep learning', 'model', 'training', 'dataset', 'prediction',
+      'computing', 'processor', 'memory', 'storage', 'virtual', 'encryption',
+      'protocol', 'internet', 'connectivity', 'wireless', 'sensor', 'device'
+    ];
+
+    const keywordLower = keyword.toLowerCase();
+    let score = 0;
+    
+    // Check if keyword contains IT-related terms
+    itKeywords.forEach(itKeyword => {
+      if (keywordLower.includes(itKeyword)) score += 2;
+    });
+    
+    // Bonus for exact matches
+    if (itKeywords.includes(keywordLower)) score += 3;
+    
+    return score;
+  };
+
   const createEntityVisualization = (abstract: AbstractDetail) => {
     if (!svgRef.current) return;
 
@@ -255,15 +368,51 @@ ${new Date().toLocaleDateString()}
       .attr("viewBox", `0 0 ${width} ${height}`)
       .attr("preserveAspectRatio", "xMidYMid meet");
 
+    // Add zoom behavior
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.5, 3])
+      .on("zoom", (event) => {
+        container.attr("transform", event.transform);
+        setZoomLevel(event.transform.k);
+      });
+
+    svg.call(zoom);
+    zoomBehaviorRef.current = zoom;
+
     // Add a container group for all elements
     const container = svg.append("g");
 
-    // Create nodes: 1 center node + entity nodes from keywords
+    // Filter and rank keywords by IT relevance, removing duplicates
+    const seenKeywords = new Set<string>();
+    const uniqueKeywords = abstract.keywords
+      .map(keyword => ({
+        keyword,
+        score: calculateKeywordITRelevance(keyword)
+      }))
+      .sort((a, b) => b.score - a.score)
+      .filter(item => {
+        // Check for duplicates (case-insensitive)
+        const normalizedKeyword = item.keyword.toLowerCase().trim();
+        if (seenKeywords.has(normalizedKeyword)) {
+          return false; // Skip duplicate
+        }
+        seenKeywords.add(normalizedKeyword);
+        return true;
+      });
+
+    // If less than 12 unique keywords, show all; otherwise show top 10 IT-related
+    const rankedKeywords = uniqueKeywords.length < 12
+      ? uniqueKeywords.map(item => item.keyword)
+      : uniqueKeywords.slice(0, 10).map(item => item.keyword);
+
+    console.log(`Filtered ${abstract.keywords.length} keywords down to ${rankedKeywords.length} unique keywords (${uniqueKeywords.length < 12 ? 'showing all' : 'top 10 IT-related'})`);
+
+    // Create nodes: 1 center node + filtered entity nodes
     const nodes: Node[] = [
       { id: 'center', label: 'Abstract Center', type: 'center', x: width / 2, y: height / 2 }
     ];
 
-    abstract.keywords.forEach((keyword, index) => {
+    rankedKeywords.forEach((keyword, index) => {
       nodes.push({
         id: `entity-${index}`,
         label: keyword,
@@ -271,8 +420,8 @@ ${new Date().toLocaleDateString()}
       });
     });
 
-    // Create links from center to all entities
-    const links: Link[] = abstract.keywords.map((_, index) => ({
+    // Create links from center to filtered entities
+    const links: Link[] = rankedKeywords.map((_, index) => ({
       source: 'center',
       target: `entity-${index}`
     }));
@@ -327,19 +476,33 @@ ${new Date().toLocaleDateString()}
       .attr("stroke", "#fff")
       .attr("stroke-width", 3)
       .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))")
-      .on("mouseover", function() {
+      .on("mouseover", function(event, d) {
+        // Highlight node
         d3.select(this)
           .transition()
           .duration(200)
           .attr("r", (d: any) => d.type === 'center' ? 50 : 35)
           .style("filter", "drop-shadow(0 4px 8px rgba(0,0,0,0.2))");
+        
+        // Highlight connected links
+        link.style("stroke-opacity", (l: any) => 
+          (l.source.id === d.id || l.target.id === d.id) ? 1 : 0.2
+        )
+        .style("stroke-width", (l: any) => 
+          (l.source.id === d.id || l.target.id === d.id) ? 3 : 2
+        );
       })
       .on("mouseout", function() {
+        // Reset node
         d3.select(this)
           .transition()
           .duration(200)
           .attr("r", (d: any) => d.type === 'center' ? 45 : 30)
           .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))");
+        
+        // Reset all links
+        link.style("stroke-opacity", 0.6)
+          .style("stroke-width", 2);
       });
 
     // Add labels below nodes
@@ -363,6 +526,9 @@ ${new Date().toLocaleDateString()}
 
       node.attr("transform", (d) => `translate(${d.x},${d.y})`);
     });
+
+    // Store simulation reference
+    simulationRef.current = simulation;
 
     console.log('Visualization created with', nodes.length, 'nodes');
   };
@@ -624,27 +790,109 @@ ${new Date().toLocaleDateString()}
                 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                   {/* Interactive Controls */}
-                  <Card className="bg-blue-50 border-blue-200">
+                  <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
                     <CardContent className="p-4">
-                      <h5 className="font-semibold text-sm text-gray-900 mb-3">Interactive Controls:</h5>
-                      <ul className="space-y-2 text-xs text-gray-700">
-                        <li className="flex items-start gap-2">
-                          <span className="text-blue-600 font-bold">•</span>
-                          <span>Click any node to view abstract details</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="text-blue-600 font-bold">•</span>
-                          <span>Drag nodes to rearrange groups</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="text-blue-600 font-bold">•</span>
-                          <span>Scroll to zoom in/out</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="text-blue-600 font-bold">•</span>
-                          <span>Hover to highlight connections</span>
-                        </li>
-                      </ul>
+                      <h5 className="font-semibold text-sm text-gray-900 mb-3 flex items-center gap-2">
+                        🎮 Interactive Controls
+                      </h5>
+                      
+                      {/* Control Buttons */}
+                      <div className="space-y-2 mb-4">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-8 text-xs"
+                            onClick={handleZoomIn}
+                            title="Zoom In"
+                          >
+                            <ZoomIn className="h-3 w-3 mr-1" />
+                            Zoom In
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-8 text-xs"
+                            onClick={handleZoomOut}
+                            title="Zoom Out"
+                          >
+                            <ZoomOut className="h-3 w-3 mr-1" />
+                            Zoom Out
+                          </Button>
+                        </div>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full h-8 text-xs"
+                          onClick={handleFitToScreen}
+                          title="Fit to Screen"
+                        >
+                          <Maximize2 className="h-3 w-3 mr-1" />
+                          Fit to Screen
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full h-8 text-xs"
+                          onClick={handleToggleSimulation}
+                          title={isSimulationRunning ? "Pause Physics" : "Resume Physics"}
+                        >
+                          {isSimulationRunning ? (
+                            <>
+                              <Pause className="h-3 w-3 mr-1" />
+                              Pause Physics
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-3 w-3 mr-1" />
+                              Resume Physics
+                            </>
+                          )}
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full h-8 text-xs"
+                          onClick={handleResetView}
+                          title="Reset View"
+                        >
+                          <RotateCcw className="h-3 w-3 mr-1" />
+                          Reset View
+                        </Button>
+                      </div>
+
+                      {/* Zoom Level Indicator */}
+                      <div className="mb-3 p-2 bg-white rounded border border-blue-200">
+                        <div className="text-xs text-gray-600 mb-1">Zoom Level</div>
+                        <div className="text-sm font-semibold text-blue-600">
+                          {(zoomLevel * 100).toFixed(0)}%
+                        </div>
+                      </div>
+                      
+                      {/* Instructions */}
+                      <div className="border-t border-blue-200 pt-3">
+                        <ul className="space-y-2 text-xs text-gray-700">
+                          <li className="flex items-start gap-2">
+                            <span className="text-blue-600 font-bold">•</span>
+                            <span><strong>Drag nodes</strong> to rearrange</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="text-blue-600 font-bold">•</span>
+                            <span><strong>Scroll wheel</strong> to zoom</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="text-blue-600 font-bold">•</span>
+                            <span><strong>Click & drag</strong> background to pan</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="text-blue-600 font-bold">•</span>
+                            <span><strong>Hover nodes</strong> to highlight</span>
+                          </li>
+                        </ul>
+                      </div>
                     </CardContent>
                   </Card>
 

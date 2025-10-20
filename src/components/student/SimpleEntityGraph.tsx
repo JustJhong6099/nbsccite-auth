@@ -42,11 +42,18 @@ export const SimpleEntityGraph: React.FC<SimpleEntityGraphProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   
+  // Interactive controls state
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [displayedEntities, setDisplayedEntities] = useState(0);
+  const simulationRef = useRef<d3.Simulation<GraphNode, undefined> | null>(null);
+  const zoomBehaviorRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  
   const stats = {
     totalAbstracts: 1,
     extractedEntities: data.entities.length,
+    displayedEntities: displayedEntities,
     totalKeywords: data.entities.filter(e => e.types.some(t => t.toLowerCase().includes('keyword') || t.toLowerCase().includes('topic'))).length,
-    connections: data.entities.length
+    connections: displayedEntities
   };
 
   // Function to get color based on entity type for UI elements
@@ -63,6 +70,42 @@ export const SimpleEntityGraph: React.FC<SimpleEntityGraphProps> = ({
     return typeColors[type] || typeColors.default;
   };
 
+  // Function to calculate IT relevance score
+  const calculateITRelevance = (entity: Entity): number => {
+    const itKeywords = [
+      'computer', 'software', 'hardware', 'algorithm', 'data', 'network', 'system',
+      'programming', 'code', 'application', 'database', 'technology', 'digital',
+      'machine learning', 'ai', 'artificial intelligence', 'cloud', 'security',
+      'web', 'mobile', 'api', 'framework', 'development', 'server', 'client',
+      'javascript', 'python', 'java', 'react', 'node', 'innovation', 'blockchain',
+      'iot', 'analytics', 'platform', 'architecture', 'interface', 'automation',
+      'neural', 'deep learning', 'model', 'training', 'dataset', 'prediction'
+    ];
+
+    const itTypes = [
+      'Technology', 'Software', 'Algorithm', 'ProgrammingLanguage', 'Framework',
+      'Database', 'Protocol', 'DataStructure', 'Tool', 'Platform', 'System'
+    ];
+
+    let score = 0;
+    const labelLower = entity.label.toLowerCase();
+    
+    // Check label against IT keywords (weight: 2)
+    itKeywords.forEach(keyword => {
+      if (labelLower.includes(keyword)) score += 2;
+    });
+    
+    // Check types (weight: 3)
+    entity.types.forEach(type => {
+      if (itTypes.some(itType => type.includes(itType))) score += 3;
+    });
+    
+    // Add confidence as tiebreaker (weight: 1)
+    score += entity.confidence;
+    
+    return score;
+  };
+
   useEffect(() => {
     if (!isOpen || !svgRef.current || !data?.entities?.length) return;
 
@@ -73,7 +116,49 @@ export const SimpleEntityGraph: React.FC<SimpleEntityGraphProps> = ({
       const width = 800;
       const height = 600;
 
-      // Create nodes
+      // Filter and rank entities by IT relevance, removing duplicates
+      const seenLabels = new Set<string>();
+      const uniqueEntities = data.entities
+        .map(entity => ({
+          entity,
+          score: calculateITRelevance(entity)
+        }))
+        .sort((a, b) => b.score - a.score)
+        .filter(item => {
+          // Check for duplicates (case-insensitive)
+          const normalizedLabel = item.entity.label.toLowerCase().trim();
+          if (seenLabels.has(normalizedLabel)) {
+            return false; // Skip duplicate
+          }
+          seenLabels.add(normalizedLabel);
+          return true;
+        });
+
+      // If less than 12 unique entities, show all; otherwise show top 10 IT-related
+      const rankedEntities = uniqueEntities.length < 12
+        ? uniqueEntities.map(item => item.entity)
+        : uniqueEntities.slice(0, 10).map(item => item.entity);
+
+      console.log(`Filtered ${data.entities.length} entities down to ${rankedEntities.length} unique entities (${uniqueEntities.length < 12 ? 'showing all' : 'top 10 IT-related'})`);
+      
+      // Update displayed entities count
+      setDisplayedEntities(rankedEntities.length);
+
+      // Add zoom and pan behavior
+      const zoom = d3.zoom<SVGSVGElement, unknown>()
+        .scaleExtent([0.5, 3])
+        .on("zoom", (event) => {
+          container.attr("transform", event.transform);
+          setZoomLevel(event.transform.k);
+        });
+
+      svg.call(zoom);
+      zoomBehaviorRef.current = zoom;
+
+      // Create container for all elements
+      const container = svg.append("g");
+
+      // Create nodes with filtered entities
       const nodes: GraphNode[] = [
         {
           id: 'abstract-center',
@@ -82,7 +167,7 @@ export const SimpleEntityGraph: React.FC<SimpleEntityGraphProps> = ({
           x: width / 2,
           y: height / 2
         },
-        ...data.entities.map((entity, i) => ({
+        ...rankedEntities.map((entity, i) => ({
           id: entity.id,
           label: entity.label,
           type: 'entity' as const,
@@ -90,8 +175,8 @@ export const SimpleEntityGraph: React.FC<SimpleEntityGraphProps> = ({
         }))
       ];
 
-      // Create links
-      const links: GraphLink[] = data.entities.map(entity => ({
+      // Create links for filtered entities only
+      const links: GraphLink[] = rankedEntities.map(entity => ({
         source: 'abstract-center',
         target: entity.id
       }));
@@ -107,7 +192,7 @@ export const SimpleEntityGraph: React.FC<SimpleEntityGraphProps> = ({
         .force('collision', d3.forceCollide().radius(50)); // Larger collision radius
 
       // Create simple, clean links
-      const link = svg.selectAll('.link')
+      const link = container.selectAll('.link')
         .data(links)
         .enter().append('line')
         .attr('class', 'link')
@@ -116,7 +201,7 @@ export const SimpleEntityGraph: React.FC<SimpleEntityGraphProps> = ({
         .attr('stroke-opacity', 0.6);
 
       // Create simple node groups
-      const nodeGroup = svg.selectAll('.node-group')
+      const nodeGroup = container.selectAll('.node-group')
         .data(nodes)
         .enter().append('g')
         .attr('class', 'node-group')
@@ -125,18 +210,30 @@ export const SimpleEntityGraph: React.FC<SimpleEntityGraphProps> = ({
           setSelectedNode(d);
         })
         .on('mouseover', function(event, d) {
-          // Simple hover effect
+          // Highlight node
           d3.select(this).select('circle')
             .transition()
             .duration(200)
             .attr('r', d.type === 'abstract' ? 55 : 28);
+          
+          // Highlight connected links
+          link.style('stroke-opacity', (l: any) => 
+            (l.source.id === d.id || l.target.id === d.id) ? 1 : 0.2
+          )
+          .style('stroke-width', (l: any) => 
+            (l.source.id === d.id || l.target.id === d.id) ? 3 : 2
+          );
         })
         .on('mouseout', function(event, d) {
-          // Reset on mouse leave
+          // Reset node
           d3.select(this).select('circle')
             .transition()
             .duration(200)
             .attr('r', d.type === 'abstract' ? 50 : 25);
+          
+          // Reset all links
+          link.style('stroke-opacity', 0.6)
+            .style('stroke-width', 2);
         });
 
       // Add simple circles - no extra decorations
@@ -167,6 +264,9 @@ export const SimpleEntityGraph: React.FC<SimpleEntityGraphProps> = ({
         nodeGroup
           .attr('transform', d => `translate(${d.x || 0}, ${d.y || 0})`);
       });
+
+      // Store simulation reference for controls
+      simulationRef.current = simulation;
 
       return () => {
         simulation.stop();
@@ -231,34 +331,31 @@ export const SimpleEntityGraph: React.FC<SimpleEntityGraphProps> = ({
               className="border-r border-gray-200"
             />
             
-            {/* Enhanced Legend */}
-            <div className="absolute bottom-4 left-4 bg-white border border-gray-300 rounded-lg p-3 shadow max-w-xs">
-              <h4 className="font-medium text-sm mb-3">Knowledge Graph Legend</h4>
-              
-              {/* Node Types */}
-              <div className="space-y-2 mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-blue-500"></div>
-                  <span className="text-xs">Abstract Center</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-orange-500"></div>
-                  <span className="text-xs">Extracted Entities</span>
-                </div>
-              </div>
-
-              {/* Connection Types */}
-              <div className="border-t pt-3 space-y-2">
-              </div>
-
-              {/* Interaction Hints */}
-              <div className="border-t pt-3 mt-3">
-                <h5 className="font-medium text-xs text-gray-700 mb-1">Interactions</h5>
-                <div className="text-xs text-gray-600 space-y-1">
-                  <p>• Click nodes for details</p>
-                  <p>• Hover to highlight connections</p>
-                  <p>• Confidence shown below entities</p>
-                </div>
+            {/* Instructions Card - Top Left */}
+            <div className="absolute top-4 left-4 bg-white border border-gray-300 rounded-lg shadow-md max-w-xs">
+              <div className="p-3">
+                <h4 className="font-semibold text-xs text-gray-900 mb-2 flex items-center gap-1.5">
+                  <Info className="h-3.5 w-3.5 text-blue-600" />
+                  Interactive Instructions
+                </h4>
+                <ul className="space-y-1 text-xs text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-0.5">•</span>
+                    <span>Click any node to view details</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-0.5">•</span>
+                    <span>Drag nodes to rearrange</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-0.5">•</span>
+                    <span>Scroll to zoom in/out</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-0.5">•</span>
+                    <span>Hover to highlight connections</span>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
@@ -268,6 +365,18 @@ export const SimpleEntityGraph: React.FC<SimpleEntityGraphProps> = ({
             {/* Statistics */}
             <div className="mb-6">
               <h3 className="font-medium text-gray-900 mb-3">Graph Statistics</h3>
+              
+              {/* Filter Notice */}
+              {stats.extractedEntities > stats.displayedEntities && (
+                <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="text-xs text-blue-800">
+                    <span className="font-semibold">Showing top {stats.displayedEntities}</span> most IT-related entities
+                    <br />
+                    <span className="text-blue-600">from {stats.extractedEntities} total extracted</span>
+                  </div>
+                </div>
+              )}
+              
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-white p-3 rounded border">
                   <div className="text-lg font-semibold text-blue-600">{stats.totalAbstracts}</div>
@@ -275,11 +384,11 @@ export const SimpleEntityGraph: React.FC<SimpleEntityGraphProps> = ({
                 </div>
                 <div className="bg-white p-3 rounded border">
                   <div className="text-lg font-semibold text-orange-600">{stats.extractedEntities}</div>
-                  <div className="text-xs text-gray-600">Entities</div>
+                  <div className="text-xs text-gray-600">Total Entities</div>
                 </div>
                 <div className="bg-white p-3 rounded border">
-                  <div className="text-lg font-semibold text-green-600">{stats.totalKeywords}</div>
-                  <div className="text-xs text-gray-600">Keywords</div>
+                  <div className="text-lg font-semibold text-green-600">{stats.displayedEntities}</div>
+                  <div className="text-xs text-gray-600">IT Entities</div>
                 </div>
                 <div className="bg-white p-3 rounded border">
                   <div className="text-lg font-semibold text-purple-600">{stats.connections}</div>

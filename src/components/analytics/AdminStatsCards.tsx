@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, Users, UserCheck, Clock, Award } from 'lucide-react';
+import { TrendingUp, TrendingDown, FileText, Users, Clock, XCircle } from 'lucide-react';
 import type { AdminStats } from '../../types/analytics';
 
 interface AdminStatsCardsProps {
@@ -21,31 +21,22 @@ export const AdminStatsCards: React.FC<AdminStatsCardsProps> = ({
 }) => {
   const statCards = [
     {
-      title: 'Total Users',
-      value: stats.totalUsers,
-      icon: Users,
+      title: 'Total Abstracts',
+      value: 247,
+      icon: FileText,
       color: 'blue',
       change: `+${stats.weeklyGrowth}%`,
       changeType: 'positive' as const,
       description: 'This week'
     },
     {
-      title: 'Active Faculty',
-      value: stats.activeFaculty,
-      icon: UserCheck,
+      title: 'Total Users',
+      value: stats.totalUsers,
+      icon: Users,
       color: 'green',
       change: '+3',
       changeType: 'positive' as const,
-      description: 'New this month'
-    },
-    {
-      title: 'Students',
-      value: stats.totalStudents,
-      icon: Award,
-      color: 'purple',
-      change: `+${stats.monthlyGrowth}%`,
-      changeType: 'positive' as const,
-      description: 'Monthly growth'
+      description: 'Faculty & Students'
     },
     {
       title: 'Pending Approvals',
@@ -56,6 +47,15 @@ export const AdminStatsCards: React.FC<AdminStatsCardsProps> = ({
       changeType: 'negative' as const,
       description: 'From yesterday'
     },
+    {
+      title: 'Total Rejected',
+      value: 15,
+      icon: XCircle,
+      color: 'red',
+      change: '+1',
+      changeType: 'negative' as const,
+      description: 'This month'
+    },
   ];
 
   const getColorClasses = (color: string) => {
@@ -64,6 +64,7 @@ export const AdminStatsCards: React.FC<AdminStatsCardsProps> = ({
       green: 'bg-green-50 text-green-600 border-green-200',
       purple: 'bg-purple-50 text-purple-600 border-purple-200',
       orange: 'bg-orange-50 text-orange-600 border-orange-200',
+      red: 'bg-red-50 text-red-600 border-red-200',
     };
     return colors[color as keyof typeof colors] || colors.blue;
   };
