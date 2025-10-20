@@ -41,6 +41,160 @@ export const OCRExtractor: React.FC<OCRExtractorProps> = ({ onVisualizationData 
 
   const extractEntitiesFromText = async (text: string): Promise<Entity[]> => {
     try {
+      // Define IT-related domains and keywords for filtering (including Digital Innovation)
+      const itDomains = [
+        // Core IT & Computer Science
+        'computer', 'software', 'hardware', 'network', 'internet', 'web', 'mobile', 'app', 'application',
+        'database', 'data', 'algorithm', 'programming', 'code', 'system', 'technology', 'tech',
+        'digital', 'cyber', 'cloud', 'ai', 'artificial', 'intelligence', 'machine learning', 'ml',
+        'deep learning', 'neural', 'iot', 'blockchain', 'security', 'encryption', 'api',
+        'framework', 'development', 'agile', 'devops', 'server', 'client', 'frontend',
+        'backend', 'fullstack', 'javascript', 'python', 'java', 'react', 'node', 'angular',
+        'vue', 'typescript', 'sql', 'nosql', 'mongodb', 'redis', 'aws', 'azure', 'google cloud',
+        
+        // Digital Innovation & Transformation
+        'innovation', 'digital transformation', 'digitalization', 'digitization', 'disruption',
+        'disruptive', 'innovative', 'breakthrough', 'cutting-edge', 'emerging technology',
+        'smart city', 'smart home', 'smart device', 'connected', 'connectivity',
+        'industry 4.0', 'digital economy', 'digital business', 'e-commerce', 'online',
+        'digital marketing', 'social media', 'digital platform', 'ecosystem',
+        'fintech', 'insurtech', 'healthtech', 'edtech', 'agritech', 'proptech',
+        'startup', 'scale-up', 'venture', 'entrepreneurship', 'digital entrepreneurship',
+        
+        // Emerging Technologies
+        'metaverse', 'web3', 'nft', 'cryptocurrency', 'bitcoin', 'ethereum', 'defi',
+        'quantum computing', 'quantum', 'edge computing', 'fog computing',
+        '5g', '6g', 'wireless', 'broadband', 'fiber optic', 'satellite',
+        'autonomous', 'self-driving', 'drone', 'uav', 'robotics', 'robot',
+        'virtual', 'augmented', 'mixed reality', 'vr', 'ar', 'mr', 'xr',
+        '3d printing', 'additive manufacturing', 'biometric', 'facial recognition',
+        'voice recognition', 'speech', 'gesture', 'haptic',
+        
+        // AI & Machine Learning
+        'artificial intelligence', 'machine learning', 'deep learning', 'neural network',
+        'natural language', 'nlp', 'computer vision', 'image recognition',
+        'predictive analytics', 'prescriptive', 'cognitive', 'intelligent system',
+        'expert system', 'decision support', 'recommendation engine',
+        'chatbot', 'conversational ai', 'voice assistant', 'alexa', 'siri',
+        'supervised', 'unsupervised', 'reinforcement', 'training', 'model',
+        'tensorflow', 'pytorch', 'keras', 'scikit', 'pandas', 'numpy',
+        'sentiment analysis', 'classification', 'regression', 'clustering',
+        
+        // Data & Analytics
+        'big data', 'data science', 'data analytics', 'business intelligence', 'bi',
+        'data mining', 'data warehouse', 'data lake', 'etl', 'pipeline',
+        'hadoop', 'spark', 'kafka', 'elasticsearch', 'kibana', 'tableau',
+        'visualization', 'dashboard', 'kpi', 'metrics', 'analytics',
+        'real-time', 'streaming', 'batch processing', 'data processing',
+        
+        // Cloud & Infrastructure
+        'cloud computing', 'saas', 'paas', 'iaas', 'serverless', 'faas',
+        'microservice', 'container', 'docker', 'kubernetes', 'orchestration',
+        'aws', 'azure', 'google cloud', 'gcp', 'alibaba cloud',
+        'cdn', 'load balancer', 'proxy', 'gateway', 'firewall',
+        'scalability', 'elasticity', 'high availability', 'fault tolerance',
+        
+        // Software Development & Engineering
+        'agile', 'scrum', 'kanban', 'sprint', 'ci/cd', 'pipeline', 'jenkins',
+        'git', 'github', 'gitlab', 'bitbucket', 'version control', 'repository',
+        'testing', 'debugging', 'refactoring', 'optimization', 'deployment',
+        'automation', 'workflow', 'integration', 'continuous delivery',
+        'microservices', 'api', 'rest', 'graphql', 'soap', 'websocket',
+        
+        // Cybersecurity & Privacy
+        'cybersecurity', 'infosec', 'encryption', 'cryptography', 'hash',
+        'authentication', 'authorization', 'oauth', 'jwt', 'token', 'sso',
+        'vpn', 'ssl', 'tls', 'https', 'certificate', 'pki',
+        'firewall', 'antivirus', 'malware', 'ransomware', 'phishing',
+        'penetration testing', 'vulnerability', 'patch', 'zero-day',
+        'gdpr', 'compliance', 'privacy', 'data protection',
+        
+        // IoT & Smart Systems
+        'iot', 'internet of things', 'sensor', 'actuator', 'embedded',
+        'smart sensor', 'wearable', 'smartwatch', 'fitness tracker',
+        'home automation', 'building automation', 'industrial iot', 'iiot',
+        'mqtt', 'coap', 'zigbee', 'bluetooth', 'nfc', 'rfid',
+        'edge device', 'gateway', 'mesh network',
+        
+        // Mobile & Web Technologies
+        'mobile app', 'ios', 'android', 'react native', 'flutter', 'ionic',
+        'progressive web app', 'pwa', 'responsive', 'adaptive', 'hybrid',
+        'html', 'css', 'javascript', 'typescript', 'webassembly',
+        'browser', 'chrome', 'firefox', 'safari', 'edge', 'dom',
+        'frontend', 'backend', 'fullstack', 'mean', 'mern', 'lamp',
+        
+        // Digital Business & Strategy
+        'digital strategy', 'digital transformation', 'business model',
+        'platform economy', 'sharing economy', 'gig economy',
+        'omnichannel', 'customer experience', 'cx', 'user experience', 'ux',
+        'customer journey', 'touchpoint', 'engagement', 'personalization',
+        'automation', 'workflow automation', 'rpa', 'robotic process',
+        'optimization', 'efficiency', 'productivity', 'performance',
+        
+        // Specialized Tech Areas
+        'gaming', 'esports', 'game engine', 'unity', 'unreal',
+        'streaming', 'video', 'audio', 'codec', 'transcoding',
+        'graphics', 'rendering', '3d', 'animation', 'gpu', 'cuda',
+        'simulation', 'modeling', 'virtual environment',
+        'gis', 'geospatial', 'mapping', 'location-based',
+        'ocr', 'image processing', 'pattern recognition',
+        
+        // Hardware & Electronics
+        'processor', 'cpu', 'gpu', 'memory', 'ram', 'storage', 'ssd', 'disk',
+        'microcontroller', 'microprocessor', 'arduino', 'raspberry pi',
+        'circuit', 'electronics', 'pcb', 'firmware', 'driver', 'kernel',
+        'operating system', 'linux', 'windows', 'mac', 'unix', 'shell',
+        
+        // Programming & Languages
+        'programming', 'coding', 'scripting', 'compiler', 'interpreter',
+        'java', 'python', 'javascript', 'c++', 'c#', 'ruby', 'php', 'go', 'rust',
+        'swift', 'kotlin', 'dart', 'scala', 'r', 'matlab',
+        'algorithm', 'data structure', 'complexity', 'sorting', 'searching',
+        'queue', 'stack', 'tree', 'graph', 'linked list', 'array',
+        
+        // Protocols & Standards
+        'protocol', 'http', 'https', 'tcp', 'ip', 'udp', 'ftp', 'smtp',
+        'dns', 'dhcp', 'api', 'rest', 'soap', 'json', 'xml', 'yaml',
+        'oauth', 'jwt', 'websocket', 'grpc', 'mqtt'
+      ];
+
+      const itTypes = [
+        'ProgrammingLanguage', 'Software', 'OperatingSystem', 'Device',
+        'Algorithm', 'DataStructure', 'Protocol', 'Framework', 'Library',
+        'Database', 'Service', 'Platform', 'Tool', 'Technology',
+        'ComputerScience', 'InformationTechnology'
+      ];
+
+      // Check if entity label itself is IT-related (strict checking)
+      const isITEntity = (label: string, types: string[] | undefined): boolean => {
+        const lowerLabel = label.toLowerCase();
+        
+        // Check if the label itself contains IT keywords
+        const labelHasITKeyword = itDomains.some(domain => lowerLabel.includes(domain));
+        
+        // Check if entity type is IT-related
+        const hasITType = types && types.some(type => 
+          itTypes.some(itType => type.toLowerCase().includes(itType.toLowerCase()))
+        );
+        
+        // Must have either IT keyword in label OR IT-specific type
+        // Exclude generic educational/research terms
+        const excludedTerms = [
+          'student', 'students', 'educator', 'educators', 'teacher', 'teachers',
+          'qualitative', 'quantitative', 'mixed-method', 'mixed-methods',
+          'assessment', 'learning outcome', 'learning outcomes', 'methodology',
+          'feedback', 'implementation', 'research', 'paper', 'study',
+          'abstract', 'cite', 'department', 'keywords', 'keyword', 'author', 'authors',
+          'personalized learning', 'personalized', 'learning', 'education', 'educational',
+          'nbsc', 'maria santos', 'dr', 'phd', 'professor'
+        ];
+        
+        const isExcluded = excludedTerms.some(term => lowerLabel === term.toLowerCase());
+        
+        // Only return true if has IT content AND is not excluded
+        return (labelHasITKeyword || hasITType) && !isExcluded;
+      };
+
       // Clean and preprocess the text
       const cleanedText = text
         .replace(/\s+/g, ' ') // Replace multiple spaces with single space
@@ -90,16 +244,32 @@ export const OCRExtractor: React.FC<OCRExtractorProps> = ({ onVisualizationData 
         return [];
       }
 
-      const entities = data.annotations.map((annotation, index) => ({
-        id: `entity-${index}`,
-        label: annotation.spot,
-        types: annotation.types || ['Unknown'],
-        confidence: annotation.confidence,
-        abstract: annotation.abstract,
-        uri: annotation.uri
-      }));
+      // Filter entities to only include IT-related ones
+      const allAnnotations = data.annotations;
+      const entities = allAnnotations
+        .filter(annotation => {
+          const isIT = isITEntity(annotation.spot, annotation.types);
+          
+          // Log filtering decision for debugging
+          if (!isIT) {
+            console.log(`🚫 Filtered out: "${annotation.spot}" (types: ${annotation.types?.join(', ') || 'none'})`);
+          } else {
+            console.log(`✅ Kept: "${annotation.spot}" (types: ${annotation.types?.join(', ') || 'none'})`);
+          }
+          
+          return isIT;
+        })
+        .map((annotation, index) => ({
+          id: `entity-${index}`,
+          label: annotation.spot,
+          types: annotation.types || ['Unknown'],
+          confidence: annotation.confidence,
+          abstract: annotation.abstract,
+          uri: annotation.uri
+        }));
 
-      console.log('✅ Extracted entities:', entities.length, 'found');
+      console.log('✅ Extracted IT-related entities:', entities.length, 'found (filtered from', allAnnotations.length, 'total)');
+      console.log('📊 Filtered out:', allAnnotations.length - entities.length, 'non-IT entities');
       return entities;
     } catch (error) {
       console.error('💥 Entity extraction failed:', error);
@@ -349,16 +519,16 @@ and students.`;
             {/* Editing Tools */}
             <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-start gap-2">
-                <div className="text-blue-600 mt-0.5">💡</div>
-                <div className="text-sm text-blue-800">
-                  <p className="font-medium mb-1">Editing Tips for Better Entity Extraction:</p>
-                  <ul className="text-xs space-y-1">
-                    <li>• Remove headers, footers, or page numbers</li>
-                    <li>• Fix OCR errors and misspelled words</li>
-                    <li>• Keep only the main abstract content</li>
-                    <li>• Remove extra line breaks or formatting</li>
-                  </ul>
-                </div>
+                  <div className="text-blue-600 mt-0.5">💡</div>
+                  <div className="text-sm text-blue-800">
+                    <p className="font-medium mb-1">Editing Tips for Better IT Entity Extraction:</p>
+                    <ul className="text-xs space-y-1">
+                      <li>• Remove headers, footers, or page numbers</li>
+                      <li>• Fix OCR errors and misspelled technical terms</li>
+                      <li>• Keep only IT-related content and technical terminology</li>
+                      <li>• Include specific technologies, frameworks, or methodologies</li>
+                    </ul>
+                  </div>
               </div>
             </div>
             
@@ -483,9 +653,9 @@ and students.`;
               </div>
 
               <div className="text-xs text-gray-500 mt-2">
-                <p>• Identifies research entities like authors, institutions, technologies</p>
-                <p>• Extracts keywords and research domains</p>
-                <p>• Analyzes methodology and findings</p>
+                <p>• Identifies IT-related entities: technologies, frameworks, methodologies</p>
+                <p>• Filters for Information Technology domain only</p>
+                <p>• Extracts technical keywords and research concepts</p>
               </div>
             </div>
           </div>
@@ -575,13 +745,13 @@ and students.`;
                         <div className="text-xs text-yellow-700 space-y-1">
                           <p className="font-medium">Try these improvements:</p>
                           <ul className="space-y-1 ml-4">
-                            <li>• Use more specific academic terminology</li>
-                            <li>• Include author names, institution names, or technical terms</li>
-                            <li>• Add research methodologies or field-specific keywords</li>
-                            <li>• Ensure text is at least 50-100 characters long</li>
-                            <li>• Remove OCR artifacts like extra spaces or symbols</li>
+                            <li>• Use IT-specific terminology (e.g., algorithms, databases, frameworks)</li>
+                            <li>• Include technical terms related to computer science or software</li>
+                            <li>• Add programming languages, technologies, or methodologies</li>
+                            <li>• Ensure text contains Information Technology domain content</li>
+                            <li>• Remove non-IT content that may dilute entity extraction</li>
                           </ul>
-                          <p className="mt-2 font-medium">Check the browser console for detailed debugging info.</p>
+                          <p className="mt-2 font-medium">Note: Only IT-related entities are extracted and displayed.</p>
                         </div>
                       </div>
                     </div>
