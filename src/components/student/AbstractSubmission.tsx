@@ -23,6 +23,7 @@ import Tesseract from 'tesseract.js';
 
 interface AbstractFormData {
   title: string;
+  authors: string;
   abstract: string;
   keywords: string[];
   year: string;
@@ -31,6 +32,7 @@ interface AbstractFormData {
 export const AbstractSubmission: React.FC = () => {
   const [formData, setFormData] = useState<AbstractFormData>({
     title: '',
+    authors: '',
     abstract: '',
     keywords: [],
     year: '2025'
@@ -130,6 +132,7 @@ export const AbstractSubmission: React.FC = () => {
       // Reset form
       setFormData({
         title: '',
+        authors: '',
         abstract: '',
         keywords: [],
         year: '2025'
@@ -153,6 +156,7 @@ export const AbstractSubmission: React.FC = () => {
           <CardHeader>
             <CardTitle>{formData.title || "Untitled Abstract"}</CardTitle>
             <CardDescription>
+              {formData.authors && <span>{formData.authors} • </span>}
               {formData.year}
             </CardDescription>
           </CardHeader>
@@ -264,6 +268,20 @@ export const AbstractSubmission: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                   className="mt-1"
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="authors">Authors</Label>
+                <Input
+                  id="authors"
+                  placeholder="Enter author names (e.g., John Doe, Jane Smith, Dr. Brown)"
+                  value={formData.authors}
+                  onChange={(e) => setFormData(prev => ({ ...prev, authors: e.target.value }))}
+                  className="mt-1"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Separate multiple authors with commas
+                </p>
               </div>
 
               <div>
