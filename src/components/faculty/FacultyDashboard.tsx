@@ -28,6 +28,7 @@ import { AbstractManagement as AdminAbstractManagement } from "@/components/anal
 import { SystemMonitoring } from "@/components/analytics/SystemMonitoring";
 import { OCRExtractor } from "@/components/ocr/OCRExtractor";
 import { SimpleEntityGraph } from "@/components/student/SimpleEntityGraph";
+import { AbstractsLibrary } from "@/components/student/AbstractsLibrary";
 import { 
   BookOpen, 
   FileText, 
@@ -1406,8 +1407,8 @@ const FacultyDashboard: React.FC = () => {
             </TabsTrigger>
             {/* v2.0: New Admin Features for Faculty */}
             <TabsTrigger value="all-abstracts" className="flex items-center space-x-2">
-              <Database className="w-4 h-4" />
-              <span className="hidden sm:inline">All Abstracts</span>
+              <BookOpen className="w-4 h-4" />
+              <span className="hidden sm:inline">Abstracts Library</span>
             </TabsTrigger>
             <TabsTrigger value="ocr" className="flex items-center space-x-2">
               <Scan className="w-4 h-4" />
@@ -1662,18 +1663,7 @@ const FacultyDashboard: React.FC = () => {
 
           {/* v2.0: New Admin Feature Tabs for Faculty */}
           <TabsContent value="all-abstracts" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="h-5 w-5" />
-                  All Abstracts Management
-                </CardTitle>
-                <CardDescription>
-                  Manage all abstracts from students and faculty across the system
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            <AdminAbstractManagement />
+            <AbstractsLibrary isFacultyMode={true} />
           </TabsContent>
 
           <TabsContent value="ocr" className="space-y-6">
