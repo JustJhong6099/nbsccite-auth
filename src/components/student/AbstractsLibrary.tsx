@@ -4,7 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import * as d3 from "d3";
 import { 
@@ -23,7 +26,9 @@ import {
   Maximize2,
   Play,
   Pause,
-  RotateCcw
+  RotateCcw,
+  Edit,
+  Trash2
 } from "lucide-react";
 
 // Mock data for approved abstracts
@@ -141,13 +146,21 @@ interface Link extends d3.SimulationLinkDatum<Node> {
   target: string | Node;
 }
 
-export const AbstractsLibrary: React.FC = () => {
+interface AbstractsLibraryProps {
+  isFacultyMode?: boolean;
+}
+
+export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMode = false }) => {
   const { toast } = useToast();
+  const [abstracts, setAbstracts] = useState<AbstractDetail[]>(mockApprovedAbstracts);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("year-desc");
   const [filterYear, setFilterYear] = useState("all");
   const [selectedAbstract, setSelectedAbstract] = useState<AbstractDetail | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState<AbstractDetail | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Interactive visualization controls
@@ -157,10 +170,10 @@ export const AbstractsLibrary: React.FC = () => {
   const zoomBehaviorRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
   // Get unique years for filter
-  const availableYears = Array.from(new Set(mockApprovedAbstracts.map(a => a.year))).sort((a, b) => b - a);
+  const availableYears = Array.from(new Set(abstracts.map(a => a.year))).sort((a, b) => b - a);
 
   // Filter abstracts based on search and filters
-  const filteredAbstracts = mockApprovedAbstracts
+  const filteredAbstracts = abstracts
     .filter(abstract => {
       const matchesSearch = searchTerm === "" || 
         abstract.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -188,6 +201,54 @@ export const AbstractsLibrary: React.FC = () => {
   const handleViewDetails = (abstract: AbstractDetail) => {
     setSelectedAbstract(abstract);
     setIsDetailOpen(true);
+  };
+
+  const handleEdit = (abstract: AbstractDetail) => {
+    setEditFormData({ ...abstract });
+    setSelectedAbstract(abstract);
+    setIsEditOpen(true);
+  };
+
+  const handleDelete = (abstract: AbstractDetail) => {
+    setSelectedAbstract(abstract);
+    setIsDeleteOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editFormData) return;
+
+    setAbstracts(prev => 
+      prev.map(a => a.id === editFormData.id ? editFormData : a)
+    );
+
+    toast({
+      title: "Abstract Updated",
+      description: `"${editFormData.title}" has been successfully updated.`,
+    });
+
+    setIsEditOpen(false);
+    setEditFormData(null);
+    
+    // If detail modal is open, update it
+    if (isDetailOpen && selectedAbstract?.id === editFormData.id) {
+      setSelectedAbstract(editFormData);
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (!selectedAbstract) return;
+
+    setAbstracts(prev => prev.filter(a => a.id !== selectedAbstract.id));
+
+    toast({
+      title: "Abstract Deleted",
+      description: `"${selectedAbstract.title}" has been removed from the library.`,
+      variant: "destructive",
+    });
+
+    setIsDeleteOpen(false);
+    setIsDetailOpen(false);
+    setSelectedAbstract(null);
   };
 
   const handleDownloadPDF = (abstract: AbstractDetail) => {
@@ -706,14 +767,35 @@ ${new Date().toLocaleDateString()}
                         </span>
                         <span>{abstract.department}</span>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewDetails(abstract)}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Details
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(abstract)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </Button>
+                        {isFacultyMode && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(abstract)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDelete(abstract)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -944,11 +1026,163 @@ ${new Date().toLocaleDateString()}
                   <Download className="h-4 w-4 mr-2" />
                   Download PDF
                 </Button>
+                {isFacultyMode && selectedAbstract && (
+                  <>
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleEdit(selectedAbstract)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleDelete(selectedAbstract)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Abstract Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Abstract</DialogTitle>
+            <DialogDescription>
+              Update the abstract details below
+            </DialogDescription>
+          </DialogHeader>
+
+          {editFormData && (
+            <div className="space-y-4 pt-4">
+              <div>
+                <Label htmlFor="edit-title">Title *</Label>
+                <Input
+                  id="edit-title"
+                  value={editFormData.title}
+                  onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-authors">Authors (comma-separated) *</Label>
+                <Input
+                  id="edit-authors"
+                  value={editFormData.authors.join(", ")}
+                  onChange={(e) => setEditFormData({ 
+                    ...editFormData, 
+                    authors: e.target.value.split(",").map(a => a.trim()) 
+                  })}
+                  className="mt-1"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-year">Year *</Label>
+                  <Select 
+                    value={editFormData.year.toString()} 
+                    onValueChange={(value) => setEditFormData({ ...editFormData, year: parseInt(value) })}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[2025, 2024, 2023, 2022, 2021, 2020].map(year => (
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-category">Category *</Label>
+                  <Input
+                    id="edit-category"
+                    value={editFormData.category}
+                    onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-department">Department *</Label>
+                <Input
+                  id="edit-department"
+                  value={editFormData.department}
+                  onChange={(e) => setEditFormData({ ...editFormData, department: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-abstract">Abstract Text *</Label>
+                <Textarea
+                  id="edit-abstract"
+                  value={editFormData.abstract}
+                  onChange={(e) => setEditFormData({ ...editFormData, abstract: e.target.value })}
+                  className="mt-1 min-h-[200px]"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-keywords">Keywords (comma-separated) *</Label>
+                <Input
+                  id="edit-keywords"
+                  value={editFormData.keywords.join(", ")}
+                  onChange={(e) => setEditFormData({ 
+                    ...editFormData, 
+                    keywords: e.target.value.split(",").map(k => k.trim()) 
+                  })}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit}>
+              <Edit className="h-4 w-4 mr-2" />
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the abstract "{selectedAbstract?.title}". 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
