@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import * as d3 from "d3";
+import { FacultyAbstractSubmission } from "@/components/faculty/FacultyAbstractSubmission";
 import { 
   BookOpen,
   Search,
@@ -31,7 +32,8 @@ import {
   Edit,
   Trash2,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Plus
 } from "lucide-react";
 
 interface AbstractDetail {
@@ -82,6 +84,7 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<AbstractDetail | null>(null);
+  const [isAddAbstractOpen, setIsAddAbstractOpen] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Interactive visualization controls
@@ -561,13 +564,23 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-6 w-6" />
-            Approved Abstracts Library
-          </CardTitle>
-          <CardDescription>
-            Browse all approved research abstracts from faculty and students
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-6 w-6" />
+                Approved Abstracts Library
+              </CardTitle>
+              <CardDescription>
+                Browse all approved research abstracts from faculty and students
+              </CardDescription>
+            </div>
+            {isFacultyMode && (
+              <Button onClick={() => setIsAddAbstractOpen(true)} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add Abstract
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Search and Filter Section */}
@@ -1132,6 +1145,17 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Faculty Abstract Submission Modal */}
+      {isFacultyMode && (
+        <FacultyAbstractSubmission
+          isOpen={isAddAbstractOpen}
+          onClose={() => setIsAddAbstractOpen(false)}
+          onSuccess={() => {
+            fetchApprovedAbstracts();
+          }}
+        />
+      )}
     </div>
   );
 };
