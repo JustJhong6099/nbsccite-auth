@@ -25,7 +25,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import Tesseract from 'tesseract.js';
-import { performEntityExtraction, type ExtractedEntities } from '@/lib/entity-extraction';
+import { performEntityExtraction, type ExtractedEntities } from '@/lib/dandelion-api';
 import * as d3 from "d3";
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -155,7 +155,7 @@ export const FacultyAbstractSubmission: React.FC<FacultyAbstractSubmissionProps>
 
     setIsExtractingEntities(true);
     try {
-      const entities = performEntityExtraction(formData.abstract, formData.keywords);
+      const entities = await performEntityExtraction(formData.abstract, formData.keywords);
       setExtractedEntities(entities);
       
       setTimeout(() => {
