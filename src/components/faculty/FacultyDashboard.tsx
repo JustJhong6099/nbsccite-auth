@@ -174,32 +174,36 @@ const StudentAbstractReview: React.FC = () => {
     try {
       setIsLoading(true);
       
-      // Fetch abstracts with student profile information
-      const { data, error } = await supabase
+      // Fetch abstracts first
+      const { data: abstractsData, error: abstractsError } = await supabase
         .from('abstracts')
-        .select(`
-          id,
-          title,
-          abstract_text,
-          keywords,
-          status,
-          submitted_date,
-          reviewed_date,
-          department,
-          year,
-          authors,
-          extracted_entities,
-          entity_extraction_confidence,
-          student_id,
-          profiles:student_id (
-            full_name,
-            email,
-            student_id
-          )
-        `)
+        .select('*')
         .order('submitted_date', { ascending: false });
 
-      if (error) throw error;
+      if (abstractsError) throw abstractsError;
+
+      // Fetch profiles for all student_ids
+      const studentIds = abstractsData?.map(a => a.student_id).filter(Boolean) || [];
+      
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, student_id')
+        .in('id', studentIds);
+
+      if (profilesError) throw profilesError;
+
+      // Create a map of profiles by id for quick lookup
+      const profilesMap = new Map(
+        profilesData?.map(p => [p.id, p]) || []
+      );
+
+      const data = abstractsData?.map(abstract => ({
+        ...abstract,
+        profiles: profilesMap.get(abstract.student_id)
+      }));
+
+      console.log('Fetched abstracts:', data);
+      console.log('Number of submissions:', data?.length || 0);
 
       // Transform data to match StudentSubmission interface
       const transformedSubmissions: StudentSubmission[] = (data || []).map(abstract => {
@@ -225,11 +229,19 @@ const StudentAbstractReview: React.FC = () => {
       });
 
       setSubmissions(transformedSubmissions);
-    } catch (error) {
+      console.log('Transformed submissions:', transformedSubmissions);
+    } catch (error: any) {
       console.error('Error fetching submissions:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      
       toast({
         title: "Error",
-        description: "Failed to load submissions. Please try again.",
+        description: error.message || "Failed to load submissions. Please try again.",
         variant: "destructive",
       });
     } finally {
