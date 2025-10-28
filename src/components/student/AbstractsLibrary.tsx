@@ -33,7 +33,10 @@ import {
   Trash2,
   Loader2,
   RefreshCw,
-  Plus
+  Plus,
+  X,
+  Save,
+  XCircle
 } from "lucide-react";
 
 interface AbstractDetail {
@@ -85,6 +88,14 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<AbstractDetail | null>(null);
   const [isAddAbstractOpen, setIsAddAbstractOpen] = useState(false);
+  const [isEditingEntities, setIsEditingEntities] = useState(false);
+  const [editedEntities, setEditedEntities] = useState<{
+    technologies: string[];
+    domains: string[];
+    methodologies: string[];
+  } | null>(null);
+  const [newEntityInput, setNewEntityInput] = useState('');
+  const [newEntityType, setNewEntityType] = useState<'technologies' | 'domains' | 'methodologies'>('technologies');
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Interactive visualization controls
@@ -193,6 +204,8 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
   const handleViewDetails = (abstract: AbstractDetail) => {
     setSelectedAbstract(abstract);
     setIsDetailOpen(true);
+    setIsEditingEntities(false);
+    setEditedEntities(null);
   };
 
   const handleEdit = (abstract: AbstractDetail) => {
@@ -278,6 +291,122 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
       toast({
         title: "Delete Failed",
         description: error.message || "Failed to delete abstract. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Entity editing functions
+  const handleStartEditingEntities = () => {
+    if (selectedAbstract?.extractedEntities) {
+      setEditedEntities({
+        technologies: [...(selectedAbstract.extractedEntities.technologies || [])],
+        domains: [...(selectedAbstract.extractedEntities.domains || [])],
+        methodologies: [...(selectedAbstract.extractedEntities.methodologies || [])]
+      });
+      setIsEditingEntities(true);
+    }
+  };
+
+  const handleCancelEditingEntities = () => {
+    setIsEditingEntities(false);
+    setEditedEntities(null);
+    setNewEntityInput('');
+    setNewEntityType('technologies');
+  };
+
+  const handleAddEntity = () => {
+    if (!newEntityInput.trim() || !editedEntities) return;
+
+    const newEntity = newEntityInput.trim();
+    
+    // Check if entity already exists in any category
+    const allEntities = [
+      ...editedEntities.technologies,
+      ...editedEntities.domains,
+      ...editedEntities.methodologies
+    ];
+    
+    if (allEntities.includes(newEntity)) {
+      toast({
+        title: "Duplicate Entity",
+        description: "This entity already exists.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setEditedEntities({
+      ...editedEntities,
+      [newEntityType]: [...editedEntities[newEntityType], newEntity]
+    });
+    setNewEntityInput('');
+    
+    toast({
+      title: "Entity Added",
+      description: `Added "${newEntity}" to ${newEntityType}.`,
+    });
+  };
+
+  const handleRemoveEntity = (type: 'technologies' | 'domains' | 'methodologies', entity: string) => {
+    if (!editedEntities) return;
+
+    setEditedEntities({
+      ...editedEntities,
+      [type]: editedEntities[type].filter(e => e !== entity)
+    });
+
+    toast({
+      title: "Entity Removed",
+      description: `Removed "${entity}" from ${type}.`,
+    });
+  };
+
+  const handleSaveEntities = async () => {
+    if (!selectedAbstract || !editedEntities) return;
+
+    try {
+      const { error } = await supabase
+        .from('abstracts')
+        .update({
+          extracted_entities: editedEntities,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedAbstract.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Entities Updated",
+        description: "Entity extraction has been successfully updated.",
+      });
+
+      // Update local state
+      setSelectedAbstract({
+        ...selectedAbstract,
+        extractedEntities: editedEntities
+      });
+
+      setIsEditingEntities(false);
+      setEditedEntities(null);
+
+      // Refresh data
+      await fetchApprovedAbstracts();
+      
+      // Rebuild visualization with new entities
+      setTimeout(() => {
+        if (svgRef.current && selectedAbstract) {
+          createEntityVisualization({
+            ...selectedAbstract,
+            extractedEntities: editedEntities
+          });
+        }
+      }, 100);
+    } catch (error: any) {
+      console.error('Error updating entities:', error);
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update entities. Please try again.",
         variant: "destructive",
       });
     }
@@ -846,29 +975,107 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
               {/* Extracted Entities */}
               {selectedAbstract.extractedEntities && (
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <Network className="h-4 w-4" />
-                    Extracted Entities
-                    {selectedAbstract.extractionConfidence && (
-                      <Badge variant="outline" className="ml-2 bg-green-50 text-green-700">
-                        {Math.round(selectedAbstract.extractionConfidence * 100)}% Confidence
-                      </Badge>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <Network className="h-4 w-4" />
+                      Extracted Entities
+                      {selectedAbstract.extractionConfidence && (
+                        <Badge variant="outline" className="ml-2 bg-green-50 text-green-700">
+                          {Math.round(selectedAbstract.extractionConfidence * 100)}% Confidence
+                        </Badge>
+                      )}
+                    </h4>
+                    {isFacultyMode && !isEditingEntities && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleStartEditingEntities}
+                        className="flex items-center gap-2"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Edit Entities
+                      </Button>
                     )}
-                  </h4>
+                    {isFacultyMode && isEditingEntities && (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCancelEditingEntities}
+                          className="flex items-center gap-2"
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveEntities}
+                          className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          Save Changes
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Add Entity Input (Faculty Mode) */}
+                  {isFacultyMode && isEditingEntities && editedEntities && (
+                    <Card className="mb-4 border-blue-200 bg-blue-50">
+                      <CardContent className="p-4">
+                        <Label className="text-sm font-medium text-gray-900 mb-2 block">Add New Entity</Label>
+                        <div className="flex gap-2">
+                          <Select value={newEntityType} onValueChange={(value: any) => setNewEntityType(value)}>
+                            <SelectTrigger className="w-[180px] bg-white">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="technologies">Technology</SelectItem>
+                              <SelectItem value="domains">Research Domain</SelectItem>
+                              <SelectItem value="methodologies">Methodology</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            placeholder="Enter entity name..."
+                            value={newEntityInput}
+                            onChange={(e) => setNewEntityInput(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && handleAddEntity()}
+                            className="flex-1 bg-white"
+                          />
+                          <Button onClick={handleAddEntity} size="sm">
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Technologies */}
-                    {selectedAbstract.extractedEntities.technologies && 
-                     selectedAbstract.extractedEntities.technologies.length > 0 && (
+                    {((isEditingEntities && editedEntities) ? editedEntities.technologies : selectedAbstract.extractedEntities.technologies) && 
+                     ((isEditingEntities && editedEntities) ? editedEntities.technologies : selectedAbstract.extractedEntities.technologies).length > 0 && (
                       <div>
                         <Label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
                           <span className="h-3 w-3 rounded-full bg-blue-500"></span>
                           Technologies
                         </Label>
                         <div className="flex flex-wrap gap-2">
-                          {selectedAbstract.extractedEntities.technologies.map((tech: string, idx: number) => (
-                            <Badge key={idx} variant="outline" className="bg-blue-50 text-blue-700">
+                          {((isEditingEntities && editedEntities) ? editedEntities.technologies : selectedAbstract.extractedEntities.technologies).map((tech: string, idx: number) => (
+                            <Badge 
+                              key={idx} 
+                              variant="outline" 
+                              className={`bg-blue-50 text-blue-700 ${isEditingEntities ? 'pr-1' : ''}`}
+                            >
                               {tech}
+                              {isEditingEntities && (
+                                <button
+                                  onClick={() => handleRemoveEntity('technologies', tech)}
+                                  className="ml-2 hover:text-red-600"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              )}
                             </Badge>
                           ))}
                         </div>
@@ -876,17 +1083,29 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
                     )}
 
                     {/* Research Domains */}
-                    {selectedAbstract.extractedEntities.domains && 
-                     selectedAbstract.extractedEntities.domains.length > 0 && (
+                    {((isEditingEntities && editedEntities) ? editedEntities.domains : selectedAbstract.extractedEntities.domains) && 
+                     ((isEditingEntities && editedEntities) ? editedEntities.domains : selectedAbstract.extractedEntities.domains).length > 0 && (
                       <div>
                         <Label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
                           <span className="h-3 w-3 rounded-full bg-purple-500"></span>
                           Research Domains
                         </Label>
                         <div className="flex flex-wrap gap-2">
-                          {selectedAbstract.extractedEntities.domains.map((domain: string, idx: number) => (
-                            <Badge key={idx} variant="outline" className="bg-purple-50 text-purple-700">
+                          {((isEditingEntities && editedEntities) ? editedEntities.domains : selectedAbstract.extractedEntities.domains).map((domain: string, idx: number) => (
+                            <Badge 
+                              key={idx} 
+                              variant="outline" 
+                              className={`bg-purple-50 text-purple-700 ${isEditingEntities ? 'pr-1' : ''}`}
+                            >
                               {domain}
+                              {isEditingEntities && (
+                                <button
+                                  onClick={() => handleRemoveEntity('domains', domain)}
+                                  className="ml-2 hover:text-red-600"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              )}
                             </Badge>
                           ))}
                         </div>
@@ -895,17 +1114,29 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
                   </div>
 
                   {/* Methodologies - Full Width */}
-                  {selectedAbstract.extractedEntities.methodologies && 
-                   selectedAbstract.extractedEntities.methodologies.length > 0 && (
+                  {((isEditingEntities && editedEntities) ? editedEntities.methodologies : selectedAbstract.extractedEntities.methodologies) && 
+                   ((isEditingEntities && editedEntities) ? editedEntities.methodologies : selectedAbstract.extractedEntities.methodologies).length > 0 && (
                     <div className="mt-4">
                       <Label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
                         <span className="h-3 w-3 rounded-full bg-green-500"></span>
                         Methodologies
                       </Label>
                       <div className="flex flex-wrap gap-2">
-                        {selectedAbstract.extractedEntities.methodologies.map((method: string, idx: number) => (
-                          <Badge key={idx} variant="outline" className="bg-green-50 text-green-700">
+                        {((isEditingEntities && editedEntities) ? editedEntities.methodologies : selectedAbstract.extractedEntities.methodologies).map((method: string, idx: number) => (
+                          <Badge 
+                            key={idx} 
+                            variant="outline" 
+                            className={`bg-green-50 text-green-700 ${isEditingEntities ? 'pr-1' : ''}`}
+                          >
                             {method}
+                            {isEditingEntities && (
+                              <button
+                                onClick={() => handleRemoveEntity('methodologies', method)}
+                                className="ml-2 hover:text-red-600"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            )}
                           </Badge>
                         ))}
                       </div>

@@ -62,27 +62,101 @@ Before you begin, make sure you have:
    ```ini
    VITE_SUPABASE_URL=https://your-project.supabase.co
    VITE_SUPABASE_ANON_KEY=your-anon-key
-   VITE_DANDELION_TOKEN=your-dandelion-token
-6. Start the development server:
+   VITE_DANDELION_API_TOKEN=your-dandelion-api-token
+   ```
+   
+   **📖 Dandelion API Setup:**  
+   For detailed instructions on obtaining and configuring your Dandelion API token, see **[DANDELION-API-SETUP.md](./DANDELION-API-SETUP.md)**
+   
+   - **Free Tier:** 1,000 requests/day (sufficient for most academic use)
+   - **Benefits:** Higher accuracy, context-aware entity extraction, false-positive filtering
+   - **Fallback:** System automatically uses keyword-based extraction if API is unavailable
+
+5. Start the development server:
    ```bash
-   npm run dev / ionic serve
+   npm run dev
+   ```
 Make sure you have your own Supabase project and environment variables set up to connect the frontend to the backend.
 
 
 
 ## 📦 Features
-🔍 Automated Entity Extraction – Detects keywords, technologies, locations, and research domains from abstracts
 
-📊 Visualization Tools – Tag clouds, frequency charts, and entity lists
+### 🔍 Intelligent Entity Extraction
+- **Dandelion API Integration** – Professional semantic text analytics with 80-95% accuracy
+- **Context-Aware Recognition** – Understands meaning and relationships between entities
+- **False-Positive Filtering** – Reduces irrelevant matches (e.g., filters generic "AR" vs "Augmented Reality")
+- **Fallback Mode** – Automatic keyword-based extraction when API is unavailable
+- **Multi-Category Detection** – Extracts technologies, research domains, and methodologies
 
-👥 Role-Based Access – Different permissions for students and faculty
+### 📊 Visualization & Analysis
+- **Interactive D3.js Graphs** – Drag-and-drop entity relationship visualization
+- **Tag Clouds** – Visual representation of keyword frequency
+- **Entity Analytics** – Track trends and patterns across abstracts
 
-🛠 Admin Dashboard – Manage submissions, validate extractions, and generate reports
+### 👥 Role-Based System
+- **Student Portal** – Submit abstracts, view entity extractions, track submissions
+- **Faculty Dashboard** – Review submissions, validate entities, direct publishing
+- **Admin Tools** – User management, system monitoring, comprehensive analytics
 
-📱 Cross-Platform – Works on both web and mobile devices
+### 🛠 Advanced Features
+- **OCR Support** – Extract text from images before submission
+- **Auto-Approval for Faculty** – Streamlined publishing workflow
+- **Real-time Preview** – See extracted entities before submission
+- **Edit & Delete** – Full CRUD operations for approved abstracts
+
+### 📱 Cross-Platform
+- Responsive design works on desktop, tablet, and mobile devices
+- Optimized for modern web browsers
 
 
+---
 
+## 🚀 Deployment
+
+### Deploying to Vercel
+
+1. **Push your code to GitHub**
+   ```bash
+   git add .
+   git commit -m "Ready for deployment"
+   git push origin main
+   ```
+
+2. **Connect to Vercel**
+   - Go to [vercel.com](https://vercel.com) and sign in
+   - Click "New Project" and import your GitHub repository
+   - Vercel will auto-detect it as a Vite project
+
+3. **Configure Environment Variables**
+   
+   In your Vercel project settings, add these environment variables:
+   
+   | Variable Name | Value | Required |
+   |--------------|-------|----------|
+   | `VITE_SUPABASE_URL` | Your Supabase project URL | ✅ Yes |
+   | `VITE_SUPABASE_ANON_KEY` | Your Supabase anon key | ✅ Yes |
+   | `VITE_DANDELION_API_TOKEN` | Your Dandelion API token | ✅ Yes |
+
+   **Steps:**
+   - Go to Project Settings → Environment Variables
+   - Add each variable for Production, Preview, and Development
+   - Click Save
+
+4. **Deploy**
+   - Click "Deploy" and Vercel will build and deploy your app
+   - Your app will be live at `https://your-project.vercel.app`
+
+5. **Update Supabase URL Allowlist**
+   - Go to your Supabase project settings
+   - Add your Vercel domain to the allowed origins
+   - Format: `https://your-project.vercel.app`
+
+### Custom Domain (Optional)
+- In Vercel: Settings → Domains → Add your custom domain
+- Update DNS records as instructed by Vercel
+
+---
 
 ## 🙏 Acknowledgments
 Special thanks to our faculty mentors and project adviser at NBSC–ICS for their valuable guidance and support.
