@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +22,8 @@ import {
   User,
   Tag,
   Network,
-  Info
+  Info,
+  RefreshCw
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -32,6 +33,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
 
 // Type definitions
 interface Node extends d3.SimulationNodeDatum {
@@ -45,108 +49,90 @@ interface Link extends d3.SimulationLinkDatum<Node> {
   target: string | Node;
 }
 
-// Mock data for student's abstracts
-const mockAbstracts = [
-  {
-    id: '1',
-    title: 'Machine Learning Applications in Educational Technology',
-    abstract: 'This research explores the implementation of machine learning algorithms in educational platforms to enhance student learning outcomes. The study focuses on personalized learning paths, automated assessment systems, and predictive analytics for student performance.',
-    authors: ['You', 'Dr. Sarah Johnson', 'Prof. Michael Chen'],
-    keywords: ['Machine Learning', 'Education Technology', 'Personalized Learning', 'Assessment Systems', 'Predictive Analytics'],
-    research_area: 'Machine Learning',
-    methodology: 'Mixed Methods',
-    year: '2024',
-    department: 'Institute for Computer Studies',
-    category: 'Applied Research',
-    status: 'approved',
-    submitted_date: '2024-01-15',
-    review_date: '2024-01-18',
-    reviewer: 'Dr. Sarah Johnson',
-    file_name: 'ml_education_paper.pdf',
-    feedback: 'Excellent research methodology and clear presentation of findings.',
-    entity_extraction: {
-      technologies: ['Python', 'TensorFlow', 'Scikit-learn', 'Jupyter', 'Keras'],
-      domains: ['Machine Learning', 'Educational Technology', 'Data Science'],
-      confidence: 0.92
-    }
-  },
-  {
-    id: '2',
-    title: 'Web Development Framework for E-commerce Applications',
-    abstract: 'This project focuses on developing a comprehensive e-commerce platform using modern web technologies. The frontend is built with React.js, providing a responsive and user-friendly interface.',
-    authors: ['You', 'Jane Smith'],
-    keywords: ['React', 'Node.js', 'E-commerce', 'Web Development', 'JavaScript', 'MongoDB'],
-    research_area: 'Web Development',
-    methodology: 'Case Study',
-    year: '2024',
-    department: 'Institute for Computer Studies',
-    category: 'Capstone Project',
-    status: 'under_review',
-    submitted_date: '2024-01-10',
-    review_date: null,
-    reviewer: 'Prof. Michael Chen',
-    file_name: 'ecommerce_framework.pdf',
-    feedback: null,
-    entity_extraction: {
-      technologies: ['React', 'Node.js', 'JavaScript', 'MongoDB', 'Express.js'],
-      domains: ['Web Development', 'E-commerce', 'Full-stack Development'],
-      confidence: 0.88
-    }
-  },
-  {
-    id: '3',
-    title: 'Database Optimization Techniques in PostgreSQL',
-    abstract: 'This study investigates various database optimization techniques specifically for PostgreSQL in large-scale applications. We examine indexing strategies, query optimization, and performance tuning.',
-    authors: ['You', 'Dr. Amanda Liu'],
-    keywords: ['Database', 'PostgreSQL', 'Optimization', 'Performance', 'SQL', 'Indexing'],
-    research_area: 'Database Systems',
-    methodology: 'Experimental Design',
-    year: '2023',
-    department: 'Institute for Computer Studies',
-    category: 'Thesis',
-    status: 'rejected',
-    submitted_date: '2023-12-15',
-    review_date: '2023-12-20',
-    reviewer: 'Dr. Amanda Liu',
-    file_name: 'postgres_optimization.pdf',
-    feedback: 'The methodology needs improvement and more comprehensive testing is required.',
-    entity_extraction: {
-      technologies: ['PostgreSQL', 'SQL', 'Python', 'Docker'],
-      domains: ['Database Systems', 'Performance Optimization', 'DevOps'],
-      confidence: 0.85
-    }
-  },
-  {
-    id: '4',
-    title: 'Mobile Healthcare Application Development',
-    abstract: 'Development of a mobile application for healthcare management using Flutter framework. The application aims to improve patient-doctor communication and appointment scheduling.',
-    authors: ['You'],
-    keywords: ['Flutter', 'Mobile Development', 'Healthcare', 'Dart', 'Firebase', 'Cross-platform'],
-    research_area: 'Mobile Development',
-    methodology: 'Quantitative Research',
-    year: '2024',
-    department: 'Institute for Computer Studies',
-    category: 'Applied Research',
-    status: 'draft',
-    submitted_date: null,
-    review_date: null,
-    reviewer: null,
-    file_name: null,
-    feedback: null,
-    entity_extraction: {
-      technologies: ['Flutter', 'Dart', 'Firebase', 'Android', 'iOS'],
-      domains: ['Mobile Development', 'Healthcare Technology', 'Cross-platform Development'],
-      confidence: 0.90
-    }
-  }
-];
+interface AbstractData {
+  id: string;
+  title: string;
+  abstract: string;
+  authors: string[];
+  keywords: string[];
+  research_area?: string;
+  methodology?: string;
+  year: string;
+  department?: string;
+  category?: string;
+  status: string;
+  submitted_date: string | null;
+  review_date?: string | null;
+  reviewer?: string | null;
+  file_name?: string | null;
+  feedback?: string | null;
+  entity_extraction?: {
+    technologies?: string[];
+    domains?: string[];
+    methodologies?: string[];
+    confidence?: number;
+  };
+}
 
 export const MyAbstracts: React.FC = () => {
+  const { user } = useAuth();
+  const [abstracts, setAbstracts] = useState<AbstractData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedAbstract, setSelectedAbstract] = useState<any>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // Fetch abstracts from database
+  useEffect(() => {
+    if (user) {
+      fetchAbstracts();
+    }
+  }, [user]);
+
+  const fetchAbstracts = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('abstracts')
+        .select('*')
+        .eq('student_id', user?.id)
+        .order('submitted_date', { ascending: false });
+
+      if (error) throw error;
+
+      // Transform data to match interface
+      const transformedAbstracts: AbstractData[] = (data || []).map(abstract => ({
+        id: abstract.id,
+        title: abstract.title,
+        abstract: abstract.abstract_text,
+        authors: abstract.authors || [],
+        keywords: abstract.keywords || [],
+        year: abstract.year?.toString() || '2025',
+        department: abstract.department,
+        category: abstract.category,
+        status: abstract.status,
+        submitted_date: abstract.submitted_date,
+        review_date: abstract.reviewed_date,
+        feedback: null, // Will need to add feedback column to schema if needed
+        entity_extraction: abstract.extracted_entities ? {
+          technologies: abstract.extracted_entities.technologies || [],
+          domains: abstract.extracted_entities.domains || [],
+          methodologies: abstract.extracted_entities.methodologies || [],
+          confidence: abstract.extracted_entities.confidence || abstract.entity_extraction_confidence
+        } : undefined
+      }));
+
+      setAbstracts(transformedAbstracts);
+    } catch (error: any) {
+      console.error('Error fetching abstracts:', error);
+      toast.error('Failed to load abstracts');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -163,7 +149,7 @@ export const MyAbstracts: React.FC = () => {
     }
   };
 
-  const filteredAbstracts = mockAbstracts.filter(abstract => {
+  const filteredAbstracts = abstracts.filter(abstract => {
     const matchesSearch = abstract.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          abstract.keywords.some(keyword => keyword.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = selectedStatus === 'all' || abstract.status === selectedStatus;
@@ -171,11 +157,11 @@ export const MyAbstracts: React.FC = () => {
   });
 
   const abstractsByStatus = {
-    all: mockAbstracts,
-    approved: mockAbstracts.filter(a => a.status === 'approved'),
-    under_review: mockAbstracts.filter(a => a.status === 'under_review'),
-    rejected: mockAbstracts.filter(a => a.status === 'rejected'),
-    draft: mockAbstracts.filter(a => a.status === 'draft')
+    all: abstracts,
+    approved: abstracts.filter(a => a.status === 'approved'),
+    pending: abstracts.filter(a => a.status === 'pending'),
+    rejected: abstracts.filter(a => a.status === 'rejected'),
+    needs_revision: abstracts.filter(a => a.status === 'needs-revision')
   };
 
   const handleViewAbstract = (abstract: any) => {
@@ -314,79 +300,93 @@ export const MyAbstracts: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">My Abstracts</h2>
           <p className="text-gray-600">Manage your research submissions and track their status</p>
         </div>
-        <Button>
-          <FileText className="h-4 w-4 mr-2" />
-          New Abstract
+        <Button onClick={fetchAbstracts} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
         </Button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">{abstractsByStatus.all.length}</div>
-            <div className="text-sm text-gray-600">Total</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">{abstractsByStatus.approved.length}</div>
-            <div className="text-sm text-gray-600">Approved</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">{abstractsByStatus.under_review.length}</div>
-            <div className="text-sm text-gray-600">Under Review</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-red-600">{abstractsByStatus.rejected.length}</div>
-            <div className="text-sm text-gray-600">Rejected</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-gray-600">{abstractsByStatus.draft.length}</div>
-            <div className="text-sm text-gray-600">Drafts</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters and Search */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <CardTitle>Research Submissions</CardTitle>
-              <CardDescription>Your abstract submissions and their current status</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search abstracts..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-64"
-                />
-              </div>
-            </div>
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mr-2" />
+          <span className="text-gray-600">Loading your abstracts...</span>
+        </div>
+      ) : (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-blue-600">{abstractsByStatus.all.length}</div>
+                <div className="text-sm text-gray-600">Total</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-green-600">{abstractsByStatus.approved.length}</div>
+                <div className="text-sm text-gray-600">Approved</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-orange-600">{abstractsByStatus.pending.length}</div>
+                <div className="text-sm text-gray-600">Pending</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-red-600">{abstractsByStatus.rejected.length}</div>
+                <div className="text-sm text-gray-600">Rejected</div>
+              </CardContent>
+            </Card>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={selectedStatus} onValueChange={setSelectedStatus}>
-            <TabsList className="mb-6">
-              <TabsTrigger value="all">All ({abstractsByStatus.all.length})</TabsTrigger>
-              <TabsTrigger value="approved">Approved ({abstractsByStatus.approved.length})</TabsTrigger>
-              <TabsTrigger value="under_review">Under Review ({abstractsByStatus.under_review.length})</TabsTrigger>
-              <TabsTrigger value="rejected">Rejected ({abstractsByStatus.rejected.length})</TabsTrigger>
-              <TabsTrigger value="draft">Drafts ({abstractsByStatus.draft.length})</TabsTrigger>
-            </TabsList>
 
-            <div className="space-y-4">
-              {filteredAbstracts.map((abstract) => (
+          {/* Filters and Search */}
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <CardTitle>Research Submissions</CardTitle>
+                  <CardDescription>Your abstract submissions and their current status</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search abstracts..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 w-64"
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Tabs value={selectedStatus} onValueChange={setSelectedStatus}>
+                <TabsList className="mb-6">
+                  <TabsTrigger value="all">All ({abstractsByStatus.all.length})</TabsTrigger>
+                  <TabsTrigger value="approved">Approved ({abstractsByStatus.approved.length})</TabsTrigger>
+                  <TabsTrigger value="pending">Pending ({abstractsByStatus.pending.length})</TabsTrigger>
+                  <TabsTrigger value="rejected">Rejected ({abstractsByStatus.rejected.length})</TabsTrigger>
+                  <TabsTrigger value="needs-revision">Needs Revision ({abstractsByStatus.needs_revision.length})</TabsTrigger>
+                </TabsList>
+
+                <div className="space-y-4">{filteredAbstracts.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <FileText className="w-12 h-12 text-gray-300 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        {selectedStatus === 'all' ? 'No Abstracts Yet' : `No ${selectedStatus.replace('_', ' ')} Abstracts`}
+                      </h3>
+                      <p className="text-gray-500 max-w-sm">
+                        {selectedStatus === 'all' 
+                          ? 'Start by submitting your first research abstract.' 
+                          : `You don't have any ${selectedStatus.replace('_', ' ')} abstracts.`}
+                      </p>
+                    </div>
+                  ) : (
+                    filteredAbstracts.map((abstract) => (
                 <Card key={abstract.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
@@ -481,24 +481,13 @@ export const MyAbstracts: React.FC = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-
-              {filteredAbstracts.length === 0 && (
-                <div className="text-center py-12">
-                  <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No abstracts found</h3>
-                  <p className="text-gray-600">
-                    {searchTerm || selectedStatus !== 'all' 
-                      ? 'Try adjusting your search or filter criteria.'
-                      : 'Start by submitting your first research abstract.'
-                    }
-                  </p>
-                </div>
-              )}
+              )))}
             </div>
           </Tabs>
         </CardContent>
       </Card>
+        </>
+      )}
 
       {/* View Abstract Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>

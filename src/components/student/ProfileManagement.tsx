@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 import { 
   User,
   Mail,
@@ -15,86 +17,245 @@ import {
   GraduationCap,
   Camera,
   Save,
-  Edit
+  Edit,
+  RefreshCw
 } from "lucide-react";
 
-// Mock user profile data
-const mockUserProfile = {
+interface ProfileData {
   personal: {
-    firstName: 'John',
-    lastName: 'Smith',
-    email: 'john.smith@student.nbsc.edu',
-    phone: '+1 (555) 123-4567',
-    dateOfBirth: '1999-03-15',
-    address: '123 Campus Drive, University City',
-    bio: 'Passionate computer science student with interests in AI, web development, and educational technology. Currently pursuing research in machine learning applications for educational systems.',
-    avatar: null,
-    studentId: 'CS2021001',
-    enrollmentYear: '2021'
-  },
+    firstName: string;
+    lastName: string;
+    fullName?: string;
+    email: string;
+    phone: string;
+    dateOfBirth?: string;
+    address: string;
+    bio: string;
+    avatar: string | null;
+    studentId: string;
+    enrollmentYear?: string;
+  };
   academic: {
-    program: 'Bachelor of Science in Computer Science',
-    major: 'Computer Science',
-    minor: 'Mathematics',
-    gpa: '3.85',
-    expectedGraduation: '2025-05',
-    advisor: 'Dr. Sarah Johnson',
-    researchInterests: [
-      'Machine Learning',
-      'Educational Technology',
-      'Web Development',
-      'Data Science',
-      'Mobile Development'
-    ],
-    skills: [
-      'Python',
-      'JavaScript',
-      'React',
-      'TensorFlow',
-      'Node.js',
-      'PostgreSQL',
-      'Flutter',
-      'Git'
-    ]
-  },
+    program: string;
+    major?: string;
+    minor?: string;
+    gpa?: string;
+    expectedGraduation?: string;
+    advisor?: string;
+    researchInterests: string[];
+    skills: string[];
+  };
   research: {
-    totalAbstracts: 4,
-    totalCitations: 12,
-    hIndex: 2,
-    publicationsCount: 4,
-    researchGroups: ['AI Research Lab', 'Educational Technology Group'],
-    conferences: ['NBSC-ICS 2023', 'NBSC-ICS 2024'],
-    awards: ['Best Student Paper 2023', 'Research Excellence Award 2024']
-  },
-  privacy: {
-    profileVisibility: 'public',
-    showEmail: false,
-    showPhone: false,
-    showResearchInterests: true,
-    showPublications: true,
-    allowCollaboration: true,
-    indexInSearch: true
-  }
-};
+    totalAbstracts: number;
+    totalCitations?: number;
+    hIndex?: number;
+    publicationsCount: number;
+    researchGroups?: string[];
+    conferences?: string[];
+    awards?: string[];
+  };
+  privacy?: {
+    profileVisibility?: string;
+    showEmail?: boolean;
+    showPhone?: boolean;
+    showResearchInterests?: boolean;
+    showPublications?: boolean;
+    allowCollaboration?: boolean;
+    indexInSearch?: boolean;
+  };
+}
 
 export const ProfileManagement: React.FC = () => {
-  const [profile, setProfile] = useState(mockUserProfile);
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    toast.success("Profile updated successfully!");
-    setIsEditing(false);
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+    }
+  }, [user]);
+
+  const fetchProfile = async () => {
+    try {
+      setIsLoading(true);
+
+      // Fetch profile data
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      // Fetch abstracts count
+      const { data: abstractsData, error: abstractsError } = await supabase
+        .from('abstracts')
+        .select('id, status')
+        .eq('student_id', user?.id);
+
+      if (abstractsError) throw abstractsError;
+
+      // Transform data to match interface
+      const transformedProfile: ProfileData = {
+        personal: {
+          firstName: profileData.full_name?.split(' ')[0] || '',
+          lastName: profileData.full_name?.split(' ').slice(1).join(' ') || '',
+          fullName: profileData.full_name || '',
+          email: profileData.email || user?.email || '',
+          phone: profileData.phone || '',
+          dateOfBirth: profileData.date_of_birth || '',
+          address: profileData.address || '',
+          bio: profileData.bio || '',
+          avatar: profileData.avatar_url || null,
+          studentId: profileData.student_id || '',
+          enrollmentYear: profileData.enrollment_year || ''
+        },
+        academic: {
+          program: profileData.program || 'Bachelor of Science in Computer Science',
+          major: profileData.major || '',
+          minor: profileData.minor || '',
+          gpa: profileData.gpa?.toString() || '',
+          expectedGraduation: profileData.expected_graduation || '',
+          advisor: profileData.advisor || '',
+          researchInterests: profileData.research_interests || [],
+          skills: profileData.skills || []
+        },
+        research: {
+          totalAbstracts: abstractsData?.length || 0,
+          publicationsCount: abstractsData?.filter(a => a.status === 'approved').length || 0,
+          totalCitations: profileData.total_citations || 0,
+          hIndex: profileData.h_index || 0,
+          researchGroups: profileData.research_groups || [],
+          conferences: profileData.conferences || [],
+          awards: profileData.awards || []
+        },
+        privacy: {
+          profileVisibility: profileData.profile_visibility || 'public',
+          showEmail: profileData.show_email ?? false,
+          showPhone: profileData.show_phone ?? false,
+          showResearchInterests: profileData.show_research_interests ?? true,
+          showPublications: profileData.show_publications ?? true,
+          allowCollaboration: profileData.allow_collaboration ?? true,
+          indexInSearch: profileData.index_in_search ?? true
+        }
+      };
+
+      setProfile(transformedProfile);
+    } catch (error: any) {
+      console.error('Error fetching profile:', error);
+      
+      const errorMessage = error?.message || 'Failed to load profile data';
+      toast.error(errorMessage);
+      
+      // Check if it's a column not found error
+      if (error?.message?.includes('column') && error?.message?.includes('does not exist')) {
+        toast.error('Database schema needs to be updated. Please run profile-fields-update.sql', {
+          duration: 5000
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!profile || !user) return;
+
+    try {
+      setIsSaving(true);
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: `${profile.personal.firstName} ${profile.personal.lastName}`,
+          phone: profile.personal.phone || null,
+          date_of_birth: profile.personal.dateOfBirth || null,
+          address: profile.personal.address || null,
+          bio: profile.personal.bio || null,
+          student_id: profile.personal.studentId || null,
+          enrollment_year: profile.personal.enrollmentYear || null,
+          program: profile.academic.program || null,
+          major: profile.academic.major || null,
+          minor: profile.academic.minor || null,
+          gpa: profile.academic.gpa ? parseFloat(profile.academic.gpa) : null,
+          expected_graduation: profile.academic.expectedGraduation || null,
+          advisor: profile.academic.advisor || null,
+          research_interests: profile.academic.researchInterests,
+          skills: profile.academic.skills,
+          research_groups: profile.research.researchGroups,
+          conferences: profile.research.conferences,
+          awards: profile.research.awards,
+          profile_visibility: profile.privacy?.profileVisibility || 'public',
+          show_email: profile.privacy?.showEmail ?? false,
+          show_phone: profile.privacy?.showPhone ?? false,
+          show_research_interests: profile.privacy?.showResearchInterests ?? true,
+          show_publications: profile.privacy?.showPublications ?? true,
+          allow_collaboration: profile.privacy?.allowCollaboration ?? true,
+          index_in_search: profile.privacy?.indexInSearch ?? true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast.success("Profile updated successfully!");
+      setIsEditing(false);
+      fetchProfile(); // Refresh data
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      
+      // Show specific error message
+      const errorMessage = error?.message || 'Failed to update profile';
+      toast.error(errorMessage);
+      
+      // Check if it's a column not found error
+      if (error?.message?.includes('column') && error?.message?.includes('does not exist')) {
+        toast.error('Database schema needs to be updated. Please run profile-fields-update.sql', {
+          duration: 5000
+        });
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const updatePersonalField = (field: string, value: string) => {
+    if (!profile) return;
     setProfile(prev => ({
-      ...prev,
+      ...prev!,
       personal: {
-        ...prev.personal,
+        ...prev!.personal,
         [field]: value
       }
     }));
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mr-2" />
+        <span className="text-gray-600">Loading profile...</span>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <User className="w-12 h-12 text-gray-300 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Profile Not Found</h3>
+        <p className="text-gray-500 mb-4">Unable to load profile data.</p>
+        <Button onClick={fetchProfile}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -106,19 +267,34 @@ export const ProfileManagement: React.FC = () => {
         <div className="flex gap-2">
           {isEditing ? (
             <>
-              <Button onClick={handleSave}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
+              <Button onClick={handleSave} disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
               </Button>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
+              <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving}>
                 Cancel
               </Button>
             </>
           ) : (
-            <Button onClick={() => setIsEditing(true)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Profile
-            </Button>
+            <>
+              <Button onClick={() => setIsEditing(true)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Profile
+              </Button>
+              <Button variant="outline" onClick={fetchProfile}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+            </>
           )}
         </div>
       </div>

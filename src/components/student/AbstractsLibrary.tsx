@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
 import * as d3 from "d3";
 import { 
   BookOpen,
@@ -19,7 +21,6 @@ import {
   User,
   Tag,
   Eye,
-  Download,
   Network,
   ZoomIn,
   ZoomOut,
@@ -28,100 +29,10 @@ import {
   Pause,
   RotateCcw,
   Edit,
-  Trash2
+  Trash2,
+  Loader2,
+  RefreshCw
 } from "lucide-react";
-
-// Mock data for approved abstracts
-const mockApprovedAbstracts = [
-  {
-    id: "1",
-    title: "Machine Learning Applications in Precision Agriculture",
-    abstract: "This research explores the application of machine learning algorithms in precision agriculture, focusing on crop yield prediction and pest detection. Using datasets from multiple agricultural regions, we developed a hybrid model combining convolutional neural networks (CNN) and recurrent neural networks (RNN) that achieved 94% accuracy in yield prediction and 89% accuracy in pest identification.",
-    authors: ["Dr. Maria Santos", "John Doe", "Jane Smith"],
-    year: 2024,
-    keywords: ["Machine Learning", "Agriculture", "IoT", "Data Analytics", "Precision Farming"],
-    submittedBy: "Faculty",
-    department: "Institute for Computer Studies",
-    category: "Applied Research"
-  },
-  {
-    id: "2",
-    title: "IoT-Based Smart City Infrastructure: A Case Study",
-    abstract: "An investigation into IoT implementation for smart city development in urban areas. This study examines the integration of sensor networks, data analytics platforms, and citizen engagement systems. Results demonstrate a 35% improvement in resource allocation and 28% reduction in energy consumption.",
-    authors: ["Dr. Robert Chen", "Emily Wang"],
-    year: 2024,
-    keywords: ["IoT", "Smart Cities", "Infrastructure", "Technology", "Urban Planning"],
-    submittedBy: "Faculty",
-    department: "Institute for Computer Studies",
-    category: "Infrastructure"
-  },
-  {
-    id: "3",
-    title: "Blockchain Technology in Supply Chain Management",
-    abstract: "This paper presents a blockchain-based framework for enhancing transparency and traceability in supply chain management. The proposed system utilizes smart contracts and distributed ledger technology to automate processes and reduce fraud. Implementation results show a 45% reduction in processing time and improved stakeholder trust.",
-    authors: ["Sarah Johnson", "Dr. Mark Lee", "Alex Brown"],
-    year: 2023,
-    keywords: ["Blockchain", "Supply Chain", "Smart Contracts", "Transparency", "Logistics"],
-    submittedBy: "Student",
-    department: "Institute for Computer Studies",
-    category: "Applied Research"
-  },
-  {
-    id: "4",
-    title: "Natural Language Processing for Filipino Language Education",
-    abstract: "Development of NLP tools specifically designed for Filipino language learning and assessment. This research introduces a novel approach to grammar checking, sentiment analysis, and automated essay scoring for Filipino texts. The system achieved 87% accuracy in grammar correction and 82% in sentiment classification.",
-    authors: ["Dr. Ana Reyes", "Miguel Santos", "Lisa Cruz"],
-    year: 2023,
-    keywords: ["NLP", "Filipino Language", "Education", "Machine Learning", "Linguistics"],
-    submittedBy: "Faculty",
-    department: "Institute for Computer Studies",
-    category: "Educational Technology"
-  },
-  {
-    id: "5",
-    title: "Cybersecurity Threats in Cloud Computing Environments",
-    abstract: "A comprehensive analysis of emerging cybersecurity threats in cloud computing environments. This study identifies vulnerabilities in multi-tenant architectures and proposes a layered security framework. The framework was tested across various cloud platforms and demonstrated a 67% improvement in threat detection.",
-    authors: ["Kevin Martinez", "Dr. Susan Taylor"],
-    year: 2023,
-    keywords: ["Cybersecurity", "Cloud Computing", "Threat Detection", "Security Framework", "Data Protection"],
-    submittedBy: "Student",
-    department: "Institute for Computer Studies",
-    category: "Security"
-  },
-  {
-    id: "6",
-    title: "Augmented Reality in Medical Education and Training",
-    abstract: "This research explores the application of augmented reality (AR) technology in medical education, particularly in anatomy learning and surgical training. The study developed an AR application that allows students to visualize 3D anatomical structures in real-time. Results show a 42% improvement in knowledge retention.",
-    authors: ["Dr. Patricia Garcia", "Rachel Kim", "David Nguyen"],
-    year: 2022,
-    keywords: ["Augmented Reality", "Medical Education", "Training", "3D Visualization", "Healthcare"],
-    submittedBy: "Faculty",
-    department: "Institute for Computer Studies",
-    category: "Healthcare Technology"
-  },
-  {
-    id: "7",
-    title: "Predictive Analytics for Student Performance Assessment",
-    abstract: "Development of a predictive analytics model to identify at-risk students early in their academic journey. Using historical academic data and machine learning algorithms, the system predicts student performance with 91% accuracy, enabling timely intervention and support.",
-    authors: ["Michael Thompson", "Dr. James Wilson"],
-    year: 2022,
-    keywords: ["Predictive Analytics", "Education", "Machine Learning", "Student Assessment", "Data Mining"],
-    submittedBy: "Student",
-    department: "Institute for Computer Studies",
-    category: "Educational Technology"
-  },
-  {
-    id: "8",
-    title: "Renewable Energy Management Systems Using AI",
-    abstract: "An AI-powered energy management system designed to optimize renewable energy distribution in smart grids. The system uses deep learning to predict energy demand and supply patterns, resulting in 38% improvement in energy efficiency and 25% reduction in operational costs.",
-    authors: ["Dr. Jennifer Lopez", "Carlos Mendez", "Nina Patel"],
-    year: 2022,
-    keywords: ["Artificial Intelligence", "Renewable Energy", "Smart Grids", "Energy Management", "Sustainability"],
-    submittedBy: "Faculty",
-    department: "Institute for Computer Studies",
-    category: "Energy Systems"
-  }
-];
 
 interface AbstractDetail {
   id: string;
@@ -133,6 +44,14 @@ interface AbstractDetail {
   submittedBy: string;
   department: string;
   category: string;
+  extractedEntities?: {
+    technologies: string[];
+    domains: string[];
+    methodologies: string[];
+  };
+  extractionConfidence?: number;
+  studentName?: string;
+  studentEmail?: string;
 }
 
 interface Node extends d3.SimulationNodeDatum {
@@ -152,7 +71,9 @@ interface AbstractsLibraryProps {
 
 export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMode = false }) => {
   const { toast } = useToast();
-  const [abstracts, setAbstracts] = useState<AbstractDetail[]>(mockApprovedAbstracts);
+  const { user } = useAuth();
+  const [abstracts, setAbstracts] = useState<AbstractDetail[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("year-desc");
   const [filterYear, setFilterYear] = useState("all");
@@ -168,6 +89,74 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
   const [isSimulationRunning, setIsSimulationRunning] = useState(true);
   const simulationRef = useRef<d3.Simulation<Node, undefined> | null>(null);
   const zoomBehaviorRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+
+  // Fetch approved abstracts from database
+  useEffect(() => {
+    fetchApprovedAbstracts();
+  }, []);
+
+  const fetchApprovedAbstracts = async () => {
+    try {
+      setIsLoading(true);
+
+      // Fetch approved abstracts
+      const { data: abstractsData, error: abstractsError } = await supabase
+        .from('abstracts')
+        .select('*')
+        .eq('status', 'approved')
+        .order('submitted_date', { ascending: false });
+
+      if (abstractsError) throw abstractsError;
+
+      // Fetch profiles for all student_ids
+      const studentIds = abstractsData?.map(a => a.student_id).filter(Boolean) || [];
+      
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, role')
+        .in('id', studentIds);
+
+      if (profilesError) throw profilesError;
+
+      // Create a map of profiles by id for quick lookup
+      const profilesMap = new Map(
+        profilesData?.map(p => [p.id, p]) || []
+      );
+
+      // Transform data to AbstractDetail format
+      const transformedAbstracts: AbstractDetail[] = (abstractsData || []).map(abstract => {
+        const profile = profilesMap.get(abstract.student_id);
+        
+        return {
+          id: abstract.id,
+          title: abstract.title,
+          abstract: abstract.abstract_text,
+          authors: abstract.authors || [],
+          year: abstract.year || new Date().getFullYear(),
+          keywords: abstract.keywords || [],
+          submittedBy: profile?.role === 'faculty' ? 'Faculty' : 'Student',
+          department: abstract.department || 'Institute for Computer Studies',
+          category: abstract.category || 'Research',
+          extractedEntities: abstract.extracted_entities,
+          extractionConfidence: abstract.entity_extraction_confidence,
+          studentName: profile?.full_name || 'Unknown',
+          studentEmail: profile?.email || ''
+        };
+      });
+
+      setAbstracts(transformedAbstracts);
+      console.log('Fetched approved abstracts:', transformedAbstracts.length);
+    } catch (error: any) {
+      console.error('Error fetching approved abstracts:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load abstracts. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Get unique years for filter
   const availableYears = Array.from(new Set(abstracts.map(a => a.year))).sort((a, b) => b - a);
@@ -214,98 +203,78 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
     setIsDeleteOpen(true);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editFormData) return;
 
-    setAbstracts(prev => 
-      prev.map(a => a.id === editFormData.id ? editFormData : a)
-    );
+    try {
+      const { error } = await supabase
+        .from('abstracts')
+        .update({
+          title: editFormData.title,
+          authors: editFormData.authors,
+          abstract_text: editFormData.abstract,
+          year: editFormData.year,
+          keywords: editFormData.keywords,
+          department: editFormData.department,
+          category: editFormData.category,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editFormData.id);
 
-    toast({
-      title: "Abstract Updated",
-      description: `"${editFormData.title}" has been successfully updated.`,
-    });
+      if (error) throw error;
 
-    setIsEditOpen(false);
-    setEditFormData(null);
-    
-    // If detail modal is open, update it
-    if (isDetailOpen && selectedAbstract?.id === editFormData.id) {
-      setSelectedAbstract(editFormData);
+      toast({
+        title: "Abstract Updated",
+        description: `"${editFormData.title}" has been successfully updated.`,
+      });
+
+      setIsEditOpen(false);
+      setEditFormData(null);
+      
+      // If detail modal is open, update it
+      if (isDetailOpen && selectedAbstract?.id === editFormData.id) {
+        setSelectedAbstract(editFormData);
+      }
+
+      // Refresh data
+      await fetchApprovedAbstracts();
+    } catch (error: any) {
+      console.error('Error updating abstract:', error);
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update abstract. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!selectedAbstract) return;
 
-    setAbstracts(prev => prev.filter(a => a.id !== selectedAbstract.id));
-
-    toast({
-      title: "Abstract Deleted",
-      description: `"${selectedAbstract.title}" has been removed from the library.`,
-      variant: "destructive",
-    });
-
-    setIsDeleteOpen(false);
-    setIsDetailOpen(false);
-    setSelectedAbstract(null);
-  };
-
-  const handleDownloadPDF = (abstract: AbstractDetail) => {
     try {
-      // Create a formatted text document with abstract details
-      const content = `
-${abstract.title}
-${'='.repeat(abstract.title.length)}
+      const { error } = await supabase
+        .from('abstracts')
+        .delete()
+        .eq('id', selectedAbstract.id);
 
-Authors: ${abstract.authors.join(", ")}
-Year: ${abstract.year}
-Department: ${abstract.department}
-Category: ${abstract.category}
-Submitted By: ${abstract.submittedBy}
+      if (error) throw error;
 
-ABSTRACT
---------
-${abstract.abstract}
-
-KEYWORDS
---------
-${abstract.keywords.join(", ")}
-
-EXTRACTED ENTITIES
------------------
-${abstract.keywords.slice(0, 5).join(", ")}
-
----
-Document generated from NBSC CITE Research Repository
-${new Date().toLocaleDateString()}
-      `.trim();
-
-      // Create a blob from the content
-      const blob = new Blob([content], { type: 'text/plain' });
-      const url = window.URL.createObjectURL(blob);
-      
-      // Create a temporary link and trigger download
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${abstract.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
-      document.body.appendChild(link);
-      link.click();
-      
-      // Cleanup
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      // Show success toast
       toast({
-        title: "Download Started",
-        description: `"${abstract.title}" is being downloaded.`,
+        title: "Abstract Deleted",
+        description: `"${selectedAbstract.title}" has been removed from the library.`,
       });
-    } catch (error) {
-      console.error('Download error:', error);
+
+      setIsDeleteOpen(false);
+      setIsDetailOpen(false);
+      setSelectedAbstract(null);
+
+      // Refresh data
+      await fetchApprovedAbstracts();
+    } catch (error: any) {
+      console.error('Error deleting abstract:', error);
       toast({
-        title: "Download Failed",
-        description: "There was an error downloading the file. Please try again.",
+        title: "Delete Failed",
+        description: error.message || "Failed to delete abstract. Please try again.",
         variant: "destructive",
       });
     }
@@ -384,34 +353,6 @@ ${new Date().toLocaleDateString()}
     }
   };
 
-  // Function to calculate IT relevance score for keywords
-  const calculateKeywordITRelevance = (keyword: string): number => {
-    const itKeywords = [
-      'computer', 'software', 'hardware', 'algorithm', 'data', 'network', 'system',
-      'programming', 'code', 'application', 'database', 'technology', 'digital',
-      'machine learning', 'ai', 'artificial intelligence', 'cloud', 'security',
-      'web', 'mobile', 'api', 'framework', 'development', 'server', 'client',
-      'javascript', 'python', 'java', 'react', 'node', 'innovation', 'blockchain',
-      'iot', 'analytics', 'platform', 'architecture', 'interface', 'automation',
-      'neural', 'deep learning', 'model', 'training', 'dataset', 'prediction',
-      'computing', 'processor', 'memory', 'storage', 'virtual', 'encryption',
-      'protocol', 'internet', 'connectivity', 'wireless', 'sensor', 'device'
-    ];
-
-    const keywordLower = keyword.toLowerCase();
-    let score = 0;
-    
-    // Check if keyword contains IT-related terms
-    itKeywords.forEach(itKeyword => {
-      if (keywordLower.includes(itKeyword)) score += 2;
-    });
-    
-    // Bonus for exact matches
-    if (itKeywords.includes(keywordLower)) score += 3;
-    
-    return score;
-  };
-
   const createEntityVisualization = (abstract: AbstractDetail) => {
     if (!svgRef.current) return;
 
@@ -443,46 +384,49 @@ ${new Date().toLocaleDateString()}
     // Add a container group for all elements
     const container = svg.append("g");
 
-    // Filter and rank keywords by IT relevance, removing duplicates
-    const seenKeywords = new Set<string>();
-    const uniqueKeywords = abstract.keywords
-      .map(keyword => ({
-        keyword,
-        score: calculateKeywordITRelevance(keyword)
-      }))
-      .sort((a, b) => b.score - a.score)
-      .filter(item => {
-        // Check for duplicates (case-insensitive)
-        const normalizedKeyword = item.keyword.toLowerCase().trim();
-        if (seenKeywords.has(normalizedKeyword)) {
-          return false; // Skip duplicate
-        }
-        seenKeywords.add(normalizedKeyword);
-        return true;
-      });
+    // Use extracted entities instead of keywords
+    const extractedEntities = abstract.extractedEntities;
+    
+    if (!extractedEntities) {
+      console.warn('No extracted entities available for visualization');
+      return;
+    }
 
-    // If less than 12 unique keywords, show all; otherwise show top 10 IT-related
-    const rankedKeywords = uniqueKeywords.length < 12
-      ? uniqueKeywords.map(item => item.keyword)
-      : uniqueKeywords.slice(0, 10).map(item => item.keyword);
+    // Collect all entities from extracted data
+    const allEntities: string[] = [
+      ...(extractedEntities.technologies || []),
+      ...(extractedEntities.domains || []),
+      ...(extractedEntities.methodologies || [])
+    ];
 
-    console.log(`Filtered ${abstract.keywords.length} keywords down to ${rankedKeywords.length} unique keywords (${uniqueKeywords.length < 12 ? 'showing all' : 'top 10 IT-related'})`);
+    // Remove duplicates (case-insensitive)
+    const seenEntities = new Set<string>();
+    const uniqueEntities = allEntities.filter(entity => {
+      const normalized = entity.toLowerCase().trim();
+      if (seenEntities.has(normalized)) {
+        return false;
+      }
+      seenEntities.add(normalized);
+      return true;
+    });
 
-    // Create nodes: 1 center node + filtered entity nodes
+    console.log(`Displaying ${uniqueEntities.length} extracted entities in visualization`);
+
+    // Create nodes: 1 center node + entity nodes
     const nodes: Node[] = [
       { id: 'center', label: 'Abstract Center', type: 'center', x: width / 2, y: height / 2 }
     ];
 
-    rankedKeywords.forEach((keyword, index) => {
+    uniqueEntities.forEach((entity, index) => {
       nodes.push({
         id: `entity-${index}`,
-        label: keyword,
+        label: entity,
         type: 'entity'
       });
     });
 
-    // Create links from center to filtered entities
-    const links: Link[] = rankedKeywords.map((_, index) => ({
+    // Create links from center to entities
+    const links: Link[] = uniqueEntities.map((_, index) => ({
       source: 'center',
       target: `entity-${index}`
     }));
@@ -684,24 +628,43 @@ ${new Date().toLocaleDateString()}
           {/* Results Count */}
           <div className="flex items-center justify-between text-sm text-gray-600">
             <span>
-              Showing {filteredAbstracts.length} of {mockApprovedAbstracts.length} abstracts
+              Showing {filteredAbstracts.length} of {abstracts.length} abstracts
             </span>
-            {(searchTerm || filterYear !== "all") && (
+            <div className="flex items-center gap-2">
+              {(searchTerm || filterYear !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setFilterYear("all");
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  setSearchTerm("");
-                  setFilterYear("all");
-                }}
+                onClick={fetchApprovedAbstracts}
+                disabled={isLoading}
               >
-                Clear Filters
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
               </Button>
-            )}
+            </div>
           </div>
 
-          {/* Abstracts Grid */}
-          <div className="grid grid-cols-1 gap-4">
+          {/* Loading State */}
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-12 w-12 text-blue-500 animate-spin mb-4" />
+              <p className="text-gray-600">Loading approved abstracts...</p>
+            </div>
+          ) : (
+            <>
+              {/* Abstracts Grid */}
+              <div className="grid grid-cols-1 gap-4">
             {filteredAbstracts.map((abstract) => (
               <Card key={abstract.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
@@ -742,20 +705,25 @@ ${new Date().toLocaleDateString()}
                       </div>
                     </div>
 
-                    {/* Extracted Entities (sample subset of keywords) */}
-                    <div className="flex items-start gap-2 pt-2 border-t border-gray-100">
-                      <Network className="h-4 w-4 text-gray-400 mt-1" />
-                      <div className="flex-1">
-                        <span className="text-xs font-medium text-gray-600 block mb-2">Extracted Entities:</span>
-                        <div className="flex flex-wrap gap-2">
-                          {abstract.keywords.slice(0, 5).map((keyword, index) => (
-                            <Badge key={index} variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
-                              {keyword}
-                            </Badge>
-                          ))}
+                    {/* Extracted Entities */}
+                    {abstract.extractedEntities && (
+                      <div className="flex items-start gap-2 pt-2 border-t border-gray-100">
+                        <Network className="h-4 w-4 text-gray-400 mt-1" />
+                        <div className="flex-1">
+                          <span className="text-xs font-medium text-gray-600 block mb-2">Extracted Entities:</span>
+                          <div className="flex flex-wrap gap-2">
+                            {[
+                              ...(abstract.extractedEntities.technologies || []).slice(0, 3),
+                              ...(abstract.extractedEntities.domains || []).slice(0, 2)
+                            ].map((entity, index) => (
+                              <Badge key={index} variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
+                                {entity}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Footer */}
                     <div className="flex items-center justify-between pt-3 border-t">
@@ -804,7 +772,7 @@ ${new Date().toLocaleDateString()}
           </div>
 
           {/* No Results */}
-          {filteredAbstracts.length === 0 && (
+          {filteredAbstracts.length === 0 && !isLoading && (
             <div className="text-center py-12">
               <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No abstracts found</h3>
@@ -812,6 +780,8 @@ ${new Date().toLocaleDateString()}
                 Try adjusting your search or filter criteria
               </p>
             </div>
+          )}
+          </>
           )}
         </CardContent>
       </Card>
@@ -860,6 +830,77 @@ ${new Date().toLocaleDateString()}
                 </div>
               </div>
 
+              {/* Extracted Entities */}
+              {selectedAbstract.extractedEntities && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Network className="h-4 w-4" />
+                    Extracted Entities
+                    {selectedAbstract.extractionConfidence && (
+                      <Badge variant="outline" className="ml-2 bg-green-50 text-green-700">
+                        {Math.round(selectedAbstract.extractionConfidence * 100)}% Confidence
+                      </Badge>
+                    )}
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Technologies */}
+                    {selectedAbstract.extractedEntities.technologies && 
+                     selectedAbstract.extractedEntities.technologies.length > 0 && (
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                          <span className="h-3 w-3 rounded-full bg-blue-500"></span>
+                          Technologies
+                        </Label>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedAbstract.extractedEntities.technologies.map((tech: string, idx: number) => (
+                            <Badge key={idx} variant="outline" className="bg-blue-50 text-blue-700">
+                              {tech}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Research Domains */}
+                    {selectedAbstract.extractedEntities.domains && 
+                     selectedAbstract.extractedEntities.domains.length > 0 && (
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                          <span className="h-3 w-3 rounded-full bg-purple-500"></span>
+                          Research Domains
+                        </Label>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedAbstract.extractedEntities.domains.map((domain: string, idx: number) => (
+                            <Badge key={idx} variant="outline" className="bg-purple-50 text-purple-700">
+                              {domain}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Methodologies - Full Width */}
+                  {selectedAbstract.extractedEntities.methodologies && 
+                   selectedAbstract.extractedEntities.methodologies.length > 0 && (
+                    <div className="mt-4">
+                      <Label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                        <span className="h-3 w-3 rounded-full bg-green-500"></span>
+                        Methodologies
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedAbstract.extractedEntities.methodologies.map((method: string, idx: number) => (
+                          <Badge key={idx} variant="outline" className="bg-green-50 text-green-700">
+                            {method}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Entity Visualization */}
               <div>
                 <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -869,120 +910,38 @@ ${new Date().toLocaleDateString()}
                 <p className="text-sm text-gray-600 mb-4">
                   Explore connections between your research entities. Click on nodes to view details.
                 </p>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                  {/* Interactive Controls */}
-                  <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-                    <CardContent className="p-4">
-                      <h5 className="font-semibold text-sm text-gray-900 mb-3 flex items-center gap-2">
-                        🎮 Interactive Controls
-                      </h5>
-                      
-                      {/* Control Buttons */}
-                      <div className="space-y-2 mb-4">
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 h-8 text-xs"
-                            onClick={handleZoomIn}
-                            title="Zoom In"
-                          >
-                            <ZoomIn className="h-3 w-3 mr-1" />
-                            Zoom In
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 h-8 text-xs"
-                            onClick={handleZoomOut}
-                            title="Zoom Out"
-                          >
-                            <ZoomOut className="h-3 w-3 mr-1" />
-                            Zoom Out
-                          </Button>
-                        </div>
-                        
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full h-8 text-xs"
-                          onClick={handleFitToScreen}
-                          title="Fit to Screen"
-                        >
-                          <Maximize2 className="h-3 w-3 mr-1" />
-                          Fit to Screen
-                        </Button>
-                        
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full h-8 text-xs"
-                          onClick={handleToggleSimulation}
-                          title={isSimulationRunning ? "Pause Physics" : "Resume Physics"}
-                        >
-                          {isSimulationRunning ? (
-                            <>
-                              <Pause className="h-3 w-3 mr-1" />
-                              Pause Physics
-                            </>
-                          ) : (
-                            <>
-                              <Play className="h-3 w-3 mr-1" />
-                              Resume Physics
-                            </>
-                          )}
-                        </Button>
-                        
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full h-8 text-xs"
-                          onClick={handleResetView}
-                          title="Reset View"
-                        >
-                          <RotateCcw className="h-3 w-3 mr-1" />
-                          Reset View
-                        </Button>
-                      </div>
 
-                      {/* Zoom Level Indicator */}
-                      <div className="mb-3 p-2 bg-white rounded border border-blue-200">
-                        <div className="text-xs text-gray-600 mb-1">Zoom Level</div>
-                        <div className="text-sm font-semibold text-blue-600">
-                          {(zoomLevel * 100).toFixed(0)}%
-                        </div>
-                      </div>
-                      
-                      {/* Instructions */}
-                      <div className="border-t border-blue-200 pt-3">
-                        <ul className="space-y-2 text-xs text-gray-700">
-                          <li className="flex items-start gap-2">
-                            <span className="text-blue-600 font-bold">•</span>
-                            <span><strong>Drag nodes</strong> to rearrange</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="text-blue-600 font-bold">•</span>
-                            <span><strong>Scroll wheel</strong> to zoom</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="text-blue-600 font-bold">•</span>
-                            <span><strong>Click & drag</strong> background to pan</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="text-blue-600 font-bold">•</span>
-                            <span><strong>Hover nodes</strong> to highlight</span>
-                          </li>
-                        </ul>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Visualization */}
-                  <div className="lg:col-span-3">
+                {/* Visualization */}
+                <div>
                     <Card className="bg-gray-50">
                       <CardContent className="p-4">
                         <div className="flex justify-center items-center min-h-[400px] border-2 border-gray-200 rounded-lg bg-white relative">
+                          {/* Instructions Overlay - Top Left */}
+                          <div className="absolute top-4 left-4 z-10 pointer-events-none">
+                            <Card className="bg-white/90 backdrop-blur-sm border-blue-200 shadow-lg">
+                              <CardContent className="p-3">
+                                <ul className="space-y-1 text-xs text-gray-700">
+                                  <li className="flex items-center gap-2">
+                                    <span className="text-blue-600 font-bold">•</span>
+                                    <span><strong>Drag nodes</strong> to rearrange</span>
+                                  </li>
+                                  <li className="flex items-center gap-2">
+                                    <span className="text-blue-600 font-bold">•</span>
+                                    <span><strong>Scroll wheel</strong> to zoom</span>
+                                  </li>
+                                  <li className="flex items-center gap-2">
+                                    <span className="text-blue-600 font-bold">•</span>
+                                    <span><strong>Click & drag</strong> background to pan</span>
+                                  </li>
+                                  <li className="flex items-center gap-2">
+                                    <span className="text-blue-600 font-bold">•</span>
+                                    <span><strong>Hover nodes</strong> to highlight</span>
+                                  </li>
+                                </ul>
+                              </CardContent>
+                            </Card>
+                          </div>
+
                           <svg 
                             ref={svgRef} 
                             className="w-full h-full"
@@ -1003,7 +962,6 @@ ${new Date().toLocaleDateString()}
                     </Card>
                   </div>
                 </div>
-              </div>
 
               {/* Metadata */}
               <div className="grid grid-cols-2 gap-4 pt-4 border-t">
@@ -1018,34 +976,25 @@ ${new Date().toLocaleDateString()}
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 pt-4 border-t">
-                <Button 
-                  className="flex-1"
-                  onClick={() => selectedAbstract && handleDownloadPDF(selectedAbstract)}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download PDF
-                </Button>
-                {isFacultyMode && selectedAbstract && (
-                  <>
-                    <Button 
-                      variant="outline"
-                      onClick={() => handleEdit(selectedAbstract)}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => handleDelete(selectedAbstract)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </Button>
-                  </>
-                )}
-              </div>
+              {isFacultyMode && selectedAbstract && (
+                <div className="flex gap-3 pt-4 border-t">
+                  <Button 
+                    variant="outline"
+                    onClick={() => handleEdit(selectedAbstract)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => handleDelete(selectedAbstract)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
