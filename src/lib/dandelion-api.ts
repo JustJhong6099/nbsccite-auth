@@ -34,6 +34,9 @@ export interface ExtractedEntities {
 const DANDELION_API_URL = 'https://api.dandelion.eu/datatxt/nex/v1';
 const DANDELION_TOKEN = import.meta.env.VITE_DANDELION_API_TOKEN || '';
 
+console.log('🔑 Dandelion API Token Status:', DANDELION_TOKEN ? '✅ Token loaded' : '❌ Token missing');
+console.log('🔑 Token length:', DANDELION_TOKEN.length, 'characters');
+
 // Technology-related DBpedia types/categories
 const TECHNOLOGY_TYPES = [
   'software',
@@ -101,8 +104,12 @@ const METHODOLOGY_KEYWORDS = [
  * Call Dandelion API to extract entities
  */
 async function callDandelionAPI(text: string): Promise<DandelionResponse | null> {
+  console.log('🌐 Attempting to call Dandelion API...');
+  console.log('🔑 Token available:', !!DANDELION_TOKEN);
+  console.log('📝 Text length:', text.length);
+  
   if (!DANDELION_TOKEN) {
-    console.warn('Dandelion API token not configured. Using fallback extraction.');
+    console.warn('⚠️ Dandelion API token not configured. Using fallback extraction.');
     return null;
   }
 
@@ -116,6 +123,8 @@ async function callDandelionAPI(text: string): Promise<DandelionResponse | null>
       social: 'false'
     });
 
+    console.log('📡 Calling Dandelion API with URL:', `${DANDELION_API_URL}?${params.toString().substring(0, 100)}...`);
+    
     const response = await fetch(`${DANDELION_API_URL}?${params}`, {
       method: 'GET',
       headers: {
@@ -123,16 +132,19 @@ async function callDandelionAPI(text: string): Promise<DandelionResponse | null>
       }
     });
 
+    console.log('📥 Dandelion API Response Status:', response.status);
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Dandelion API error:', response.status, errorText);
+      console.error('❌ Dandelion API error:', response.status, errorText);
       return null;
     }
 
     const data: DandelionResponse = await response.json();
+    console.log('✅ Dandelion API Success! Found', data.annotations?.length || 0, 'entities');
     return data;
   } catch (error) {
-    console.error('Error calling Dandelion API:', error);
+    console.error('❌ Error calling Dandelion API:', error);
     return null;
   }
 }

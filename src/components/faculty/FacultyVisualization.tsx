@@ -6,151 +6,297 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   GitBranch, 
-  Maximize2, 
-  Download, 
-  Filter,
-  Search,
   Network,
   Zap,
-  X,
-  FileText,
-  Save,
-  Send,
-  AlertCircle,
-  CheckCircle,
-  Upload,
-  Camera,
-  Scan,
   Loader2
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 import * as d3 from 'd3';
 
-// Enhanced mock data - Each group represents one abstract with its extracted entities
-const mockEntityData = {
-  nodes: [
-    // Abstract 1: AI & Sustainability
-    { id: 'abstract1', label: '', type: 'abstract', size: 30, color: '#3b82f6', x: 200, y: 200 },
-    { id: 'ai1', label: 'AI', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract1' },
-    { id: 'satellite1', label: 'satellite', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract1' },
-    { id: 'monitoring1', label: 'monitoring', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract1' },
-    { id: 'machine_learning1', label: 'machine learning', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract1' },
+interface Abstract {
+  id: string;
+  title: string;
+  abstract: string;
+  authors: string[];
+  keywords: string[];
+  year: number;
+  extracted_entities: {
+    technologies: string[];
+    domains: string[];
+    methodologies: string[];
+  };
+}
 
-    // Abstract 2: Smart Agriculture
-    { id: 'abstract2', label: '', type: 'abstract', size: 30, color: '#3b82f6', x: 600, y: 200 },
-    { id: 'infrastructure2', label: 'infrastructure', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract2' },
-    { id: 'ai2', label: 'AI', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract2' },
-    { id: 'satellite2', label: 'satellite', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract2' },
-    { id: 'irrigation2', label: 'irrigation', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract2' },
-    { id: 'monitoring2', label: 'monitoring', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract2' },
-    { id: 'machine_learning2', label: 'machine learning', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract2' },
-    { id: 'sustainable2', label: 'sustainable', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract2' },
+interface Node {
+  id: string;
+  label: string;
+  type: 'abstract' | 'entity';
+  size: number;
+  color: string;
+  abstractId: string; // Which abstract this node belongs to
+  x?: number;
+  y?: number;
+  vx?: number;
+  vy?: number;
+  fx?: number | null;
+  fy?: number | null;
+}
 
-    // Abstract 3: Citizen Science & Biodiversity
-    { id: 'abstract3', label: '', type: 'abstract', size: 30, color: '#3b82f6', x: 200, y: 500 },
-    { id: 'citizen3', label: 'citizen', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract3' },
-    { id: 'mapping3', label: 'mapping', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract3' },
-    { id: 'biodiversity3', label: 'biodiversity', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract3' },
-    { id: 'mobile3', label: 'mobile', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract3' },
-    { id: 'crowdsourced3', label: 'crowdsourced', type: 'entity', size: 20, color: '#f97316', abstractId: 'abstract3' }
-  ],
-  links: [
-    // Abstract 1 connections
-    { source: 'abstract1', target: 'ai1', strength: 1.0, type: 'contains' },
-    { source: 'abstract1', target: 'satellite1', strength: 1.0, type: 'contains' },
-    { source: 'abstract1', target: 'monitoring1', strength: 1.0, type: 'contains' },
-    { source: 'abstract1', target: 'machine_learning1', strength: 1.0, type: 'contains' },
-
-    // Abstract 2 connections
-    { source: 'abstract2', target: 'infrastructure2', strength: 1.0, type: 'contains' },
-    { source: 'abstract2', target: 'ai2', strength: 1.0, type: 'contains' },
-    { source: 'abstract2', target: 'satellite2', strength: 1.0, type: 'contains' },
-    { source: 'abstract2', target: 'irrigation2', strength: 1.0, type: 'contains' },
-    { source: 'abstract2', target: 'monitoring2', strength: 1.0, type: 'contains' },
-    { source: 'abstract2', target: 'machine_learning2', strength: 1.0, type: 'contains' },
-    { source: 'abstract2', target: 'sustainable2', strength: 1.0, type: 'contains' },
-
-    // Abstract 3 connections
-    { source: 'abstract3', target: 'citizen3', strength: 1.0, type: 'contains' },
-    { source: 'abstract3', target: 'mapping3', strength: 1.0, type: 'contains' },
-    { source: 'abstract3', target: 'biodiversity3', strength: 1.0, type: 'contains' },
-    { source: 'abstract3', target: 'mobile3', strength: 1.0, type: 'contains' },
-    { source: 'abstract3', target: 'crowdsourced3', strength: 1.0, type: 'contains' }
-  ],
-  abstracts: [
-    {
-      id: 'abstract1',
-      title: 'AI-Powered Sustainability Monitoring',
-      content: 'AI technologies offer promising solutions in sustainability monitoring, using satellite imagery and machine learning.',
-      keywords: ['AI', 'machine learning', 'satellite', 'monitoring']
-    },
-    {
-      id: 'abstract2', 
-      title: 'Smart Agricultural Infrastructure',
-      content: 'Development of intelligent infrastructure systems for sustainable agricultural practices using AI and satellite monitoring.',
-      keywords: ['infrastructure', 'AI', 'satellite', 'irrigation', 'monitoring', 'machine learning', 'sustainable']
-    },
-    {
-      id: 'abstract3',
-      title: 'Citizen Science for Biodiversity Conservation', 
-      content: 'Mobile crowdsourced mapping applications for citizen science initiatives in biodiversity conservation.',
-      keywords: ['citizen', 'mapping', 'biodiversity', 'mobile', 'crowdsourced']
-    }
-  ]
-};
-
-// Mock frequency data
-const mockFrequencyData = [
-  { category: 'AI & Machine Learning', count: 45, trend: 'up', percentage: 18.2 },
-  { category: 'Satellite Technology', count: 38, trend: 'up', percentage: 15.4 },
-  { category: 'Environmental Monitoring', count: 32, trend: 'up', percentage: 13.0 },
-  { category: 'Sustainable Technology', count: 28, trend: 'stable', percentage: 11.4 },
-  { category: 'Infrastructure Systems', count: 25, trend: 'up', percentage: 10.1 },
-  { category: 'Mobile Applications', count: 22, trend: 'down', percentage: 8.9 },
-  { category: 'Citizen Science', count: 18, trend: 'up', percentage: 7.3 },
-  { category: 'Biodiversity Conservation', count: 15, trend: 'stable', percentage: 6.1 }
-];
+interface Link {
+  source: string | any;
+  target: string | any;
+  strength: number;
+  type: string;
+}
 
 export const FacultyVisualization: React.FC = () => {
   const [activeTab, setActiveTab] = useState('graph');
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [abstracts, setAbstracts] = useState<Abstract[]>([]);
+  const [filteredAbstracts, setFilteredAbstracts] = useState<Abstract[]>([]);
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [graphData, setGraphData] = useState<{ nodes: Node[]; links: Link[] }>({ nodes: [], links: [] });
+  const [frequencyData, setFrequencyData] = useState<any[]>([]);
   const svgRef = useRef<SVGSVGElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const { toast } = useToast();
+
+  // Fetch approved abstracts from Supabase
+  useEffect(() => {
+    fetchApprovedAbstracts();
+  }, []);
+
+  // Filter abstracts by year
+  useEffect(() => {
+    if (selectedYear === 'all') {
+      setFilteredAbstracts(abstracts);
+    } else {
+      setFilteredAbstracts(abstracts.filter(a => a.year === parseInt(selectedYear)));
+    }
+  }, [selectedYear, abstracts]);
+
+  // Update graph when filtered abstracts change
+  useEffect(() => {
+    if (filteredAbstracts.length > 0) {
+      processGraphData(filteredAbstracts);
+      processFrequencyData(filteredAbstracts);
+    } else {
+      setGraphData({ nodes: [], links: [] });
+      setFrequencyData([]);
+    }
+  }, [filteredAbstracts]);
+
+  const fetchApprovedAbstracts = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('abstracts')
+        .select('*')
+        .eq('status', 'approved')
+        .not('extracted_entities', 'is', null)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setAbstracts(data || []);
+      
+      // Extract unique years for filter
+      const years = [...new Set(data?.map(a => a.year).filter(Boolean))].sort((a, b) => b - a);
+      setAvailableYears(years as number[]);
+      
+      // Process data for visualization
+      if (data && data.length > 0) {
+        setFilteredAbstracts(data);
+      }
+    } catch (error: any) {
+      console.error('Error fetching abstracts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load abstracts. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const processGraphData = (abstracts: Abstract[]) => {
+    const nodes: Node[] = [];
+    const links: Link[] = [];
+
+    // Create abstract nodes and their entity nodes (each abstract is isolated)
+    abstracts.forEach((abstract, index) => {
+      const abstractId = `abstract_${abstract.id}`;
+      
+      // Add abstract node
+      nodes.push({
+        id: abstractId,
+        label: '', // Empty label for abstract centers
+        type: 'abstract',
+        size: 30,
+        color: '#3b82f6',
+        abstractId: abstractId,
+      });
+
+      const entities = abstract.extracted_entities;
+      if (!entities) return;
+
+      // Combine all entities from technologies, domains, and methodologies
+      const allEntities = [
+        ...(entities.technologies || []),
+        ...(entities.domains || []),
+        ...(entities.methodologies || [])
+      ];
+
+      // Create entity nodes with UNIQUE IDs per abstract (to prevent merging)
+      allEntities.forEach((entity: string, entityIndex: number) => {
+        const uniqueEntityId = `entity_${abstract.id}_${entityIndex}`; // Unique per abstract
+        
+        // Add entity node (unique to this abstract)
+        nodes.push({
+          id: uniqueEntityId,
+          label: entity,
+          type: 'entity',
+          size: 15,
+          color: '#f97316',
+          abstractId: abstractId,
+        });
+
+        // Create link from abstract to its entity
+        links.push({
+          source: abstractId,
+          target: uniqueEntityId,
+          strength: 1.0,
+          type: 'contains'
+        });
+      });
+    });
+
+    setGraphData({ nodes, links });
+  };
+
+  const processFrequencyData = (abstracts: Abstract[]) => {
+    const entityCount = new Map<string, number>();
+    const categoryCount = {
+      technologies: 0,
+      domains: 0,
+      methodologies: 0
+    };
+
+    abstracts.forEach(abstract => {
+      const entities = abstract.extracted_entities;
+      if (!entities) return;
+
+      // Count technologies
+      (entities.technologies || []).forEach((tech: string) => {
+        entityCount.set(tech, (entityCount.get(tech) || 0) + 1);
+        categoryCount.technologies++;
+      });
+
+      // Count domains
+      (entities.domains || []).forEach((domain: string) => {
+        entityCount.set(domain, (entityCount.get(domain) || 0) + 1);
+        categoryCount.domains++;
+      });
+
+      // Count methodologies
+      (entities.methodologies || []).forEach((method: string) => {
+        entityCount.set(method, (entityCount.get(method) || 0) + 1);
+        categoryCount.methodologies++;
+      });
+    });
+
+    // Convert to array and sort by count
+    const sortedEntities = Array.from(entityCount.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 15); // Top 15 entities
+
+    const totalCount = sortedEntities.reduce((sum, [, count]) => sum + count, 0);
+
+    const frequencyData = sortedEntities.map(([entity, count]) => ({
+      category: entity,
+      count,
+      percentage: ((count / totalCount) * 100).toFixed(1),
+      trend: 'stable' // You can implement trend calculation based on historical data
+    }));
+
+    setFrequencyData(frequencyData);
+  };
 
   // D3.js Force-Directed Graph Implementation
   const renderForceGraph = useCallback(() => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || graphData.nodes.length === 0) return;
 
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const width = dimensions.width * 0.65; // Adjust for 2-pane layout
+    const width = dimensions.width;
     const height = dimensions.height;
 
-    // Create separate force simulations for each abstract group
-    const abstractNodes = mockEntityData.nodes.filter(n => n.type === 'abstract');
-    const entityNodes = mockEntityData.nodes.filter(n => n.type === 'entity');
+    // Group nodes by abstract for initial positioning
+    const abstractGroups = new Map<string, Node[]>();
+    graphData.nodes.forEach(node => {
+      const groupId = node.abstractId;
+      if (!abstractGroups.has(groupId)) {
+        abstractGroups.set(groupId, []);
+      }
+      abstractGroups.get(groupId)!.push(node);
+    });
 
-    // Create force simulation with custom forces for grouping
-    const simulation = d3.forceSimulation(mockEntityData.nodes as any)
-      .force("link", d3.forceLink(mockEntityData.links).id((d: any) => d.id).distance(80).strength(0.8))
-      .force("charge", d3.forceManyBody().strength((d: any) => d.type === 'abstract' ? -800 : -200))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius((d: any) => d.size + 10))
-      .force("group", d3.forceRadial(100, width / 2, height / 2).strength(0.1));
+    // Calculate initial grid positions for each abstract group (not fixed)
+    const numAbstracts = abstractGroups.size;
+    const cols = Math.ceil(Math.sqrt(numAbstracts));
+    const rows = Math.ceil(numAbstracts / cols);
 
-    // Add grouping force to keep entities close to their abstract
+    let groupIndex = 0;
+    abstractGroups.forEach((groupNodes, abstractId) => {
+      const col = groupIndex % cols;
+      const row = Math.floor(groupIndex / cols);
+      const centerX = (col + 0.5) * (width / cols);
+      const centerY = (row + 0.5) * (height / rows);
+      
+      // Set initial positions (not fixed, just starting position)
+      groupNodes.forEach(node => {
+        if (!node.x) node.x = centerX + (Math.random() - 0.5) * 50;
+        if (!node.y) node.y = centerY + (Math.random() - 0.5) * 50;
+      });
+      
+      groupIndex++;
+    });
+
+    // Create force simulation with group separation
+    const simulation = d3.forceSimulation(graphData.nodes as any)
+      .force("link", d3.forceLink(graphData.links).id((d: any) => d.id).distance(50).strength(0.3))
+      .force("charge", d3.forceManyBody().strength((d: any) => d.type === 'abstract' ? -1000 : -100))
+      .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+      .force("collision", d3.forceCollide().radius((d: any) => d.type === 'abstract' ? 80 : 30))
+      .force("x", d3.forceX(width / 2).strength(0.005))
+      .force("y", d3.forceY(height / 2).strength(0.005))
+      .velocityDecay(0.7)  // Higher value = slower movement (default is 0.4)
+      .alphaDecay(0.01);   // Slower settling (default is 0.0228)
+
+    // Add custom force to keep entities close to their abstract
     simulation.force("grouping", () => {
-      entityNodes.forEach(entity => {
-        const abstract = abstractNodes.find(a => a.id === (entity as any).abstractId);
-        if (abstract) {
-          const dx = (abstract as any).x - (entity as any).x;
-          const dy = (abstract as any).y - (entity as any).y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance > 120) {
-            (entity as any).vx += dx * 0.1;
-            (entity as any).vy += dy * 0.1;
+      graphData.nodes.forEach(node => {
+        if (node.type === 'entity') {
+          // Find the abstract this entity belongs to
+          const abstractNode = graphData.nodes.find(n => n.id === node.abstractId);
+          if (abstractNode && abstractNode.x && abstractNode.y && node.x && node.y) {
+            const dx = abstractNode.x - node.x;
+            const dy = abstractNode.y - node.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Pull entity towards its abstract if too far (very gentle force)
+            if (distance > 100) {
+              const force = (distance - 100) * 0.02; // Reduced from 0.1 to 0.02
+              node.vx = (node.vx || 0) + (dx / distance) * force;
+              node.vy = (node.vy || 0) + (dy / distance) * force;
+            }
           }
         }
       });
@@ -160,17 +306,17 @@ export const FacultyVisualization: React.FC = () => {
     const link = svg.append("g")
       .attr("class", "links")
       .selectAll("line")
-      .data(mockEntityData.links)
+      .data(graphData.links)
       .enter().append("line")
       .attr("stroke", "#999")
       .attr("stroke-opacity", 0.6)
-      .attr("stroke-width", 2);
+      .attr("stroke-width", 1.5);
 
     // Create node groups
     const node = svg.append("g")
       .attr("class", "nodes")
       .selectAll("g")
-      .data(mockEntityData.nodes)
+      .data(graphData.nodes)
       .enter().append("g")
       .attr("class", "node")
       .style("cursor", "pointer")
@@ -197,52 +343,64 @@ export const FacultyVisualization: React.FC = () => {
       .attr("stroke", "#fff")
       .attr("stroke-width", 2)
       .on("click", (event, d: any) => {
-        // Find the abstract for this entity or use the node itself if it's an abstract
-        const abstractData = d.type === 'abstract' 
-          ? mockEntityData.abstracts.find(a => a.id === d.id)
-          : mockEntityData.abstracts.find(a => a.id === d.abstractId);
-        
-        setSelectedNode({ ...d, abstract: abstractData });
-        setIsModalOpen(true);
+        // Only allow clicking on abstract nodes
+        if (d.type === 'abstract') {
+          const abstractId = d.id.replace('abstract_', '');
+          const abstractData = filteredAbstracts.find(a => a.id === abstractId);
+          
+          setSelectedNode({ ...d, abstract: abstractData });
+          setIsModalOpen(true);
+        }
       })
       .on("mouseover", function(event, d: any) {
-        d3.select(this)
-          .transition()
-          .duration(200)
-          .attr("r", (d: any) => d.size + 3)
-          .attr("stroke-width", 3);
-        
-        // Highlight connected nodes
-        const connectedLinks = mockEntityData.links.filter(l => l.source === d.id || l.target === d.id);
-        const connectedNodeIds = connectedLinks.map(l => l.source === d.id ? l.target : l.source);
-        
-        node.selectAll("circle")
-          .style("opacity", (n: any) => connectedNodeIds.includes(n.id) || n.id === d.id ? 1 : 0.3);
-        
-        link.style("opacity", (l: any) => l.source.id === d.id || l.target.id === d.id ? 0.8 : 0.1);
+        if (d.type === 'abstract') {
+          d3.select(this)
+            .transition()
+            .duration(200)
+            .attr("r", (d: any) => d.size + 3)
+            .attr("stroke-width", 3);
+          
+          // Highlight connected nodes for this abstract only
+          const connectedLinks = graphData.links.filter((l: any) => 
+            l.source.id === d.id || l.target.id === d.id
+          );
+          const connectedNodeIds = connectedLinks.map((l: any) => 
+            l.source.id === d.id ? l.target.id : l.source.id
+          );
+          
+          node.selectAll("circle")
+            .style("opacity", (n: any) => 
+              n.abstractId === d.abstractId || connectedNodeIds.includes(n.id) || n.id === d.id ? 1 : 0.2
+            );
+          
+          link.style("opacity", (l: any) => 
+            l.source.id === d.id || l.target.id === d.id ? 0.8 : 0.1
+          );
+        }
       })
       .on("mouseout", function(event, d: any) {
-        d3.select(this)
-          .transition()
-          .duration(200)
-          .attr("r", (d: any) => d.size)
-          .attr("stroke-width", 2);
-        
-        // Reset all nodes and links opacity
-        node.selectAll("circle").style("opacity", 1);
-        link.style("opacity", 0.6);
+        if (d.type === 'abstract') {
+          d3.select(this)
+            .transition()
+            .duration(200)
+            .attr("r", (d: any) => d.size)
+            .attr("stroke-width", 2);
+          
+          // Reset all nodes and links opacity
+          node.selectAll("circle").style("opacity", 1);
+          link.style("opacity", 0.6);
+        }
       });
 
     // Add labels beside nodes (not inside)
     node.append("text")
       .text((d: any) => d.label)
-      .attr("font-size", 12)
+      .attr("font-size", 11)
       .attr("font-family", "Arial, sans-serif")
       .attr("text-anchor", "start")
-      .attr("dx", (d: any) => d.size + 8) // Position text beside the node
+      .attr("dx", (d: any) => d.size + 5)
       .attr("dy", ".35em")
       .attr("fill", "#333")
-      .attr("font-weight", (d: any) => d.type === 'abstract' ? 'bold' : 'normal')
       .style("pointer-events", "none")
       .style("user-select", "none");
 
@@ -267,7 +425,7 @@ export const FacultyVisualization: React.FC = () => {
 
     svg.call(zoom as any);
 
-  }, [dimensions]);
+  }, [dimensions, graphData, filteredAbstracts]);
 
   useEffect(() => {
     renderForceGraph();
@@ -277,8 +435,11 @@ export const FacultyVisualization: React.FC = () => {
     const handleResize = () => {
       const container = svgRef.current?.parentElement;
       if (container) {
+        // Calculate width for 2/3 of the container in lg screens
+        const containerWidth = container.clientWidth;
+        const leftPaneWidth = window.innerWidth >= 1024 ? containerWidth * 0.66 : containerWidth;
         setDimensions({
-          width: container.clientWidth,
+          width: leftPaneWidth - 24, // Account for padding
           height: 600
         });
       }
@@ -296,16 +457,6 @@ export const FacultyVisualization: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">Entity Visualization</h2>
           <p className="text-gray-600">Explore relationships between technologies, domains, and research</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export Graph
-          </Button>
-          <Button variant="outline">
-            <Maximize2 className="h-4 w-4 mr-2" />
-            Fullscreen
-          </Button>
-        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -322,6 +473,26 @@ export const FacultyVisualization: React.FC = () => {
 
         {/* Force-Directed Graph Tab */}
         <TabsContent value="graph" className="space-y-6">
+          {isLoading ? (
+            <Card>
+              <CardContent className="flex items-center justify-center py-12">
+                <div className="text-center space-y-4">
+                  <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600" />
+                  <p className="text-gray-600">Loading entity visualization...</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : graphData.nodes.length === 0 ? (
+            <Card>
+              <CardContent className="flex items-center justify-center py-12">
+                <div className="text-center space-y-4">
+                  <Network className="h-12 w-12 mx-auto text-gray-400" />
+                  <p className="text-gray-600">No approved abstracts with entities found.</p>
+                  <p className="text-sm text-gray-500">Submit and approve abstracts to see the entity visualization.</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
@@ -332,14 +503,13 @@ export const FacultyVisualization: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {/* 2-Pane Layout */}
-              <div className="grid grid-cols-3 gap-6">
-                {/* Left Pane - Interactive Graph (2/3 width) */}
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left pane - Visualization (2/3 width) */}
+                <div className="lg:col-span-2">
                   <div className="relative w-full bg-white rounded-lg border overflow-hidden">
                     <svg 
                       ref={svgRef} 
-                      width={dimensions.width * 0.65} 
+                      width={dimensions.width} 
                       height={dimensions.height}
                       className="w-full h-full"
                     >
@@ -348,37 +518,59 @@ export const FacultyVisualization: React.FC = () => {
                     <div className="absolute top-4 left-4 bg-white/90 p-3 rounded-lg shadow-sm border max-w-xs">
                       <h4 className="text-sm font-medium mb-2">Interactive Controls:</h4>
                       <ul className="text-xs text-gray-600 space-y-1">
-                        <li>• Click any node to view abstract details</li>
-                        <li>• Drag nodes to rearrange groups</li>
+                        <li>• Click abstract centers (blue) to view details</li>
+                        <li>• Drag any node to rearrange position</li>
                         <li>• Scroll to zoom in/out</li>
-                        <li>• Hover to highlight connections</li>
+                        <li>• Hover abstracts to highlight connections</li>
+                        <li>• Each abstract group stays together (no merging)</li>
                       </ul>
                     </div>
                   </div>
                 </div>
 
-                {/* Right Pane - Legend and Statistics (1/3 width) */}
-                <div className="col-span-1 space-y-4">
+                {/* Right pane - Legend and Statistics (1/3 width) */}
+                <div className="space-y-4">
+                  {/* Year Filter */}
+                  <Card className="p-4">
+                    <h4 className="font-medium mb-3">Filter by Year</h4>
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Years</SelectItem>
+                        {availableYears.map(year => (
+                          <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Card>
+
                   {/* Graph Statistics */}
                   <Card className="p-4">
                     <h4 className="font-medium mb-3">Graph Statistics</h4>
-                    <div className="space-y-3 text-sm">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Showing Abstracts:</span>
+                        <span className="font-medium">{filteredAbstracts.length}</span>
+                      </div>
                       <div className="flex justify-between">
                         <span>Total Abstracts:</span>
-                        <span className="font-medium">{mockEntityData.abstracts.length}</span>
+                        <span className="font-medium text-gray-500">{abstracts.length}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Extracted Entities:</span>
-                        <span className="font-medium">{mockEntityData.nodes.filter(n => n.type === 'entity').length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Total Keywords:</span>
-                        <span className="font-medium">{mockEntityData.abstracts.reduce((acc, abs) => acc + abs.keywords.length, 0)}</span>
+                        <span className="font-medium">{graphData.nodes.filter(n => n.type === 'entity').length}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Connections:</span>
-                        <span className="font-medium">{mockEntityData.links.length}</span>
+                        <span className="font-medium">{graphData.links.length}</span>
                       </div>
+                      {selectedYear !== 'all' && (
+                        <div className="pt-2 border-t">
+                          <span className="text-xs text-blue-600">Filtered by: {selectedYear}</span>
+                        </div>
+                      )}
                     </div>
                   </Card>
 
@@ -387,90 +579,125 @@ export const FacultyVisualization: React.FC = () => {
                     <h4 className="font-medium mb-3">Legend</h4>
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full bg-blue-500"></div>
+                        <div className="w-4 h-4 rounded-full bg-blue-500"></div>
                         <span className="text-sm">Abstract Centers</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-orange-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-orange-500"></div>
                         <span className="text-sm">Extracted Entities</span>
                       </div>
-                      <div className="text-xs text-gray-500 mt-2">
+                      <div className="text-xs text-gray-500">
                         Each blue node represents one abstract with its connected orange entity nodes showing extracted keywords and concepts.
                       </div>
                     </div>
                   </Card>
 
-                  {/* Abstract Details */}
+                  {/* Quick Info */}
                   <Card className="p-4">
                     <h4 className="font-medium mb-3">Quick Info</h4>
                     <div className="space-y-2 text-sm">
                       <div className="p-2 bg-blue-50 rounded text-blue-800">
-                        <strong>Abstracts:</strong> {mockEntityData.abstracts.length} research papers
+                        <strong>Abstracts:</strong> {filteredAbstracts.length} {selectedYear !== 'all' ? `(${selectedYear})` : 'total'}
                       </div>
                       <div className="p-2 bg-orange-50 rounded text-orange-800">
-                        <strong>Entities:</strong> {mockEntityData.nodes.filter(n => n.type === 'entity').length} unique keywords
+                        <strong>Entities:</strong> {graphData.nodes.filter(n => n.type === 'entity').length} unique
                       </div>
                       <div className="p-2 bg-green-50 rounded text-green-800">
-                        <strong>Connections:</strong> {mockEntityData.links.length} relationships
+                        <strong>Connections:</strong> {graphData.links.length} links
                       </div>
-                    </div>
-                  </Card>
-
-                  {/* Most Connected Entities */}
-                  <Card className="p-4">
-                    <h4 className="font-medium mb-3">Top Entities</h4>
-                    <div className="space-y-2 text-sm">
-                      {mockEntityData.nodes
-                        .filter(n => n.type === 'entity')
-                        .slice(0, 5)
-                        .map((entity, index) => (
-                          <div key={entity.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                            <span className="font-medium">{entity.label}</span>
-                            <div className="w-12 h-2 bg-gray-200 rounded">
-                              <div 
-                                className="h-2 bg-blue-500 rounded"
-                                style={{ width: `${(entity.size / 30) * 100}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        ))}
                     </div>
                   </Card>
                 </div>
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Entity Details Modal */}
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Abstract Details</DialogTitle>
+                <DialogTitle>
+                  {selectedNode?.abstract?.title || 'Abstract Details'}
+                </DialogTitle>
               </DialogHeader>
               
               {selectedNode && selectedNode.abstract && (
                 <div className="space-y-4">
                   <div>
-                    <h4 className="font-medium text-sm text-gray-700 mb-2">Abstract</h4>
-                    <p className="text-sm text-gray-600">
-                      {selectedNode.abstract.content}
+                    <h4 className="font-medium text-sm text-gray-700 mb-2">Authors</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedNode.abstract.authors?.map((author: string, index: number) => (
+                        <Badge key={index} variant="outline">{author}</Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-sm text-gray-700 mb-2">Abstract Content</h4>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {selectedNode.abstract.abstract}
                     </p>
                   </div>
 
                   <div>
                     <h4 className="font-medium text-sm text-gray-700 mb-2">Keywords</h4>
                     <div className="flex flex-wrap gap-2">
-                      {selectedNode.abstract.keywords.map((keyword: string, index: number) => (
-                        <div key={index} className="px-3 py-1 border-b border-gray-200 text-sm">
+                      {selectedNode.abstract.keywords?.map((keyword: string, index: number) => (
+                        <Badge key={index} className="bg-blue-100 text-blue-800">
                           {keyword}
-                        </div>
+                        </Badge>
                       ))}
                     </div>
                   </div>
+
+                  {selectedNode.abstract.extracted_entities && (
+                    <div>
+                      <h4 className="font-medium text-sm text-gray-700 mb-2">Extracted Entities</h4>
+                      <div className="space-y-2">
+                        {selectedNode.abstract.extracted_entities.technologies?.length > 0 && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Technologies:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {selectedNode.abstract.extracted_entities.technologies.map((tech: string, index: number) => (
+                                <Badge key={index} variant="outline" className="bg-blue-50 text-blue-700 text-xs">
+                                  {tech}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {selectedNode.abstract.extracted_entities.domains?.length > 0 && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Domains:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {selectedNode.abstract.extracted_entities.domains.map((domain: string, index: number) => (
+                                <Badge key={index} variant="outline" className="bg-purple-50 text-purple-700 text-xs">
+                                  {domain}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {selectedNode.abstract.extracted_entities.methodologies?.length > 0 && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Methodologies:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {selectedNode.abstract.extracted_entities.methodologies.map((method: string, index: number) => (
+                                <Badge key={index} variant="outline" className="bg-green-50 text-green-700 text-xs">
+                                  {method}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               
-              <div className="flex justify-end">
+              <div className="flex justify-end mt-4">
                 <Button variant="outline" onClick={() => setIsModalOpen(false)}>
                   Close
                 </Button>
@@ -481,20 +708,38 @@ export const FacultyVisualization: React.FC = () => {
 
         {/* Frequency Chart Tab */}
         <TabsContent value="frequency" className="space-y-6">
+          {isLoading ? (
+            <Card>
+              <CardContent className="flex items-center justify-center py-12">
+                <div className="text-center space-y-4">
+                  <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600" />
+                  <p className="text-gray-600">Loading frequency data...</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : frequencyData.length === 0 ? (
+            <Card>
+              <CardContent className="flex items-center justify-center py-12">
+                <div className="text-center space-y-4">
+                  <Zap className="h-12 w-12 mx-auto text-gray-400" />
+                  <p className="text-gray-600">No frequency data available.</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
           <Card>
             <CardHeader>
-              <CardTitle>Research Category Frequency</CardTitle>
-              <CardDescription>Analysis of research categories and their usage patterns</CardDescription>
+              <CardTitle>Research Entity Frequency</CardTitle>
+              <CardDescription>Top entities extracted from approved abstracts</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockFrequencyData.map((item, index) => (
+                {frequencyData.map((item, index) => (
                   <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-4">
-                      <div className={`w-4 h-4 rounded-full ${
-                        item.trend === 'up' ? 'bg-green-500' : 
-                        item.trend === 'down' ? 'bg-red-500' : 'bg-yellow-500'
-                      }`}></div>
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-sm">
+                        {index + 1}
+                      </div>
                       <span className="font-medium">{item.category}</span>
                     </div>
                     <div className="flex items-center space-x-6">
@@ -505,7 +750,7 @@ export const FacultyVisualization: React.FC = () => {
                       <div className="w-32 h-3 bg-gray-200 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-blue-500 transition-all duration-300"
-                          style={{ width: `${item.percentage * 5}%` }}
+                          style={{ width: `${Math.min(parseFloat(item.percentage), 100)}%` }}
                         ></div>
                       </div>
                     </div>
@@ -514,6 +759,7 @@ export const FacultyVisualization: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
