@@ -251,6 +251,12 @@ const StudentAbstractReview: React.FC = () => {
 
   const [selectedSubmission, setSelectedSubmission] = useState<StudentSubmission | null>(null);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  
+  // D3.js visualization state for review modal
+  const graphRef = useRef<SVGSVGElement>(null);
+  const [zoomLevel, setZoomLevel] = useState(100);
+  const simulationRef = useRef<d3.Simulation<any, undefined> | null>(null);
+  const zoomBehaviorRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
   const [reviewForm, setReviewForm] = useState({
     status: "",
     feedback: "",
@@ -267,6 +273,160 @@ const StudentAbstractReview: React.FC = () => {
       advisorNotes: submission.advisorNotes || ""
     });
     setIsReviewDialogOpen(true);
+    
+    // Build entity graph after modal opens
+    setTimeout(() => {
+      if (submission.extractedEntities) {
+        buildEntityGraph(submission.extractedEntities);
+      }
+    }, 100);
+  };
+
+  // Build D3.js entity relationship graph
+  const buildEntityGraph = (entities: any) => {
+    if (!graphRef.current || !entities) return;
+
+    const svg = d3.select(graphRef.current);
+    svg.selectAll("*").remove();
+
+    const width = 600;
+    const height = 400;
+
+    const g = svg.append("g");
+
+    // Create nodes
+    const nodes: any[] = [
+      { id: "abstract", label: "Abstract", type: "center", x: width / 2, y: height / 2 }
+    ];
+
+    // Add technology nodes
+    entities.technologies?.forEach((tech: string, i: number) => {
+      nodes.push({ id: `tech-${i}`, label: tech, type: "technology" });
+    });
+
+    // Add domain nodes
+    entities.domains?.forEach((domain: string, i: number) => {
+      nodes.push({ id: `domain-${i}`, label: domain, type: "domain" });
+    });
+
+    // Add methodology nodes
+    entities.methodologies?.forEach((method: string, i: number) => {
+      nodes.push({ id: `method-${i}`, label: method, type: "methodology" });
+    });
+
+    // Create links
+    const links: any[] = nodes
+      .filter(n => n.type !== "center")
+      .map(n => ({ source: "abstract", target: n.id }));
+
+    // Create force simulation
+    const simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id((d: any) => d.id).distance(120))
+      .force("charge", d3.forceManyBody().strength(-400))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide().radius(50));
+
+    simulationRef.current = simulation;
+
+    // Draw links
+    const link = g.append("g")
+      .selectAll("line")
+      .data(links)
+      .join("line")
+      .attr("stroke", "#94a3b8")
+      .attr("stroke-width", 2)
+      .attr("stroke-opacity", 0.6);
+
+    // Draw nodes
+    const node = g.append("g")
+      .selectAll("g")
+      .data(nodes)
+      .join("g")
+      .call(d3.drag<any, any>()
+        .on("start", (event, d) => {
+          if (!event.active) simulation.alphaTarget(0.3).restart();
+          d.fx = d.x;
+          d.fy = d.y;
+        })
+        .on("drag", (event, d) => {
+          d.fx = event.x;
+          d.fy = event.y;
+        })
+        .on("end", (event, d) => {
+          if (!event.active) simulation.alphaTarget(0);
+          d.fx = null;
+          d.fy = null;
+        })
+      );
+
+    // Add circles
+    node.append("circle")
+      .attr("r", (d: any) => d.type === "center" ? 25 : 20)
+      .attr("fill", (d: any) => {
+        if (d.type === "center") return "#3b82f6"; // blue
+        return "#fb923c"; // orange
+      })
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 2);
+
+    // Add labels
+    node.append("text")
+      .text((d: any) => d.label)
+      .attr("text-anchor", "middle")
+      .attr("dy", 35)
+      .attr("font-size", "12px")
+      .attr("fill", "#1f2937")
+      .attr("font-weight", "500");
+
+    // Update positions
+    simulation.on("tick", () => {
+      link
+        .attr("x1", (d: any) => d.source.x)
+        .attr("y1", (d: any) => d.source.y)
+        .attr("x2", (d: any) => d.target.x)
+        .attr("y2", (d: any) => d.target.y);
+
+      node.attr("transform", (d: any) => `translate(${d.x},${d.y})`);
+    });
+
+    // Add zoom behavior
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.5, 3])
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform);
+        setZoomLevel(Math.round(event.transform.k * 100));
+      });
+
+    svg.call(zoom);
+    zoomBehaviorRef.current = zoom;
+  };
+
+  // Zoom control functions
+  const handleZoomIn = () => {
+    if (graphRef.current && zoomBehaviorRef.current) {
+      d3.select(graphRef.current)
+        .transition()
+        .duration(300)
+        .call(zoomBehaviorRef.current.scaleBy, 1.3);
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (graphRef.current && zoomBehaviorRef.current) {
+      d3.select(graphRef.current)
+        .transition()
+        .duration(300)
+        .call(zoomBehaviorRef.current.scaleBy, 0.7);
+    }
+  };
+
+  const handleResetZoom = () => {
+    if (graphRef.current && zoomBehaviorRef.current) {
+      d3.select(graphRef.current)
+        .transition()
+        .duration(300)
+        .call(zoomBehaviorRef.current.transform, d3.zoomIdentity);
+    }
   };
 
   const handleApprove = async () => {
@@ -546,11 +706,11 @@ const StudentAbstractReview: React.FC = () => {
       </Card>
 
       <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Review Student Submission</DialogTitle>
             <DialogDescription>
-              Review the abstract and take action
+              Review the abstract, extracted entities, and entity relationships
             </DialogDescription>
           </DialogHeader>
           
@@ -590,6 +750,151 @@ const StudentAbstractReview: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Extracted Entities Section */}
+              {selectedSubmission.extractedEntities && (
+                <div className="space-y-4 border-t pt-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Extracted Entities</h3>
+                    <Badge variant="outline" className="bg-green-50 text-green-700">
+                      {selectedSubmission.extractionConfidence 
+                        ? Math.round(selectedSubmission.extractionConfidence * 100) 
+                        : 0}% Confidence
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Technologies - Left */}
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <span className="h-3 w-3 rounded-full bg-blue-500"></span>
+                        Technologies
+                      </Label>
+                      <div className="mt-2 space-y-1">
+                        {selectedSubmission.extractedEntities.technologies && 
+                         selectedSubmission.extractedEntities.technologies.length > 0 ? (
+                          selectedSubmission.extractedEntities.technologies.map((tech: string, idx: number) => (
+                            <Badge key={idx} variant="outline" className="bg-blue-50 text-blue-700 mr-2 mb-2">
+                              {tech}
+                            </Badge>
+                          ))
+                        ) : (
+                          <p className="text-sm text-gray-500">None detected</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Research Domains - Right */}
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <span className="h-3 w-3 rounded-full bg-purple-500"></span>
+                        Research Domains
+                      </Label>
+                      <div className="mt-2 space-y-1">
+                        {selectedSubmission.extractedEntities.domains && 
+                         selectedSubmission.extractedEntities.domains.length > 0 ? (
+                          selectedSubmission.extractedEntities.domains.map((domain: string, idx: number) => (
+                            <Badge key={idx} variant="outline" className="bg-purple-50 text-purple-700 mr-2 mb-2">
+                              {domain}
+                            </Badge>
+                          ))
+                        ) : (
+                          <p className="text-sm text-gray-500">None detected</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Methodologies - Full Width */}
+                  {selectedSubmission.extractedEntities.methodologies && 
+                   selectedSubmission.extractedEntities.methodologies.length > 0 && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <span className="h-3 w-3 rounded-full bg-green-500"></span>
+                        Methodologies
+                      </Label>
+                      <div className="mt-2 space-y-1">
+                        {selectedSubmission.extractedEntities.methodologies.map((method: string, idx: number) => (
+                          <Badge key={idx} variant="outline" className="bg-green-50 text-green-700 mr-2 mb-2">
+                            {method}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Interactive Entity Graph */}
+                  <div className="border rounded-lg bg-gray-50">
+                    <div className="relative bg-white rounded-lg border overflow-hidden" style={{ height: '400px' }}>
+                      <svg ref={graphRef} className="w-full h-full"></svg>
+                      
+                      {/* Overlay Controls - Top Left */}
+                      <div className="absolute top-3 left-3 space-y-2 pointer-events-none">
+                        {/* Title and Legend */}
+                        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-3 border pointer-events-auto">
+                          <div className="flex items-center gap-4">
+                            <h4 className="text-sm font-semibold text-gray-900">Interactive Entity Graph</h4>
+                            <div className="flex items-center gap-3 text-xs">
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-3 h-3 rounded-full bg-[#3b82f6]"></div>
+                                <span className="text-gray-600">Abstract Center</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-3 h-3 rounded-full bg-[#fb923c]"></div>
+                                <span className="text-gray-600">Extracted Entities</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Interactive Instructions */}
+                        <div className="bg-blue-50/95 backdrop-blur-sm rounded-lg shadow-lg p-3 border border-blue-200 pointer-events-auto">
+                          <div className="text-xs text-blue-800 space-y-0.5">
+                            <div className="font-semibold mb-1">How to interact:</div>
+                            <div>• <span className="font-medium">Hover over nodes</span> for details</div>
+                            <div>• <span className="font-medium">Drag nodes</span> to rearrange</div>
+                            <div>• <span className="font-medium">Blue:</span> Central abstract</div>
+                            <div>• <span className="font-medium">Orange:</span> Entity keywords</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Zoom Controls - Top Right */}
+                      <div className="absolute top-3 right-3 pointer-events-auto">
+                        <div className="flex items-center gap-1 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border p-1">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={handleZoomIn}
+                            className="h-8 w-8 p-0"
+                            title="Zoom In"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={handleZoomOut}
+                            className="h-8 w-8 p-0"
+                            title="Zoom Out"
+                          >
+                            <span className="text-xl leading-none">−</span>
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={handleResetZoom}
+                            className="h-8 w-8 p-0"
+                            title="Reset View"
+                          >
+                            <Maximize className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="flex justify-end gap-3 pt-4">
