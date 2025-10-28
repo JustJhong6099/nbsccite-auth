@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Upload, 
   FileText, 
@@ -15,11 +16,20 @@ import {
   Eye,
   Camera,
   Scan,
-  Loader2
+  Loader2,
+  Network,
+  CheckCircle,
+  ZoomIn,
+  ZoomOut,
+  Maximize2
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import Tesseract from 'tesseract.js';
+import { performEntityExtraction, type ExtractedEntities } from '@/lib/entity-extraction';
+import * as d3 from "d3";
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 interface AbstractFormData {
   title: string;
@@ -29,7 +39,19 @@ interface AbstractFormData {
   year: string;
 }
 
+interface Node extends d3.SimulationNodeDatum {
+  id: string;
+  label: string;
+  type: 'center' | 'entity';
+}
+
+interface Link extends d3.SimulationLinkDatum<Node> {
+  source: string | Node;
+  target: string | Node;
+}
+
 export const AbstractSubmission: React.FC = () => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState<AbstractFormData>({
     title: '',
     authors: '',
@@ -44,6 +66,15 @@ export const AbstractSubmission: React.FC = () => {
   const [ocrProgress, setOcrProgress] = useState(0);
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const [ocrImage, setOcrImage] = useState<string | null>(null);
+  
+  // Entity extraction states
+  const [extractedEntities, setExtractedEntities] = useState<ExtractedEntities | null>(null);
+  const [isExtractingEntities, setIsExtractingEntities] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const svgRef = React.useRef<SVGSVGElement>(null);
+  const simulationRef = React.useRef<d3.Simulation<Node, Link> | null>(null);
+  const zoomBehaviorRef = React.useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
   const handleKeywordAdd = () => {
     if (keywordInput.trim() && !formData.keywords.includes(keywordInput.trim())) {
@@ -111,6 +142,221 @@ export const AbstractSubmission: React.FC = () => {
     }
   }, [formData.abstract]);
 
+  const handleExtractEntities = useCallback(async () => {
+    if (!formData.abstract.trim()) {
+      toast.error("Please enter abstract content first");
+      return;
+    }
+
+    setIsExtractingEntities(true);
+    try {
+      // Perform entity extraction
+      const entities = performEntityExtraction(formData.abstract, formData.keywords);
+      setExtractedEntities(entities);
+      
+      // Build visualization
+      setTimeout(() => {
+        if (svgRef.current && entities) {
+          buildEntityGraph(entities);
+        }
+      }, 100);
+      
+      toast.success(`Extracted ${entities.technologies.length + entities.domains.length + entities.methodologies.length} entities with ${Math.round(entities.confidence * 100)}% confidence`);
+    } catch (error) {
+      console.error('Entity extraction error:', error);
+      toast.error("Failed to extract entities");
+    } finally {
+      setIsExtractingEntities(false);
+    }
+  }, [formData.abstract, formData.keywords]);
+
+  const buildEntityGraph = (entities: ExtractedEntities) => {
+    if (!svgRef.current) return;
+
+    // Clear previous graph
+    d3.select(svgRef.current).selectAll("*").remove();
+
+    const width = 700;
+    const height = 400;
+
+    const svg = d3.select(svgRef.current)
+      .attr("width", "100%")
+      .attr("height", "100%")
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("preserveAspectRatio", "xMidYMid meet");
+
+    // Add zoom behavior
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.5, 3])
+      .on("zoom", (event) => {
+        container.attr("transform", event.transform);
+        setZoomLevel(event.transform.k);
+      });
+
+    svg.call(zoom);
+    zoomBehaviorRef.current = zoom;
+
+    // Add a container group for all elements
+    const container = svg.append("g");
+
+    // Get all entities
+    const allEntities = [
+      ...entities.technologies,
+      ...entities.domains,
+      ...entities.methodologies
+    ];
+
+    // Create nodes: 1 center node + entity nodes
+    const nodes: Node[] = [
+      { id: 'center', label: 'Abstract Center', type: 'center', x: width / 2, y: height / 2 }
+    ];
+
+    allEntities.forEach((entity, index) => {
+      nodes.push({
+        id: `entity-${index}`,
+        label: entity,
+        type: 'entity'
+      });
+    });
+
+    // Create links from center to entities
+    const links: Link[] = allEntities.map((_, index) => ({
+      source: 'center',
+      target: `entity-${index}`
+    }));
+
+    // Create force simulation
+    const simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id((d: any) => d.id).distance(120))
+      .force("charge", d3.forceManyBody().strength(-400))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide().radius(50));
+
+    // Create links
+    const link = container.append("g")
+      .attr("class", "links")
+      .selectAll("line")
+      .data(links)
+      .join("line")
+      .attr("stroke", "#cbd5e1")
+      .attr("stroke-width", 2)
+      .attr("stroke-opacity", 0.6);
+
+    // Create node groups
+    const node = container.append("g")
+      .attr("class", "nodes")
+      .selectAll("g")
+      .data(nodes)
+      .join("g")
+      .attr("class", "node")
+      .style("cursor", "grab")
+      .call(d3.drag<SVGGElement, Node>()
+        .on("start", (event, d) => {
+          if (!event.active) simulation.alphaTarget(0.3).restart();
+          d.fx = d.x;
+          d.fy = d.y;
+          d3.select(event.currentTarget).style("cursor", "grabbing");
+        })
+        .on("drag", (event, d) => {
+          d.fx = event.x;
+          d.fy = event.y;
+        })
+        .on("end", (event, d) => {
+          if (!event.active) simulation.alphaTarget(0);
+          d.fx = null;
+          d.fy = null;
+          d3.select(event.currentTarget).style("cursor", "grab");
+        }) as any);
+
+    // Add circles to nodes with hover effects
+    node.append("circle")
+      .attr("r", (d) => d.type === 'center' ? 45 : 30)
+      .attr("fill", (d) => d.type === 'center' ? "#3b82f6" : "#fb923c")
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 3)
+      .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))")
+      .on("mouseover", function(event, d) {
+        // Highlight node
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr("r", (d: any) => d.type === 'center' ? 50 : 35)
+          .style("filter", "drop-shadow(0 4px 8px rgba(0,0,0,0.2))");
+        
+        // Highlight connected links
+        link.style("stroke-opacity", (l: any) => 
+          (l.source.id === d.id || l.target.id === d.id) ? 1 : 0.2
+        )
+        .style("stroke-width", (l: any) => 
+          (l.source.id === d.id || l.target.id === d.id) ? 3 : 2
+        );
+      })
+      .on("mouseout", function() {
+        // Reset node
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr("r", (d: any) => d.type === 'center' ? 45 : 30)
+          .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))");
+        
+        // Reset all links
+        link.style("stroke-opacity", 0.6)
+          .style("stroke-width", 2);
+      });
+
+    // Add labels below nodes
+    node.append("text")
+      .text((d) => d.label)
+      .attr("text-anchor", "middle")
+      .attr("dy", (d) => d.type === 'center' ? 60 : 45)
+      .attr("font-size", (d) => d.type === 'center' ? "13px" : "11px")
+      .attr("font-weight", (d) => d.type === 'center' ? "600" : "500")
+      .attr("fill", "#374151")
+      .style("pointer-events", "none")
+      .style("user-select", "none");
+
+    // Update positions on tick
+    simulation.on("tick", () => {
+      link
+        .attr("x1", (d: any) => d.source.x)
+        .attr("y1", (d: any) => d.source.y)
+        .attr("x2", (d: any) => d.target.x)
+        .attr("y2", (d: any) => d.target.y);
+
+      node.attr("transform", (d) => `translate(${d.x},${d.y})`);
+    });
+
+    // Store simulation reference
+    simulationRef.current = simulation;
+  };
+
+  const handleZoomIn = () => {
+    if (svgRef.current && zoomBehaviorRef.current) {
+      d3.select(svgRef.current)
+        .transition()
+        .duration(300)
+        .call(zoomBehaviorRef.current.scaleBy, 1.3);
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (svgRef.current && zoomBehaviorRef.current) {
+      d3.select(svgRef.current)
+        .transition()
+        .duration(300)
+        .call(zoomBehaviorRef.current.scaleBy, 0.7);
+    }
+  };
+
+  const handleResetZoom = () => {
+    if (svgRef.current && zoomBehaviorRef.current) {
+      d3.select(svgRef.current)
+        .transition()
+        .duration(300)
+        .call(zoomBehaviorRef.current.transform, d3.zoomIdentity);
+    }
+  };
+
   const handleSaveDraft = () => {
     setIsDraft(true);
     setTimeout(() => {
@@ -119,16 +365,56 @@ export const AbstractSubmission: React.FC = () => {
     }, 1000);
   };
 
-  const handleSubmit = () => {
+  const handlePreview = async () => {
+    if (!formData.title || !formData.abstract) {
+      toast.error("Please fill in title and abstract first");
+      return;
+    }
+
+    // Extract entities before showing preview
+    await handleExtractEntities();
+    setShowSubmitModal(true);
+  };
+
+  const handleSubmit = async () => {
     if (!formData.title || !formData.abstract) {
       toast.error("Please fill in all required fields");
       return;
     }
 
+    if (!user) {
+      toast.error("You must be logged in to submit an abstract");
+      return;
+    }
+
+    // Extract entities if not already done
+    if (!extractedEntities) {
+      await handleExtractEntities();
+    }
+
     setIsSubmitting(true);
-    setTimeout(() => {
+    
+    try {
+      // Submit to Supabase
+      const { data, error } = await supabase.from('abstracts').insert({
+        student_id: user.id,
+        title: formData.title,
+        authors: formData.authors ? formData.authors.split(',').map(a => a.trim()).filter(a => a) : [],
+        abstract_text: formData.abstract,
+        keywords: formData.keywords,
+        year: parseInt(formData.year),
+        extracted_entities: extractedEntities,
+        entity_extraction_confidence: extractedEntities?.confidence || 0,
+        status: 'pending',
+        submitted_date: new Date().toISOString()
+      }).select();
+
+      if (error) throw error;
+
       setIsSubmitting(false);
+      setShowSubmitModal(false);
       toast.success("Abstract submitted for review!");
+      
       // Reset form
       setFormData({
         title: '',
@@ -137,8 +423,13 @@ export const AbstractSubmission: React.FC = () => {
         keywords: [],
         year: '2025'
       });
+      setExtractedEntities(null);
       setOcrImage(null);
-    }, 2000);
+    } catch (error: any) {
+      console.error('Submission error:', error);
+      toast.error(error.message || "Failed to submit abstract");
+      setIsSubmitting(false);
+    }
   };
 
   if (previewMode) {
@@ -348,16 +639,20 @@ export const AbstractSubmission: React.FC = () => {
 
               {/* Action Buttons */}
               <div className="flex gap-4 pt-4">
-                <Button onClick={handleSubmit} disabled={isSubmitting || !formData.title || !formData.abstract} className="flex-1">
-                  {isSubmitting ? (
+                <Button 
+                  onClick={handlePreview} 
+                  disabled={isExtractingEntities || !formData.title || !formData.abstract} 
+                  className="flex-1"
+                >
+                  {isExtractingEntities ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Submitting...
+                      Extracting Entities...
                     </>
                   ) : (
                     <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Submit for Review
+                      <Network className="h-4 w-4 mr-2" />
+                      Extract & Preview
                     </>
                   )}
                 </Button>
@@ -482,6 +777,220 @@ export const AbstractSubmission: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Submission Preview Modal with Entity Extraction */}
+      <Dialog open={showSubmitModal} onOpenChange={setShowSubmitModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Preview & Submit Abstract
+            </DialogTitle>
+            <DialogDescription>
+              Review your abstract and extracted entities before final submission
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Abstract Details */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">{formData.title}</h3>
+                {formData.authors && (
+                  <p className="text-sm text-gray-600 mt-1">{formData.authors} • {formData.year}</p>
+                )}
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Abstract</Label>
+                <div className="mt-2 p-4 bg-gray-50 rounded-lg border">
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                    {formData.abstract}
+                  </p>
+                </div>
+              </div>
+
+              {formData.keywords.length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Keywords</Label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {formData.keywords.map((keyword, index) => (
+                      <Badge key={index} variant="outline" className="bg-blue-50 text-blue-700">
+                        {keyword}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Extracted Entities */}
+            {extractedEntities && (
+              <div className="space-y-4 border-t pt-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">Extracted Entities</h3>
+                  <Badge variant="outline" className="bg-green-50 text-green-700">
+                    {Math.round(extractedEntities.confidence * 100)}% Confidence
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Technologies */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-blue-500"></span>
+                      Technologies
+                    </Label>
+                    <div className="mt-2 space-y-1">
+                      {extractedEntities.technologies.length > 0 ? (
+                        extractedEntities.technologies.map((tech, idx) => (
+                          <Badge key={idx} variant="outline" className="bg-blue-50 text-blue-700 mr-2 mb-2">
+                            {tech}
+                          </Badge>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500">None detected</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Research Domains */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-purple-500"></span>
+                      Research Domains
+                    </Label>
+                    <div className="mt-2 space-y-1">
+                      {extractedEntities.domains.length > 0 ? (
+                        extractedEntities.domains.map((domain, idx) => (
+                          <Badge key={idx} variant="outline" className="bg-purple-50 text-purple-700 mr-2 mb-2">
+                            {domain}
+                          </Badge>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500">None detected</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Methodologies */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-green-500"></span>
+                      Methodologies
+                    </Label>
+                    <div className="mt-2 space-y-1">
+                      {extractedEntities.methodologies.length > 0 ? (
+                        extractedEntities.methodologies.map((method, idx) => (
+                          <Badge key={idx} variant="outline" className="bg-green-50 text-green-700 mr-2 mb-2">
+                            {method}
+                          </Badge>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500">None detected</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Entity Visualization */}
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <Label className="text-sm font-medium text-gray-700">Entity Relationship Graph</Label>
+                    <div className="flex items-center gap-2">
+                      {/* Legend */}
+                      <div className="flex items-center gap-3 mr-4 text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-3 h-3 rounded-full bg-[#3b82f6]"></div>
+                          <span className="text-gray-600">Abstract Center</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-3 h-3 rounded-full bg-[#fb923c]"></div>
+                          <span className="text-gray-600">Extracted Entities</span>
+                        </div>
+                      </div>
+                      {/* Zoom Controls */}
+                      <div className="flex items-center gap-1 border rounded-md bg-white p-1">
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={handleZoomIn}
+                          className="h-7 w-7 p-0"
+                          title="Zoom In"
+                        >
+                          <ZoomIn className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={handleZoomOut}
+                          className="h-7 w-7 p-0"
+                          title="Zoom Out"
+                        >
+                          <ZoomOut className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={handleResetZoom}
+                          className="h-7 w-7 p-0"
+                          title="Reset View"
+                        >
+                          <Maximize2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Interactive Controls Text */}
+                  <div className="mb-3 p-2 bg-blue-50 rounded-md border border-blue-200">
+                    <div className="text-xs text-blue-800 space-y-0.5">
+                      <div className="font-semibold mb-1">Interactive Controls:</div>
+                      <div>• <span className="font-medium">Drag nodes</span> to rearrange</div>
+                      <div>• <span className="font-medium">Scroll wheel</span> to zoom</div>
+                      <div>• <span className="font-medium">Click & drag background</span> to pan</div>
+                      <div>• <span className="font-medium">Hover nodes</span> to highlight</div>
+                    </div>
+                  </div>
+
+                  <div className="relative bg-white rounded-lg border overflow-hidden" style={{ height: '400px' }}>
+                    <svg ref={svgRef} className="w-full h-full"></svg>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowSubmitModal(false)}
+                disabled={isSubmitting}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="flex-1 bg-green-600 hover:bg-green-700"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Confirm & Submit
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

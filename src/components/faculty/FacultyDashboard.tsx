@@ -94,6 +94,10 @@ interface StudentSubmission {
   feedback?: string;
   rating?: number;
   lastReviewDate?: string;
+  extractedEntities?: any;
+  extractionConfidence?: number;
+  year?: number;
+  authors?: string[];
 }
 
 interface Entity {
@@ -157,35 +161,81 @@ interface Report {
 // Student Abstract Review Component
 const StudentAbstractReview: React.FC = () => {
   const { toast } = useToast();
-  const [submissions, setSubmissions] = useState<StudentSubmission[]>([
-    {
-      id: "1",
-      title: "Deep Learning Applications in Medical Image Analysis",
-      studentName: "John Doe",
-      studentEmail: "john.doe@nbsc.edu.ph",
-      studentId: "2024-CS-001",
-      submittedDate: "2024-09-05",
-      status: "pending",
-      abstract: "This research investigates the application of deep learning techniques for medical image analysis...",
-      keywords: ["Deep Learning", "Medical Imaging", "Computer Vision", "Healthcare"],
-      department: "Computer Science",
-    },
-    {
-      id: "2",
-      title: "Sustainable Agriculture Using IoT Technology",
-      studentName: "Jane Smith",
-      studentEmail: "jane.smith@nbsc.edu.ph",
-      studentId: "2024-AG-005",
-      submittedDate: "2024-09-03",
-      status: "reviewed",
-      abstract: "This study explores the implementation of IoT sensors and devices...",
-      keywords: ["IoT", "Agriculture", "Sustainability", "Smart Farming"],
-      department: "Agriculture",
-      feedback: "Good research direction. Please expand on the methodology section.",
-      rating: 4,
-      lastReviewDate: "2024-09-04",
+  const { user } = useAuth();
+  const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch submissions from database
+  useEffect(() => {
+    fetchSubmissions();
+  }, []);
+
+  const fetchSubmissions = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch abstracts with student profile information
+      const { data, error } = await supabase
+        .from('abstracts')
+        .select(`
+          id,
+          title,
+          abstract_text,
+          keywords,
+          status,
+          submitted_date,
+          reviewed_date,
+          department,
+          year,
+          authors,
+          extracted_entities,
+          entity_extraction_confidence,
+          student_id,
+          profiles:student_id (
+            full_name,
+            email,
+            student_id
+          )
+        `)
+        .order('submitted_date', { ascending: false });
+
+      if (error) throw error;
+
+      // Transform data to match StudentSubmission interface
+      const transformedSubmissions: StudentSubmission[] = (data || []).map(abstract => {
+        const profile = Array.isArray(abstract.profiles) ? abstract.profiles[0] : abstract.profiles;
+        
+        return {
+          id: abstract.id,
+          title: abstract.title,
+          studentName: profile?.full_name || 'Unknown Student',
+          studentEmail: profile?.email || '',
+          studentId: profile?.student_id || '',
+          submittedDate: abstract.submitted_date ? new Date(abstract.submitted_date).toISOString().split('T')[0] : '',
+          status: abstract.status as any,
+          abstract: abstract.abstract_text,
+          keywords: abstract.keywords || [],
+          department: abstract.department || '',
+          lastReviewDate: abstract.reviewed_date ? new Date(abstract.reviewed_date).toISOString().split('T')[0] : undefined,
+          extractedEntities: abstract.extracted_entities,
+          extractionConfidence: abstract.entity_extraction_confidence,
+          year: abstract.year,
+          authors: abstract.authors || []
+        };
+      });
+
+      setSubmissions(transformedSubmissions);
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load submissions. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-  ]);
+  };
 
   const [selectedSubmission, setSelectedSubmission] = useState<StudentSubmission | null>(null);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
@@ -205,6 +255,97 @@ const StudentAbstractReview: React.FC = () => {
       advisorNotes: submission.advisorNotes || ""
     });
     setIsReviewDialogOpen(true);
+  };
+
+  const handleApprove = async () => {
+    if (!selectedSubmission || !user) return;
+
+    try {
+      // Update status in database
+      const { error } = await supabase
+        .from('abstracts')
+        .update({
+          status: 'approved',
+          reviewed_date: new Date().toISOString(),
+          reviewed_by: user.id
+        })
+        .eq('id', selectedSubmission.id);
+
+      if (error) throw error;
+
+      // Update local state
+      const updatedSubmissions = submissions.map(submission =>
+        submission.id === selectedSubmission.id
+          ? {
+              ...submission,
+              status: "approved" as any,
+              lastReviewDate: new Date().toISOString().split('T')[0],
+            }
+          : submission
+      );
+
+      setSubmissions(updatedSubmissions);
+      setIsReviewDialogOpen(false);
+      setSelectedSubmission(null);
+      
+      toast({
+        title: "Abstract Approved",
+        description: `"${selectedSubmission.title}" has been approved successfully.`,
+      });
+    } catch (error) {
+      console.error('Error approving abstract:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve abstract. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedSubmission || !user) return;
+
+    try {
+      // Update status in database
+      const { error } = await supabase
+        .from('abstracts')
+        .update({
+          status: 'rejected',
+          reviewed_date: new Date().toISOString(),
+          reviewed_by: user.id
+        })
+        .eq('id', selectedSubmission.id);
+
+      if (error) throw error;
+
+      // Update local state
+      const updatedSubmissions = submissions.map(submission =>
+        submission.id === selectedSubmission.id
+          ? {
+              ...submission,
+              status: "rejected" as any,
+              lastReviewDate: new Date().toISOString().split('T')[0],
+            }
+          : submission
+      );
+
+      setSubmissions(updatedSubmissions);
+      setIsReviewDialogOpen(false);
+      setSelectedSubmission(null);
+      
+      toast({
+        title: "Abstract Rejected",
+        description: `"${selectedSubmission.title}" has been rejected.`,
+        variant: "destructive",
+      });
+    } catch (error) {
+      console.error('Error rejecting abstract:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject abstract. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSubmitReview = () => {
@@ -326,69 +467,69 @@ const StudentAbstractReview: React.FC = () => {
           <CardTitle>Student Submissions</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Student & Title</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Rating</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {submissions.map((submission) => (
-                <TableRow key={submission.id}>
-                  <TableCell>
-                    <div className="space-y-2">
-                      <div className="font-medium">{submission.title}</div>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <User className="w-4 h-4 mr-1" />
-                        {submission.studentName} ({submission.studentId})
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {submission.keywords.slice(0, 3).map((keyword, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {keyword}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{submission.department}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusColor(submission.status)} className="flex items-center space-x-1 w-fit">
-                      {getStatusIcon(submission.status)}
-                      <span>{submission.status.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}</span>
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {submission.rating ? (
-                      <div className="flex items-center">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 mr-1" />
-                        <span>{submission.rating}/5</span>
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">Not rated</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openReviewDialog(submission)}
-                      className="flex items-center space-x-1"
-                    >
-                      <Edit className="w-4 h-4" />
-                      <span>Review</span>
-                    </Button>
-                  </TableCell>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mr-2" />
+              <span className="text-gray-600">Loading submissions...</span>
+            </div>
+          ) : submissions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <FileText className="w-12 h-12 text-gray-300 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Submissions Yet</h3>
+              <p className="text-gray-500 max-w-sm">
+                Student abstract submissions will appear here once they are submitted for review.
+              </p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Student & Title</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {submissions.map((submission) => (
+                  <TableRow key={submission.id}>
+                    <TableCell>
+                      <div className="space-y-2">
+                        <div className="font-medium">{submission.title}</div>
+                        <div className="flex items-center text-sm text-gray-500">
+                          <User className="w-4 h-4 mr-1" />
+                          {submission.studentName} ({submission.studentId})
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {submission.keywords.slice(0, 3).map((keyword, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {keyword}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusColor(submission.status)} className="flex items-center space-x-1 w-fit">
+                        {getStatusIcon(submission.status)}
+                        <span>{submission.status.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}</span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openReviewDialog(submission)}
+                        className="flex items-center space-x-1"
+                      >
+                        <Edit className="w-4 h-4" />
+                        <span>Review</span>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -396,6 +537,9 @@ const StudentAbstractReview: React.FC = () => {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Review Student Submission</DialogTitle>
+            <DialogDescription>
+              Review the abstract and take action
+            </DialogDescription>
           </DialogHeader>
           
           {selectedSubmission && (
@@ -409,6 +553,14 @@ const StudentAbstractReview: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium">Department:</Label>
+                      <p className="mt-1 text-sm text-gray-700">{selectedSubmission.department}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Submitted Date:</Label>
+                      <p className="mt-1 text-sm text-gray-700">{selectedSubmission.submittedDate}</p>
+                    </div>
                     <div>
                       <Label className="text-sm font-medium">Abstract:</Label>
                       <div className="mt-2 p-4 bg-gray-50 rounded-lg text-sm">
@@ -427,67 +579,30 @@ const StudentAbstractReview: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Review & Feedback</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="status">Review Status</Label>
-                        <Select value={reviewForm.status} onValueChange={(value) => setReviewForm({...reviewForm, status: value})}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="approved">Approved</SelectItem>
-                            <SelectItem value="needs-revision">Needs Revision</SelectItem>
-                            <SelectItem value="rejected">Rejected</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="rating">Rating (1-5)</Label>
-                        <Select value={reviewForm.rating.toString()} onValueChange={(value) => setReviewForm({...reviewForm, rating: parseInt(value)})}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select rating" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">1 - Needs Major Improvement</SelectItem>
-                            <SelectItem value="2">2 - Needs Improvement</SelectItem>
-                            <SelectItem value="3">3 - Satisfactory</SelectItem>
-                            <SelectItem value="4">4 - Good</SelectItem>
-                            <SelectItem value="5">5 - Excellent</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="feedback">Student Feedback</Label>
-                      <Textarea
-                        id="feedback"
-                        placeholder="Provide constructive feedback for the student..."
-                        className="min-h-32"
-                        value={reviewForm.feedback}
-                        onChange={(e) => setReviewForm({...reviewForm, feedback: e.target.value})}
-                      />
-                    </div>
-
-                    <div className="flex justify-end space-x-2 pt-4">
-                      <Button variant="outline" onClick={() => setIsReviewDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button onClick={handleSubmitReview} className="flex items-center space-x-2">
-                        <Send className="w-4 h-4" />
-                        <span>Submit Review</span>
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsReviewDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  variant="destructive"
+                  onClick={handleReject}
+                  className="flex items-center space-x-2"
+                >
+                  <XCircle className="w-4 h-4" />
+                  <span>Reject</span>
+                </Button>
+                <Button 
+                  onClick={handleApprove}
+                  className="bg-green-600 hover:bg-green-700 flex items-center space-x-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Approve</span>
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
