@@ -28,7 +28,6 @@ import { AbstractsLibrary } from './AbstractsLibrary';
 import { EntityVisualization } from './EntityVisualization';
 import { ResearchInsights } from './ResearchInsights';
 import { ProfileManagement } from './ProfileManagement';
-import { AbstractUploadAndVisualization } from './AbstractUploadAndVisualization';
 
 // Mock student data
 const mockStudentData = {
@@ -147,7 +146,7 @@ export const StudentDashboard: React.FC = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Overview
@@ -155,10 +154,6 @@ export const StudentDashboard: React.FC = () => {
             <TabsTrigger value="submit" className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
               Submit Abstract
-            </TabsTrigger>
-            <TabsTrigger value="upload-analyze" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Upload & Analyze
             </TabsTrigger>
             <TabsTrigger value="abstracts" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
@@ -303,14 +298,10 @@ export const StudentDashboard: React.FC = () => {
                 <CardDescription>Common tasks and shortcuts</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Button onClick={() => setActiveTab('submit')} className="h-20 flex flex-col gap-2">
                     <Upload className="h-6 w-6" />
                     Submit New Abstract
-                  </Button>
-                  <Button onClick={() => setActiveTab('upload-analyze')} variant="outline" className="h-20 flex flex-col gap-2">
-                    <FileText className="h-6 w-6" />
-                    Upload & Analyze
                   </Button>
                   <Button onClick={() => setActiveTab('visualization')} variant="outline" className="h-20 flex flex-col gap-2">
                     <Brain className="h-6 w-6" />
@@ -328,11 +319,6 @@ export const StudentDashboard: React.FC = () => {
           {/* Submit Abstract Tab */}
           <TabsContent value="submit">
             <AbstractSubmission />
-          </TabsContent>
-
-          {/* Upload & Analyze Tab */}
-          <TabsContent value="upload-analyze">
-            <AbstractUploadAndVisualization />
           </TabsContent>
 
           {/* My Abstracts Tab */}

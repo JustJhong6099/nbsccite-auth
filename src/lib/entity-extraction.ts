@@ -10,6 +10,32 @@ export interface ExtractedEntities {
   confidence: number;
 }
 
+// False positives to exclude (institution names, common terms, etc.)
+const FALSE_POSITIVES = [
+  'Northern Beaches Secondary College',
+  'School',
+  'College',
+  'University',
+  'Institute',
+  'Department',
+  'Faculty',
+  'Study',
+  'Abstract',
+  'Paper',
+  'Student',
+  'Teacher',
+  'Professor'
+];
+
+// Helper function to check if entity is a false positive
+function isFalsePositive(entity: string): boolean {
+  const normalizedEntity = entity.trim().toLowerCase();
+  return FALSE_POSITIVES.some(fp => 
+    normalizedEntity === fp.toLowerCase() || 
+    normalizedEntity.includes(fp.toLowerCase())
+  );
+}
+
 // Technology keywords database
 const TECHNOLOGY_KEYWORDS = [
   'Machine Learning', 'Deep Learning', 'Neural Networks', 'CNN', 'RNN', 'LSTM',
@@ -53,7 +79,7 @@ export function extractEntities(text: string, keywords: string[]): string[] {
 
   keywords.forEach(keyword => {
     const lowerKeyword = keyword.toLowerCase();
-    if (lowerText.includes(lowerKeyword)) {
+    if (lowerText.includes(lowerKeyword) && !isFalsePositive(keyword)) {
       found.add(keyword);
     }
   });
@@ -99,6 +125,9 @@ export function performEntityExtraction(
 
   // Also include user keywords that match our categories
   keywordsArray.forEach(keyword => {
+    // Skip false positives
+    if (isFalsePositive(keyword)) return;
+    
     if (TECHNOLOGY_KEYWORDS.some(tech => tech.toLowerCase() === keyword.toLowerCase())) {
       if (!technologies.includes(keyword)) {
         technologies.push(keyword);
