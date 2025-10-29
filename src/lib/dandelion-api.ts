@@ -223,12 +223,27 @@ function filterRelevantEntities(entities: DandelionEntity[], text: string): Dand
     // Filter out ONLY very common false positives
     const falsePositives = [
       'and', 'the', 'for', 'with', 'from', 'this', 'that', 'are', 'was', 'were',
-      'ar' // Filter out "AR" in all cases (too ambiguous)
+      'ar', // Filter out "AR" in all cases (too ambiguous)
+      'experience', 'document', 'experiment', 'reductionism',
+      // Current institution
+      'northern bukidnon state college', 'nbsc', 'bukidnon',
+      // Old institution (for backward compatibility with existing data)
+      'northern beaches secondary college', 'beaches', 'secondary college'
     ];
     
     // Check if label is EXACTLY a false positive (not just contains it)
     if (falsePositives.includes(label)) {
       console.log('Filtered out false positive:', label);
+      return false;
+    }
+    
+    // Also filter out if label contains the institution name (current or old)
+    if (label.includes('bukidnon') || 
+        label.includes('nbsc') ||
+        label.includes('beaches') ||
+        label.includes('secondary college') ||
+        label.includes('northern beaches')) {
+      console.log('Filtered out institution name:', label);
       return false;
     }
     

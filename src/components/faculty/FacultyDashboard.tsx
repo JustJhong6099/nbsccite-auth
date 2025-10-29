@@ -28,6 +28,11 @@ import { UserManagement } from "@/components/analytics/UserManagement";
 import { AbstractManagement as AdminAbstractManagement } from "@/components/analytics/AbstractManagement";
 import { SystemMonitoring } from "@/components/analytics/SystemMonitoring";
 import { AbstractsLibrary } from "@/components/student/AbstractsLibrary";
+// New comprehensive charts for Overview section
+import { SubmissionTrendsChart } from "@/components/analytics/SubmissionTrendsChart";
+import { EntityDistributionChart } from "@/components/analytics/EntityDistributionChart";
+import { TopResearchDomainsChart } from "@/components/analytics/TopResearchDomainsChart";
+import { ReviewPerformanceCard } from "@/components/analytics/ReviewPerformanceCard";
 import { 
   BookOpen, 
   FileText, 
@@ -280,7 +285,7 @@ const StudentAbstractReview: React.FC = () => {
     }, 100);
   };
 
-  // Build D3.js entity relationship graph
+  // Build D3.js entity relationship graph with advanced physics and animations
   const buildEntityGraph = (entities: any) => {
     if (!graphRef.current || !entities) return;
 
@@ -290,34 +295,58 @@ const StudentAbstractReview: React.FC = () => {
     const width = 600;
     const height = 400;
 
-    const g = svg.append("g");
+    // Add zoom behavior
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.5, 3])
+      .on("zoom", (event) => {
+        container.attr("transform", event.transform);
+        setZoomLevel(Math.round(event.transform.k * 100));
+      });
 
-    // Create nodes
-    const nodes: any[] = [
-      { id: "abstract", label: "Abstract", type: "center", x: width / 2, y: height / 2 }
+    svg.call(zoom);
+    zoomBehaviorRef.current = zoom;
+
+    // Add a container group for all elements
+    const container = svg.append("g");
+
+    // Collect all entities from extracted data
+    const allEntities: string[] = [
+      ...(entities.technologies || []),
+      ...(entities.domains || []),
+      ...(entities.methodologies || [])
     ];
 
-    // Add technology nodes
-    entities.technologies?.forEach((tech: string, i: number) => {
-      nodes.push({ id: `tech-${i}`, label: tech, type: "technology" });
+    // Remove duplicates (case-insensitive)
+    const seenEntities = new Set<string>();
+    const uniqueEntities = allEntities.filter((entity: string) => {
+      const normalized = entity.toLowerCase().trim();
+      if (seenEntities.has(normalized)) {
+        return false;
+      }
+      seenEntities.add(normalized);
+      return true;
     });
 
-    // Add domain nodes
-    entities.domains?.forEach((domain: string, i: number) => {
-      nodes.push({ id: `domain-${i}`, label: domain, type: "domain" });
+    // Create nodes: 1 center node + entity nodes
+    const nodes: any[] = [
+      { id: 'center', label: 'Abstract Center', type: 'center', x: width / 2, y: height / 2 }
+    ];
+
+    uniqueEntities.forEach((entity: string, index: number) => {
+      nodes.push({
+        id: `entity-${index}`,
+        label: entity,
+        type: 'entity'
+      });
     });
 
-    // Add methodology nodes
-    entities.methodologies?.forEach((method: string, i: number) => {
-      nodes.push({ id: `method-${i}`, label: method, type: "methodology" });
-    });
+    // Create links from center to entities
+    const links: any[] = uniqueEntities.map((_: string, index: number) => ({
+      source: 'center',
+      target: `entity-${index}`
+    }));
 
-    // Create links
-    const links: any[] = nodes
-      .filter(n => n.type !== "center")
-      .map(n => ({ source: "abstract", target: n.id }));
-
-    // Create force simulation
+    // Create force simulation with improved physics
     const simulation = d3.forceSimulation(nodes)
       .force("link", d3.forceLink(links).id((d: any) => d.id).distance(120))
       .force("charge", d3.forceManyBody().strength(-400))
@@ -326,25 +355,30 @@ const StudentAbstractReview: React.FC = () => {
 
     simulationRef.current = simulation;
 
-    // Draw links
-    const link = g.append("g")
+    // Create links with better styling
+    const link = container.append("g")
+      .attr("class", "links")
       .selectAll("line")
       .data(links)
       .join("line")
-      .attr("stroke", "#94a3b8")
+      .attr("stroke", "#cbd5e1")
       .attr("stroke-width", 2)
       .attr("stroke-opacity", 0.6);
 
-    // Draw nodes
-    const node = g.append("g")
+    // Create node groups with drag and hover interactions
+    const node = container.append("g")
+      .attr("class", "nodes")
       .selectAll("g")
       .data(nodes)
       .join("g")
-      .call(d3.drag<any, any>()
+      .attr("class", "node")
+      .style("cursor", "grab")
+      .call(d3.drag<SVGGElement, any>()
         .on("start", (event, d) => {
           if (!event.active) simulation.alphaTarget(0.3).restart();
           d.fx = d.x;
           d.fy = d.y;
+          d3.select(event.currentTarget).style("cursor", "grabbing");
         })
         .on("drag", (event, d) => {
           d.fx = event.x;
@@ -354,29 +388,58 @@ const StudentAbstractReview: React.FC = () => {
           if (!event.active) simulation.alphaTarget(0);
           d.fx = null;
           d.fy = null;
+          d3.select(event.currentTarget).style("cursor", "grab");
         })
       );
 
-    // Add circles
+    // Add circles to nodes with hover effects and animations
     node.append("circle")
-      .attr("r", (d: any) => d.type === "center" ? 25 : 20)
-      .attr("fill", (d: any) => {
-        if (d.type === "center") return "#3b82f6"; // blue
-        return "#fb923c"; // orange
-      })
+      .attr("r", (d: any) => d.type === 'center' ? 45 : 30)
+      .attr("fill", (d: any) => d.type === 'center' ? "#3b82f6" : "#fb923c")
       .attr("stroke", "#fff")
-      .attr("stroke-width", 2);
+      .attr("stroke-width", 3)
+      .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))")
+      .on("mouseover", function(event, d) {
+        // Highlight node with smooth animation
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr("r", (d: any) => d.type === 'center' ? 50 : 35)
+          .style("filter", "drop-shadow(0 4px 8px rgba(0,0,0,0.2))");
+        
+        // Highlight connected links
+        link.style("stroke-opacity", (l: any) => 
+          (l.source.id === d.id || l.target.id === d.id) ? 1 : 0.2
+        )
+        .style("stroke-width", (l: any) => 
+          (l.source.id === d.id || l.target.id === d.id) ? 3 : 2
+        );
+      })
+      .on("mouseout", function() {
+        // Reset node with smooth animation
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr("r", (d: any) => d.type === 'center' ? 45 : 30)
+          .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))");
+        
+        // Reset all links
+        link.style("stroke-opacity", 0.6)
+          .style("stroke-width", 2);
+      });
 
-    // Add labels
+    // Add labels below nodes with better styling
     node.append("text")
       .text((d: any) => d.label)
       .attr("text-anchor", "middle")
-      .attr("dy", 35)
-      .attr("font-size", "12px")
+      .attr("dy", (d: any) => d.type === 'center' ? 60 : 45)
+      .attr("font-size", (d: any) => d.type === 'center' ? "13px" : "11px")
       .attr("fill", "#1f2937")
-      .attr("font-weight", "500");
+      .attr("font-weight", (d: any) => d.type === 'center' ? "600" : "500")
+      .style("pointer-events", "none")
+      .style("user-select", "none");
 
-    // Update positions
+    // Update positions with smooth animation
     simulation.on("tick", () => {
       link
         .attr("x1", (d: any) => d.source.x)
@@ -386,17 +449,6 @@ const StudentAbstractReview: React.FC = () => {
 
       node.attr("transform", (d: any) => `translate(${d.x},${d.y})`);
     });
-
-    // Add zoom behavior
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.5, 3])
-      .on("zoom", (event) => {
-        g.attr("transform", event.transform);
-        setZoomLevel(Math.round(event.transform.k * 100));
-      });
-
-    svg.call(zoom);
-    zoomBehaviorRef.current = zoom;
   };
 
   // Zoom control functions
@@ -1839,122 +1891,61 @@ const FacultyDashboard: React.FC = () => {
               <AdminStatsCards />
             </div>
 
-            {/* Charts Row */}
+            {/* New Comprehensive Charts - Top Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Submission Trends Chart */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Submission Trends</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-blue-600" />
+                    Submission Trends
+                  </CardTitle>
                   <CardDescription>
-                    Abstract submissions over time and user distribution
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Monthly Submissions</h4>
-                    <SubmissionsChart />
-                  </div>
-                  <div className="border-t pt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">User Distribution</h4>
-                    <UserDistributionChart />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Research Domain Distribution</CardTitle>
-                  <CardDescription>
-                    Breakdown by research category
+                    Track submission activity by week or month with status breakdown
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResearchDomainChart />
+                  <SubmissionTrendsChart />
+                </CardContent>
+              </Card>
+
+              {/* Entity Distribution Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PieChart className="w-5 h-5 text-purple-600" />
+                    Entity Distribution
+                  </CardTitle>
+                  <CardDescription>
+                    Technologies, domains, and methodologies breakdown
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <EntityDistributionChart />
                 </CardContent>
               </Card>
             </div>
 
-            {/* Entity Analytics and Research Trends - Two Pane Layout */}
+            {/* New Comprehensive Charts - Bottom Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Pane - Research Trends Graph */}
+              {/* Top Research Domains Chart */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Research Trends (2020-2025)</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-green-600" />
+                    Top Research Domains
+                  </CardTitle>
                   <CardDescription>
-                    Yearly growth of entities, keywords, and research domains
+                    Most popular research areas across all submissions
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <EntityAnalyticsChart />
+                  <TopResearchDomainsChart />
                 </CardContent>
               </Card>
 
-              {/* Right Pane - Research Trends Bar Chart */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Research Trends</CardTitle>
-                  <CardDescription>
-                    Top research categories by paper count (2025)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium">Machine Learning</span>
-                        <span className="text-sm text-gray-600">45 papers</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-blue-500 h-2 rounded-full" style={{width: '90%'}}></div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium">Web Development</span>
-                        <span className="text-sm text-gray-600">38 papers</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-green-500 h-2 rounded-full" style={{width: '76%'}}></div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium">Data Science</span>
-                        <span className="text-sm text-gray-600">32 papers</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-orange-500 h-2 rounded-full" style={{width: '64%'}}></div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium">Mobile Development</span>
-                        <span className="text-sm text-gray-600">28 papers</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-purple-500 h-2 rounded-full" style={{width: '56%'}}></div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium">Artificial Intelligence</span>
-                        <span className="text-sm text-gray-600">25 papers</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-indigo-500 h-2 rounded-full" style={{width: '50%'}}></div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium">Cybersecurity</span>
-                        <span className="text-sm text-gray-600">22 papers</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-pink-500 h-2 rounded-full" style={{width: '44%'}}></div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Review Performance Card */}
+              <ReviewPerformanceCard />
             </div>
 
             {/* Recent Activities */}
@@ -2070,17 +2061,49 @@ const FacultyDashboard: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
+            {/* Merged User Distribution and Statistics Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  User Management
-                </CardTitle>
+                <CardTitle>User Distribution & Statistics</CardTitle>
                 <CardDescription>
-                  Manage all users, view activity, and monitor system access
+                  Breakdown of users by role with real-time statistics
                 </CardDescription>
               </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left: User Distribution Chart */}
+                  <div>
+                    <UserDistributionChart />
+                  </div>
+
+                  {/* Right: Stats Grid */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                      <p className="text-2xl font-bold text-gray-900">9</p>
+                      <p className="text-xs text-gray-600">Total Users</p>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <UserCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                      <p className="text-2xl font-bold text-gray-900">5</p>
+                      <p className="text-xs text-gray-600">Students</p>
+                    </div>
+                    <div className="text-center p-4 bg-purple-50 rounded-lg">
+                      <User className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                      <p className="text-2xl font-bold text-gray-900">4</p>
+                      <p className="text-xs text-gray-600">Faculty</p>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <Activity className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                      <p className="text-2xl font-bold text-gray-900">9</p>
+                      <p className="text-xs text-gray-600">Active Users</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
+
+            {/* Full Width User Management Component */}
             <UserManagement />
             
             {/* System Monitoring */}
