@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { normalizeTerm, FALSE_POSITIVES } from '@/lib/data-normalization';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -23,24 +24,7 @@ import {
   X
 } from "lucide-react";
 
-// False positives to exclude from analysis (institution names, common terms, etc.)
-const FALSE_POSITIVES = [
-  'Northern Beaches Secondary College',
-  'School',
-  'College',
-  'University',
-  'Institute',
-  'Department',
-  'Faculty',
-  'Study',
-  'Abstract',
-  'Paper',
-  'Student',
-  'Teacher',
-  'Professor'
-];
-
-// Helper function to check if entity is a false positive
+// Helper function to check if entity is a false positive (for backward compatibility)
 const isFalsePositive = (entity: string): boolean => {
   const normalizedEntity = entity.trim().toLowerCase();
   return FALSE_POSITIVES.some(fp => 

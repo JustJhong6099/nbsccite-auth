@@ -223,7 +223,8 @@ function filterRelevantEntities(entities: DandelionEntity[], text: string): Dand
     // Filter out ONLY very common false positives
     const falsePositives = [
       'and', 'the', 'for', 'with', 'from', 'this', 'that', 'are', 'was', 'were',
-      'ar' // Filter out "AR" in all cases (too ambiguous)
+      'ar', // Filter out "AR" in all cases (too ambiguous)
+      'experience', 'document', 'experiment', 'reductionism'
     ];
     
     // Check if label is EXACTLY a false positive (not just contains it)

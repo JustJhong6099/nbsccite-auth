@@ -24,7 +24,11 @@ const FALSE_POSITIVES = [
   'Paper',
   'Student',
   'Teacher',
-  'Professor'
+  'Professor',
+  'Experience',
+  'Document',
+  'Experiment',
+  'Reductionism'
 ];
 
 // Helper function to check if entity is a false positive
