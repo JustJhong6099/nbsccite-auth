@@ -12,7 +12,16 @@ export interface ExtractedEntities {
 
 // False positives to exclude (institution names, common terms, etc.)
 const FALSE_POSITIVES = [
+  // Current institution name
+  'Northern Bukidnon State College',
+  'NBSC',
+  'Bukidnon',
+  'State College',
+  // Old institution name (for backward compatibility)
   'Northern Beaches Secondary College',
+  'Beaches',
+  'Secondary College',
+  // Generic terms
   'School',
   'College',
   'University',

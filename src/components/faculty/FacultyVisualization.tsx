@@ -13,6 +13,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { normalizeTerm } from '@/lib/data-normalization';
 import * as d3 from 'd3';
 
 interface Abstract {
@@ -146,12 +147,13 @@ export const FacultyVisualization: React.FC = () => {
       const entities = abstract.extracted_entities;
       if (!entities) return;
 
-      // Combine all entities from technologies, domains, and methodologies
+      // Combine all entities from technologies, domains, and methodologies (with normalization)
       const allEntities = [
         ...(entities.technologies || []),
         ...(entities.domains || []),
         ...(entities.methodologies || [])
-      ];
+      ].map(entity => normalizeTerm(entity, true))
+        .filter((entity): entity is string => entity !== null);
 
       // Create entity nodes with UNIQUE IDs per abstract (to prevent merging)
       allEntities.forEach((entity: string, entityIndex: number) => {
@@ -192,22 +194,31 @@ export const FacultyVisualization: React.FC = () => {
       const entities = abstract.extracted_entities;
       if (!entities) return;
 
-      // Count technologies
+      // Count technologies (with normalization)
       (entities.technologies || []).forEach((tech: string) => {
-        entityCount.set(tech, (entityCount.get(tech) || 0) + 1);
-        categoryCount.technologies++;
+        const normalized = normalizeTerm(tech, true);
+        if (normalized) {
+          entityCount.set(normalized, (entityCount.get(normalized) || 0) + 1);
+          categoryCount.technologies++;
+        }
       });
 
-      // Count domains
+      // Count domains (with normalization)
       (entities.domains || []).forEach((domain: string) => {
-        entityCount.set(domain, (entityCount.get(domain) || 0) + 1);
-        categoryCount.domains++;
+        const normalized = normalizeTerm(domain, true);
+        if (normalized) {
+          entityCount.set(normalized, (entityCount.get(normalized) || 0) + 1);
+          categoryCount.domains++;
+        }
       });
 
-      // Count methodologies
+      // Count methodologies (with normalization)
       (entities.methodologies || []).forEach((method: string) => {
-        entityCount.set(method, (entityCount.get(method) || 0) + 1);
-        categoryCount.methodologies++;
+        const normalized = normalizeTerm(method, true);
+        if (normalized) {
+          entityCount.set(normalized, (entityCount.get(normalized) || 0) + 1);
+          categoryCount.methodologies++;
+        }
       });
     });
 

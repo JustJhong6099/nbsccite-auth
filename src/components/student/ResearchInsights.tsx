@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { normalizeTerm, FALSE_POSITIVES } from '@/lib/data-normalization';
@@ -21,7 +23,9 @@ import {
   Sparkles,
   Loader2,
   AlertCircle,
-  X
+  X,
+  Search,
+  Filter
 } from "lucide-react";
 
 // Helper function to check if entity is a false positive (for backward compatibility)
@@ -315,10 +319,38 @@ export const ResearchInsights: React.FC = () => {
   // State for modal
   const [selectedTech, setSelectedTech] = useState<EmergingTech | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // State for Emerging Technologies filtering
+  const [techSearchTerm, setTechSearchTerm] = useState('');
+  const [techCategoryFilter, setTechCategoryFilter] = useState<string>('all');
 
   // Fetch real-time data from Supabase
   useEffect(() => {
     fetchResearchInsights();
+    
+    // Set up real-time subscription to abstracts table
+    const channel = supabase
+      .channel('research-insights-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'abstracts',
+          filter: 'status=eq.approved'
+        },
+        (payload) => {
+          console.log('Real-time update received:', payload);
+          // Refresh insights when data changes
+          fetchResearchInsights();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchResearchInsights = async () => {
@@ -793,38 +825,28 @@ export const ResearchInsights: React.FC = () => {
     }
   };
 
+  // Filter emerging technologies based on search and filters
+  const filteredTechnologies = emergingTechnologies.filter(tech => {
+    // Search filter
+    const matchesSearch = techSearchTerm === '' || 
+      tech.name.toLowerCase().includes(techSearchTerm.toLowerCase()) ||
+      tech.description.toLowerCase().includes(techSearchTerm.toLowerCase()) ||
+      tech.keyTechnologies.some(kt => kt.toLowerCase().includes(techSearchTerm.toLowerCase()));
+    
+    // Category filter
+    const matchesCategory = techCategoryFilter === 'all' || tech.category === techCategoryFilter;
+    
+    return matchesSearch && matchesCategory;
+  });
+
+  // Get unique categories for filter options
+  const categories = Array.from(new Set(emergingTechnologies.map(t => t.category)));
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Research Insights</h2>
         <p className="text-gray-600">Discover patterns and opportunities in your research portfolio</p>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Active Themes</p>
-                <p className="text-2xl font-bold">{researchThemes.length}</p>
-              </div>
-              <Brain className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Growth Areas</p>
-                <p className="text-2xl font-bold">{researchThemes.filter(t => t.trend === 'up').length}</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {isLoading ? (
@@ -1015,8 +1037,68 @@ export const ResearchInsights: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Search and Filters */}
+              <div className="mb-6 space-y-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                  {/* Search Input */}
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search technologies, descriptions, or tools..."
+                      value={techSearchTerm}
+                      onChange={(e) => setTechSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+
+                  {/* Category Filter */}
+                  <Select value={techCategoryFilter} onValueChange={setTechCategoryFilter}>
+                    <SelectTrigger className="w-full md:w-[200px]">
+                      <Filter className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {categories.map(category => (
+                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Results count */}
+                <div className="flex items-center justify-between text-sm text-gray-600">
+                  <span>
+                    Showing {filteredTechnologies.length} of {emergingTechnologies.length} technologies
+                  </span>
+                  {(techSearchTerm || techCategoryFilter !== 'all') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setTechSearchTerm('');
+                        setTechCategoryFilter('all');
+                      }}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Clear Filters
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Technologies List */}
               <div className="grid gap-6">
-                {emergingTechnologies.map((tech) => (
+                {filteredTechnologies.length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="flex flex-col items-center justify-center py-12">
+                      <AlertCircle className="h-12 w-12 text-gray-400 mb-4" />
+                      <p className="text-gray-900 font-medium">No technologies found</p>
+                      <p className="text-sm text-gray-600 mt-1">Try adjusting your search or filters</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  filteredTechnologies.map((tech) => (
                   <Card 
                     key={tech.id} 
                     className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-purple-500"
@@ -1024,19 +1106,7 @@ export const ResearchInsights: React.FC = () => {
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-xl font-bold text-gray-900">{tech.name}</h3>
-                            <Badge 
-                              variant="outline" 
-                              className={`${
-                                tech.maturity === 'experimental' ? 'bg-blue-50 text-blue-700 border-blue-300' :
-                                tech.maturity === 'emerging' ? 'bg-purple-50 text-purple-700 border-purple-300' :
-                                'bg-green-50 text-green-700 border-green-300'
-                              }`}
-                            >
-                              {tech.maturity}
-                            </Badge>
-                          </div>
+                          <h3 className="text-xl font-bold text-gray-900 mb-2">{tech.name}</h3>
                           <Badge variant="secondary" className="text-xs">
                             {tech.category}
                           </Badge>
@@ -1049,33 +1119,6 @@ export const ResearchInsights: React.FC = () => {
 
                       <p className="text-gray-700 mb-4">{tech.description}</p>
 
-                      {/* Metrics */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-gray-700">Adoption Level</span>
-                            <span className="text-sm font-bold text-blue-600">{tech.adoption}%</span>
-                          </div>
-                          <Progress value={tech.adoption} className="h-2" />
-                        </div>
-
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-gray-700">Research Potential</span>
-                            <span className="text-sm font-bold text-purple-600">{tech.potential}%</span>
-                          </div>
-                          <Progress value={tech.potential} className="h-2 [&>div]:bg-purple-500" />
-                        </div>
-
-                        <div>
-                          <div className="text-sm font-medium text-gray-700 mb-1">Timeframe</div>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-gray-400" />
-                            <span className="text-sm text-gray-600">{tech.timeframe}</span>
-                          </div>
-                        </div>
-                      </div>
-
                       {/* Key Technologies */}
                       <div className="mb-4">
                         <h4 className="text-sm font-semibold text-gray-900 mb-2">Key Technologies & Tools</h4>
@@ -1083,37 +1126,6 @@ export const ResearchInsights: React.FC = () => {
                           {tech.keyTechnologies.map((keyTech, index) => (
                             <Badge key={index} variant="outline" className="bg-gray-50">
                               {keyTech}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Research Opportunities */}
-                      <div className="mb-4">
-                        <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                          <Target className="h-4 w-4 text-green-600" />
-                          Research Opportunities
-                        </h4>
-                        <ul className="space-y-1">
-                          {tech.researchOpportunities.map((opportunity, index) => (
-                            <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
-                              <span className="text-green-600 mt-1">•</span>
-                              <span>{opportunity}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      {/* Challenges */}
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                          <TrendingDown className="h-4 w-4 text-orange-600" />
-                          Key Challenges
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {tech.challenges.map((challenge, index) => (
-                            <Badge key={index} variant="secondary" className="bg-orange-50 text-orange-700 text-xs">
-                              {challenge}
                             </Badge>
                           ))}
                         </div>
@@ -1136,7 +1148,8 @@ export const ResearchInsights: React.FC = () => {
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                ))
+                )}
               </div>
 
               {/* Summary Card */}
@@ -1195,18 +1208,6 @@ export const ResearchInsights: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex gap-2 mt-3">
-                  <Badge 
-                    variant="outline" 
-                    className={
-                      selectedTech.maturity === 'experimental' 
-                        ? 'bg-blue-50 text-blue-700 border-blue-200'
-                        : selectedTech.maturity === 'emerging'
-                        ? 'bg-purple-50 text-purple-700 border-purple-200'
-                        : 'bg-green-50 text-green-700 border-green-200'
-                    }
-                  >
-                    {selectedTech.maturity.charAt(0).toUpperCase() + selectedTech.maturity.slice(1)}
-                  </Badge>
                   <Badge variant="outline" className="bg-gray-50">
                     {selectedTech.category}
                   </Badge>
@@ -1217,49 +1218,6 @@ export const ResearchInsights: React.FC = () => {
               </DialogHeader>
 
               <div className="space-y-6 mt-6">
-                {/* Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Adoption Level</span>
-                        <span className="text-lg font-bold text-blue-600">{selectedTech.adoption}%</span>
-                      </div>
-                      <Progress value={selectedTech.adoption} className="h-2" />
-                      <p className="text-xs text-gray-500 mt-2">
-                        Current adoption rate in research community
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Research Potential</span>
-                        <span className="text-lg font-bold text-purple-600">{selectedTech.potential}%</span>
-                      </div>
-                      <Progress value={selectedTech.potential} className="h-2 [&>div]:bg-purple-600" />
-                      <p className="text-xs text-gray-500 mt-2">
-                        Predicted impact and research opportunities
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Timeline */}
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="h-5 w-5 text-gray-600" />
-                      <h3 className="font-semibold text-gray-900">Expected Timeline</h3>
-                    </div>
-                    <p className="text-gray-700">{selectedTech.timeframe}</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Estimated time for mainstream adoption
-                    </p>
-                  </CardContent>
-                </Card>
-
                 {/* Key Technologies */}
                 <Card>
                   <CardContent className="p-4">
@@ -1271,45 +1229,6 @@ export const ResearchInsights: React.FC = () => {
                       {selectedTech.keyTechnologies.map((tech, idx) => (
                         <Badge key={idx} variant="secondary" className="bg-blue-50 text-blue-700">
                           {tech}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Research Opportunities */}
-                <Card>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <Target className="h-5 w-5 text-green-600" />
-                      Research Opportunities
-                    </h3>
-                    <ul className="space-y-2">
-                      {selectedTech.researchOpportunities.map((opportunity, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-gray-700">
-                          <div className="h-1.5 w-1.5 rounded-full bg-green-500 mt-2 flex-shrink-0" />
-                          <span>{opportunity}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-
-                {/* Challenges */}
-                <Card>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5 text-orange-600" />
-                      Key Challenges
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedTech.challenges.map((challenge, idx) => (
-                        <Badge 
-                          key={idx} 
-                          variant="outline" 
-                          className="bg-orange-50 text-orange-700 border-orange-200"
-                        >
-                          {challenge}
                         </Badge>
                       ))}
                     </div>

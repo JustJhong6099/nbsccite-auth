@@ -9,6 +9,15 @@ export const FALSE_POSITIVES = [
   'document',
   'experiment',
   'reductionism',
+  // Current institution name
+  'northern bukidnon state college',
+  'nbsc',
+  'bukidnon',
+  'state college',
+  // Old institution name (for backward compatibility with existing data)
+  'northern beaches secondary college',
+  'beaches',
+  'secondary college',
   'the',
   'and',
   'or',
@@ -55,8 +64,18 @@ export function normalizeTerm(term: string, applyCapitalization: boolean = true)
   // Filter out short terms (2 characters or less)
   if (normalized.length <= 2) return null;
   
-  // Filter out false positives
+  // Filter out false positives (exact matches)
   if (FALSE_POSITIVES.includes(normalized)) return null;
+  
+  // Filter out terms containing institution name keywords (current and old)
+  if (normalized.includes('bukidnon') || 
+      normalized.includes('nbsc') || 
+      normalized.includes('state college') ||
+      normalized.includes('beaches') ||
+      normalized.includes('secondary college') ||
+      normalized.includes('northern beaches')) {
+    return null;
+  }
   
   // Apply replacements
   if (TERM_REPLACEMENTS[normalized]) {
