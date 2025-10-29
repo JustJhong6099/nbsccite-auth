@@ -15,6 +15,7 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import * as d3 from "d3";
 import { FacultyVisualization } from "./FacultyVisualization";
+import { ResearchInsights } from "@/components/student/ResearchInsights";
 
 // Import analytics components (v2.0: Faculty now has admin privileges)
 import { UserRetentionChart } from "@/components/analytics/UserRetentionChart";
@@ -26,8 +27,6 @@ import { ResearchDomainChart } from "@/components/analytics/ResearchDomainChart"
 import { UserManagement } from "@/components/analytics/UserManagement";
 import { AbstractManagement as AdminAbstractManagement } from "@/components/analytics/AbstractManagement";
 import { SystemMonitoring } from "@/components/analytics/SystemMonitoring";
-import { OCRExtractor } from "@/components/ocr/OCRExtractor";
-import { SimpleEntityGraph } from "@/components/student/SimpleEntityGraph";
 import { AbstractsLibrary } from "@/components/student/AbstractsLibrary";
 import { 
   BookOpen, 
@@ -73,7 +72,6 @@ import {
   Phone,
   MapPin,
   Briefcase,
-  Scan,
   Activity,
   PieChart
 } from "lucide-react";
@@ -1694,29 +1692,6 @@ const FacultyDashboard: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // OCR Visualization state
-  const [visualizationData, setVisualizationData] = useState<{
-    text: string;
-    entities: Array<{
-      id: string;
-      label: string;
-      types: string[];
-      confidence: number;
-      abstract?: string;
-      uri?: string;
-    }>;
-  } | null>(null);
-  const [isVisualizationModalOpen, setIsVisualizationModalOpen] = useState(false);
-
-  const handleVisualizationData = (data: { text: string; entities: any[] }) => {
-    setVisualizationData(data);
-    setIsVisualizationModalOpen(true);
-  };
-
-  const handleCloseVisualizationModal = () => {
-    setIsVisualizationModalOpen(false);
-  };
-
   // Mock data for overview cards
   const overviewStats = {
     totalAbstracts: 24,
@@ -1820,7 +1795,7 @@ const FacultyDashboard: React.FC = () => {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 lg:grid-cols-8 lg:w-fit gap-1">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 lg:grid-cols-8 gap-1">
             <TabsTrigger value="overview" className="flex items-center space-x-2">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -1842,9 +1817,9 @@ const FacultyDashboard: React.FC = () => {
               <BookOpen className="w-4 h-4" />
               <span className="hidden sm:inline">Abstracts Library</span>
             </TabsTrigger>
-            <TabsTrigger value="ocr" className="flex items-center space-x-2">
-              <Scan className="w-4 h-4" />
-              <span className="hidden sm:inline">OCR</span>
+            <TabsTrigger value="research-insights" className="flex items-center space-x-2">
+              <Brain className="w-4 h-4" />
+              <span className="hidden sm:inline">Research Insights</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center space-x-2">
               <Users className="w-4 h-4" />
@@ -2063,14 +2038,6 @@ const FacultyDashboard: React.FC = () => {
                     <Users className="w-6 h-6" />
                     <span className="text-xs text-center">Manage Users</span>
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    className="h-20 flex-col space-y-2"
-                    onClick={() => setActiveTab("ocr")}
-                  >
-                    <Scan className="w-6 h-6" />
-                    <span className="text-xs text-center">OCR Extraction</span>
-                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -2089,39 +2056,17 @@ const FacultyDashboard: React.FC = () => {
             <FacultyReports />
           </TabsContent>
 
-          <TabsContent value="profile">
-            <ProfileManagement overviewStats={overviewStats} />
-          </TabsContent>
-
           {/* v2.0: New Admin Feature Tabs for Faculty */}
           <TabsContent value="all-abstracts" className="space-y-6">
             <AbstractsLibrary isFacultyMode={true} />
           </TabsContent>
 
-          <TabsContent value="ocr" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Scan className="h-5 w-5" />
-                  OCR & Entity Extraction
-                </CardTitle>
-                <CardDescription>
-                  Extract text from images and identify research entities using AI
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <OCRExtractor onVisualizationData={handleVisualizationData} />
-              </CardContent>
-            </Card>
+          <TabsContent value="research-insights" className="space-y-6">
+            <ResearchInsights />
+          </TabsContent>
 
-            {/* Entity Visualization Modal */}
-            {visualizationData && visualizationData.entities && visualizationData.entities.length > 0 && (
-              <SimpleEntityGraph
-                data={visualizationData}
-                isOpen={isVisualizationModalOpen}
-                onClose={handleCloseVisualizationModal}
-              />
-            )}
+          <TabsContent value="profile">
+            <ProfileManagement overviewStats={overviewStats} />
           </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
