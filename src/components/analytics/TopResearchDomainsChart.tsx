@@ -118,7 +118,15 @@ export const TopResearchDomainsChart: React.FC = () => {
     return (
       <div className="space-y-4">
         {data.map((domain, index) => (
-          <div key={index} className="space-y-2">
+          <div 
+            key={index} 
+            className="space-y-2 animate-in fade-in slide-in-from-left-4"
+            style={{ 
+              animationDelay: `${index * 80}ms`,
+              animationDuration: '600ms',
+              animationFillMode: 'both'
+            }}
+          >
             {/* Domain name and count */}
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-gray-900">{domain.name}</span>
@@ -128,10 +136,11 @@ export const TopResearchDomainsChart: React.FC = () => {
             {/* Progress bar */}
             <div className="relative w-full h-2 bg-gray-200 rounded-full overflow-hidden">
               <div 
-                className="absolute top-0 left-0 h-full rounded-full transition-all duration-500"
+                className="absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ease-out"
                 style={{ 
                   width: `${(domain.count / Math.max(...data.map(d => d.count))) * 100}%`,
-                  backgroundColor: domain.color
+                  backgroundColor: domain.color,
+                  transitionDelay: `${index * 80}ms`
                 }}
               />
             </div>

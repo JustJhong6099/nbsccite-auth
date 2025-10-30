@@ -145,6 +145,19 @@ export const EntityDistributionChart: React.FC = () => {
           }
         }
       }
+    },
+    animation: {
+      animateRotate: true,
+      animateScale: true,
+      duration: 1500,
+      delay: (context) => {
+        let delay = 0;
+        if (context.type === 'data' && context.mode === 'default') {
+          delay = context.dataIndex * 150; // 150ms delay between each segment
+        }
+        return delay;
+      },
+      easing: 'easeInOutQuart',
     }
   };
 

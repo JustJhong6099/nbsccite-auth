@@ -298,6 +298,17 @@ export const SubmissionTrendsChart: React.FC = () => {
           }
         }
       }
+    },
+    animation: {
+      duration: 1500,
+      delay: (context) => {
+        let delay = 0;
+        if (context.type === 'data' && context.mode === 'default') {
+          delay = context.dataIndex * 80 + context.datasetIndex * 50; // Stagger by data point and dataset
+        }
+        return delay;
+      },
+      easing: 'easeInOutQuart',
     }
   };
 

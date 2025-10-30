@@ -15,6 +15,11 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { normalizeTerm } from '@/lib/data-normalization';
 import * as d3 from 'd3';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Pie } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface Abstract {
   id: string;
@@ -52,8 +57,8 @@ interface Link {
   type: string;
 }
 
-// Donut Chart Component
-interface DonutChartProps {
+// Pie Chart Component using Chart.js
+interface PieChartProps {
   data: Array<{
     category: string;
     count: number;
@@ -61,110 +66,73 @@ interface DonutChartProps {
   }>;
 }
 
-const DonutChart: React.FC<DonutChartProps> = ({ data }) => {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const [hoveredSlice, setHoveredSlice] = useState<number | null>(null);
+const PieChartComponent: React.FC<PieChartProps> = ({ data }) => {
+  const colors = [
+    '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e',
+    '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
+    '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#a855f7'
+  ];
 
-  useEffect(() => {
-    if (!svgRef.current || data.length === 0) return;
+  const chartData = {
+    labels: data.map(item => item.category),
+    datasets: [
+      {
+        data: data.map(item => item.count),
+        backgroundColor: colors.slice(0, data.length),
+        borderColor: '#ffffff',
+        borderWidth: 2,
+        hoverOffset: 15,
+        hoverBorderWidth: 3,
+      },
+    ],
+  };
 
-    const svg = d3.select(svgRef.current);
-    svg.selectAll("*").remove();
-
-    const width = 320;
-    const height = 320;
-    const radius = Math.min(width, height) / 2;
-    const innerRadius = radius * 0.6; // Donut hole
-
-    const g = svg
-      .append("g")
-      .attr("transform", `translate(${width / 2}, ${height / 2})`);
-
-    // Color scale
-    const colors = [
-      '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e',
-      '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
-      '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#a855f7'
-    ];
-
-    const color = d3.scaleOrdinal()
-      .domain(data.map(d => d.category))
-      .range(colors);
-
-    // Pie layout
-    const pie = d3.pie<any>()
-      .value((d: any) => d.count)
-      .sort(null);
-
-    // Arc generator
-    const arc = d3.arc()
-      .innerRadius(innerRadius)
-      .outerRadius(radius);
-
-    const arcHover = d3.arc()
-      .innerRadius(innerRadius)
-      .outerRadius(radius + 10);
-
-    // Draw arcs
-    const arcs = g.selectAll(".arc")
-      .data(pie(data))
-      .enter().append("g")
-      .attr("class", "arc");
-
-    arcs.append("path")
-      .attr("d", arc as any)
-      .attr("fill", (d: any) => color(d.data.category) as string)
-      .attr("stroke", "white")
-      .attr("stroke-width", 2)
-      .style("cursor", "pointer")
-      .on("mouseenter", function(event, d: any) {
-        const index = data.findIndex(item => item.category === d.data.category);
-        setHoveredSlice(index);
-        d3.select(this)
-          .transition()
-          .duration(200)
-          .attr("d", arcHover as any);
-      })
-      .on("mouseleave", function() {
-        setHoveredSlice(null);
-        d3.select(this)
-          .transition()
-          .duration(200)
-          .attr("d", arc as any);
-      });
-
-    // Center text
-    const centerGroup = g.append("g")
-      .attr("class", "center-text");
-
-    centerGroup.append("text")
-      .attr("text-anchor", "middle")
-      .attr("dy", "-0.5em")
-      .style("font-size", "28px")
-      .style("font-weight", "bold")
-      .style("fill", "#1f2937")
-      .text(data.reduce((sum, d) => sum + d.count, 0));
-
-    centerGroup.append("text")
-      .attr("text-anchor", "middle")
-      .attr("dy", "1.2em")
-      .style("font-size", "14px")
-      .style("fill", "#6b7280")
-      .text("Total Entities");
-
-  }, [data]);
+  const options = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: {
+        display: false, // We have our own legend on the left
+      },
+      tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        padding: 12,
+        titleFont: {
+          size: 14,
+          weight: 'bold' as const,
+        },
+        bodyFont: {
+          size: 13,
+        },
+        callbacks: {
+          label: function(context: any) {
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            const percentage = data[context.dataIndex]?.percentage || '0';
+            return `${label}: ${value} (${percentage}%)`;
+          }
+        }
+      },
+    },
+    animation: {
+      animateRotate: true,
+      animateScale: true,
+      duration: 1500,
+      delay: (context: any) => {
+        let delay = 0;
+        if (context.type === 'data' && context.mode === 'default') {
+          delay = context.dataIndex * 100; // 100ms delay between each slice
+        }
+        return delay;
+      },
+      easing: 'easeInOutQuart' as const,
+    },
+  };
 
   return (
-    <div className="relative">
-      <svg ref={svgRef} width={320} height={320}></svg>
-      {hoveredSlice !== null && (
-        <div className="absolute top-2 left-2 bg-white shadow-lg rounded-lg p-3 border z-10">
-          <div className="text-sm font-medium">{data[hoveredSlice].category}</div>
-          <div className="text-xs text-gray-600">
-            Count: <span className="font-semibold">{data[hoveredSlice].count}</span> ({data[hoveredSlice].percentage}%)
-          </div>
-        </div>
-      )}
+    <div className="w-full max-w-sm mx-auto">
+      <Pie data={chartData} options={options} />
     </div>
   );
 };
@@ -906,11 +874,11 @@ export const FacultyVisualization: React.FC = () => {
                   })}
                 </div>
 
-                {/* Right pane - Donut Chart Only */}
+                {/* Right pane - Pie Chart Only */}
                 <div className="space-y-4">
                   <h4 className="font-medium text-sm text-gray-700">Distribution Overview</h4>
-                  <div className="flex items-center justify-center">
-                    <DonutChart data={frequencyData} />
+                  <div className="flex items-center justify-center py-4">
+                    <PieChartComponent data={frequencyData} />
                   </div>
                   
                   {/* Summary Stats */}
@@ -939,8 +907,8 @@ export const FacultyVisualization: React.FC = () => {
                   {/* Info Card */}
                   <div className="p-4 bg-gray-50 rounded-lg border">
                     <p className="text-xs text-gray-600 leading-relaxed">
-                      <strong className="text-gray-700">Tip:</strong> The colors on the left match the donut chart slices. 
-                      Hover over the donut chart for detailed information about each entity.
+                      <strong className="text-gray-700">Tip:</strong> The colors on the left match the pie chart slices. 
+                      Hover over the pie chart for detailed information about each entity. Each slice animates in sequence.
                     </p>
                   </div>
                 </div>
