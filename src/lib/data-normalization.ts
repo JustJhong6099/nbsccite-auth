@@ -9,6 +9,13 @@ export const FALSE_POSITIVES = [
   'document',
   'experiment',
   'reductionism',
+  'research',
+  'design',
+  'user-centered design',
+  'methodology',
+  'system', // Too generic, use specific system types instead
+  'management', // Too generic, use specific management system types instead
+  'secondary education', // Redundant, covered by broader "Education" category
   // Current institution name
   'northern bukidnon state college',
   'nbsc',
@@ -43,8 +50,26 @@ export const TERM_REPLACEMENTS: { [key: string]: string } = {
   'i.o.t': 'Internet of Things',
   'i.o.t.': 'Internet of Things',
   
-  // Management variations
-  'management': 'Data Management',
+  // Specific Management Systems (keep these as valid system types)
+  'information management system': 'Information Management System',
+  'ims': 'Information Management System',
+  'knowledge management system': 'Knowledge Management System',
+  'kms': 'Knowledge Management System',
+  'academic management system': 'Academic Management System',
+  'educational management system': 'Educational Management System',
+  'human resource management system': 'Human Resource Management System',
+  'hrms': 'Human Resource Management System',
+  'hr management system': 'Human Resource Management System',
+  'inventory management system': 'Inventory Management System',
+  'asset management system': 'Asset Management System',
+  'service management system': 'Service Management System',
+  'event management system': 'Event Management System',
+  'ems': 'Event Management System',
+  'project management system': 'Project Management System',
+  'pms': 'Project Management System',
+  'data management': 'Data Management System',
+  'database management system': 'Database Management System',
+  'dbms': 'Database Management System',
 };
 
 /**

@@ -15,6 +15,11 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { normalizeTerm } from '@/lib/data-normalization';
 import * as d3 from 'd3';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Pie } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface Abstract {
   id: string;
@@ -51,6 +56,86 @@ interface Link {
   strength: number;
   type: string;
 }
+
+// Pie Chart Component using Chart.js
+interface PieChartProps {
+  data: Array<{
+    category: string;
+    count: number;
+    percentage: string;
+  }>;
+}
+
+const PieChartComponent: React.FC<PieChartProps> = ({ data }) => {
+  const colors = [
+    '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e',
+    '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
+    '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#a855f7'
+  ];
+
+  const chartData = {
+    labels: data.map(item => item.category),
+    datasets: [
+      {
+        data: data.map(item => item.count),
+        backgroundColor: colors.slice(0, data.length),
+        borderColor: '#ffffff',
+        borderWidth: 2,
+        hoverOffset: 15,
+        hoverBorderWidth: 3,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: {
+        display: false, // We have our own legend on the left
+      },
+      tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        padding: 12,
+        titleFont: {
+          size: 14,
+          weight: 'bold' as const,
+        },
+        bodyFont: {
+          size: 13,
+        },
+        callbacks: {
+          label: function(context: any) {
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            const percentage = data[context.dataIndex]?.percentage || '0';
+            return `${label}: ${value} (${percentage}%)`;
+          }
+        }
+      },
+    },
+    animation: {
+      animateRotate: true,
+      animateScale: true,
+      duration: 1500,
+      delay: (context: any) => {
+        let delay = 0;
+        if (context.type === 'data' && context.mode === 'default') {
+          delay = context.dataIndex * 100; // 100ms delay between each slice
+        }
+        return delay;
+      },
+      easing: 'easeInOutQuart' as const,
+    },
+  };
+
+  return (
+    <div className="w-full max-w-sm mx-auto">
+      <Pie data={chartData} options={options} />
+    </div>
+  );
+};
 
 export const FacultyVisualization: React.FC = () => {
   const [activeTab, setActiveTab] = useState('graph');
@@ -744,29 +829,89 @@ export const FacultyVisualization: React.FC = () => {
               <CardDescription>Top entities extracted from approved abstracts</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {frequencyData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-sm">
-                        {index + 1}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left pane - Bar Chart with Color Legend */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-gray-700">Top Entities by Count</h4>
+                  {frequencyData.map((item, index) => {
+                    const colors = [
+                      'bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-rose-500',
+                      'bg-orange-500', 'bg-amber-500', 'bg-yellow-500', 'bg-lime-500', 'bg-green-500',
+                      'bg-emerald-500', 'bg-teal-500', 'bg-cyan-500', 'bg-sky-500', 'bg-violet-500'
+                    ];
+                    const barColors = [
+                      'from-blue-500 to-blue-600', 'from-indigo-500 to-indigo-600', 'from-purple-500 to-purple-600', 
+                      'from-pink-500 to-pink-600', 'from-rose-500 to-rose-600', 'from-orange-500 to-orange-600', 
+                      'from-amber-500 to-amber-600', 'from-yellow-500 to-yellow-600', 'from-lime-500 to-lime-600', 
+                      'from-green-500 to-green-600', 'from-emerald-500 to-emerald-600', 'from-teal-500 to-teal-600', 
+                      'from-cyan-500 to-cyan-600', 'from-sky-500 to-sky-600', 'from-violet-500 to-violet-600'
+                    ];
+                    
+                    return (
+                      <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div className="flex items-center space-x-4 flex-1 min-w-0">
+                          {/* Color indicator matching donut chart */}
+                          <div className={`w-4 h-4 rounded-full ${colors[index % colors.length]} flex-shrink-0`}></div>
+                          <div className="w-8 h-8 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center text-gray-700 font-semibold text-sm flex-shrink-0">
+                            {index + 1}
+                          </div>
+                          <span className="font-medium truncate">{item.category}</span>
+                        </div>
+                        <div className="flex items-center space-x-6 flex-shrink-0">
+                          <div className="text-right">
+                            <div className="font-semibold">{item.count}</div>
+                            <div className="text-sm text-gray-600">{item.percentage}%</div>
+                          </div>
+                          <div className="w-32 h-3 bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full bg-gradient-to-r ${barColors[index % barColors.length]} transition-all duration-300`}
+                              style={{ width: `${Math.min(parseFloat(item.percentage), 100)}%` }}
+                            ></div>
+                          </div>
+                        </div>
                       </div>
-                      <span className="font-medium">{item.category}</span>
-                    </div>
-                    <div className="flex items-center space-x-6">
-                      <div className="text-right">
-                        <div className="font-semibold">{item.count}</div>
-                        <div className="text-sm text-gray-600">{item.percentage}%</div>
+                    );
+                  })}
+                </div>
+
+                {/* Right pane - Pie Chart Only */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-gray-700">Distribution Overview</h4>
+                  <div className="flex items-center justify-center py-4">
+                    <PieChartComponent data={frequencyData} />
+                  </div>
+                  
+                  {/* Summary Stats */}
+                  <div className="mt-6 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                    <h5 className="font-semibold text-sm text-gray-700 mb-3">Summary Statistics</h5>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Total Entities:</span>
+                        <span className="font-bold text-lg text-blue-600">{frequencyData.reduce((sum, d) => sum + d.count, 0)}</span>
                       </div>
-                      <div className="w-32 h-3 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500 transition-all duration-300"
-                          style={{ width: `${Math.min(parseFloat(item.percentage), 100)}%` }}
-                        ></div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Unique Categories:</span>
+                        <span className="font-semibold text-gray-700">{frequencyData.length}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Most Frequent:</span>
+                        <span className="font-semibold text-gray-700">{frequencyData[0]?.category}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Top Entity Count:</span>
+                        <span className="font-semibold text-gray-700">{frequencyData[0]?.count} ({frequencyData[0]?.percentage}%)</span>
                       </div>
                     </div>
                   </div>
-                ))}
+
+                  {/* Info Card */}
+                  <div className="p-4 bg-gray-50 rounded-lg border">
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      <strong className="text-gray-700">Tip:</strong> The colors on the left match the pie chart slices. 
+                      Hover over the pie chart for detailed information about each entity. Each slice animates in sequence.
+                    </p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

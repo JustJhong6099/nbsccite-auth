@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import * as d3 from "d3";
 import { FacultyAbstractSubmission } from "@/components/faculty/FacultyAbstractSubmission";
+import jsPDF from 'jspdf';
 import { 
   BookOpen,
   Search,
@@ -36,7 +37,8 @@ import {
   Plus,
   X,
   Save,
-  XCircle
+  XCircle,
+  Download
 } from "lucide-react";
 
 interface AbstractDetail {
@@ -407,6 +409,165 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
       toast({
         title: "Update Failed",
         description: error.message || "Failed to update entities. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Export to PDF with visualization
+  const handleExportToPDF = async () => {
+    if (!selectedAbstract) return;
+
+    try {
+      toast({
+        title: "Generating PDF",
+        description: "Please wait while we prepare your document...",
+      });
+
+      // Create new PDF document
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 20;
+      const maxWidth = pageWidth - (margin * 2);
+      let yPosition = margin;
+
+      // Helper function to add text with word wrap
+      const addText = (text: string, fontSize: number, isBold: boolean = false) => {
+        pdf.setFontSize(fontSize);
+        pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+        const lines = pdf.splitTextToSize(text, maxWidth);
+        
+        lines.forEach((line: string) => {
+          if (yPosition > pageHeight - margin) {
+            pdf.addPage();
+            yPosition = margin;
+          }
+          pdf.text(line, margin, yPosition);
+          yPosition += fontSize * 0.5;
+        });
+        yPosition += 3;
+      };
+
+      // Title
+      addText(selectedAbstract.title, 16, true);
+      yPosition += 2;
+
+      // Year and Submitted By
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Year: ${selectedAbstract.year}`, margin, yPosition);
+      pdf.text(`Submitted By: ${selectedAbstract.submittedBy}`, margin + 40, yPosition);
+      yPosition += 8;
+
+      // Authors
+      addText('Authors:', 12, true);
+      addText(selectedAbstract.authors.join(', '), 10);
+      yPosition += 3;
+
+      // Abstract
+      addText('Abstract:', 12, true);
+      addText(selectedAbstract.abstract, 10);
+      yPosition += 3;
+
+      // Keywords
+      addText('Keywords:', 12, true);
+      addText(selectedAbstract.keywords.join(', '), 10);
+      yPosition += 5;
+
+      // Extracted Entities
+      if (selectedAbstract.extractedEntities) {
+        addText('Extracted Entities:', 12, true);
+        
+        const { technologies, domains, methodologies } = selectedAbstract.extractedEntities;
+
+        if (technologies && technologies.length > 0) {
+          addText('Technologies:', 11, true);
+          addText(technologies.join(', '), 10);
+        }
+
+        if (domains && domains.length > 0) {
+          addText('Research Domains:', 11, true);
+          addText(domains.join(', '), 10);
+        }
+
+        if (methodologies && methodologies.length > 0) {
+          addText('Methodologies:', 11, true);
+          addText(methodologies.join(', '), 10);
+        }
+
+        yPosition += 5;
+      }
+
+      // Export D3.js visualization as SVG and add to PDF
+      if (svgRef.current) {
+        addText('Entity Graph Visualization:', 12, true);
+        yPosition += 3;
+
+        // Get the SVG element
+        const svgElement = svgRef.current;
+        const serializer = new XMLSerializer();
+        let svgString = serializer.serializeToString(svgElement);
+
+        // Create a canvas to render the SVG
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+
+        // Set canvas dimensions
+        canvas.width = 700;
+        canvas.height = 400;
+
+        // Create blob from SVG
+        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+
+        await new Promise<void>((resolve) => {
+          img.onload = () => {
+            if (ctx) {
+              // Fill white background
+              ctx.fillStyle = 'white';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              // Draw SVG
+              ctx.drawImage(img, 0, 0);
+            }
+            
+            // Convert canvas to image data
+            const imgData = canvas.toDataURL('image/png');
+            
+            // Check if we need a new page
+            if (yPosition + 100 > pageHeight - margin) {
+              pdf.addPage();
+              yPosition = margin;
+            }
+
+            // Calculate image dimensions to fit page
+            const imgWidth = maxWidth;
+            const imgHeight = (400 / 700) * imgWidth;
+
+            // Add image to PDF
+            pdf.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
+            
+            URL.revokeObjectURL(url);
+            resolve();
+          };
+          img.src = url;
+        });
+      }
+
+      // Save the PDF
+      const fileName = `${selectedAbstract.title.replace(/[^a-z0-9]/gi, '_')}_abstract.pdf`;
+      pdf.save(fileName);
+
+      toast({
+        title: "PDF Generated",
+        description: `"${selectedAbstract.title}" has been exported successfully.`,
+      });
+    } catch (error: any) {
+      console.error('Error exporting to PDF:', error);
+      toast({
+        title: "Export Failed",
+        description: error.message || "Failed to export PDF. Please try again.",
         variant: "destructive",
       });
     }
@@ -1207,16 +1368,18 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
                   </div>
                 </div>
 
-              {/* Metadata */}
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Department</h4>
-                  <p className="text-gray-700">{selectedAbstract.department}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Category</h4>
-                  <p className="text-gray-700">{selectedAbstract.category}</p>
-                </div>
+              {/* Export to PDF Section */}
+              <div className="pt-4 border-t">
+                <Button 
+                  onClick={handleExportToPDF}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export to PDF (with Visualization)
+                </Button>
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  Download this abstract with the entity graph visualization
+                </p>
               </div>
 
               {/* Actions */}

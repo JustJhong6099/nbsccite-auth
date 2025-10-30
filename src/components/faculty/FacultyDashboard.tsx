@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabase";
 import * as d3 from "d3";
 import { FacultyVisualization } from "./FacultyVisualization";
 import { ResearchInsights } from "@/components/student/ResearchInsights";
+import { exportDashboardToPDF } from "@/lib/pdf-export";
 
 // Import analytics components (v2.0: Faculty now has admin privileges)
 import { UserRetentionChart } from "@/components/analytics/UserRetentionChart";
@@ -49,6 +50,8 @@ import {
   Plus,
   Search,
   Filter,
+  FileDown,
+  Loader2,
   Download,
   Trash2,
   Tag,
@@ -137,28 +140,6 @@ interface Link {
   target: string | Node;
   weight: number;
   abstracts: string[];
-}
-
-interface Report {
-  id: string;
-  title: string;
-  type: "progress" | "analytics" | "summary" | "departmental" | "trend" | "comparative" | "custom";
-  department: string;
-  dateRange: {
-    start: string;
-    end: string;
-  };
-  status: "completed" | "generating" | "generated" | "scheduled" | "failed";
-  generatedBy: string;
-  generatedAt: string;
-  metrics?: {
-    totalAbstracts: number;
-    approvedAbstracts: number;
-    pendingReviews: number;
-    averageScore: number;
-    topKeywords: string[];
-    researchAreas: string[];
-  };
 }
 
 // Student Abstract Review Component
@@ -618,13 +599,6 @@ const StudentAbstractReview: React.FC = () => {
     }
   };
 
-  const statsData = {
-    total: submissions.length,
-    pending: submissions.filter(s => s.status === "pending").length,
-    reviewed: submissions.filter(s => s.status === "reviewed").length,
-    approved: submissions.filter(s => s.status === "approved").length,
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -632,56 +606,6 @@ const StudentAbstractReview: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">Student Abstract Review</h2>
           <p className="text-gray-600">Review and provide feedback on student research submissions</p>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Submissions</p>
-                <p className="text-2xl font-bold text-gray-900">{statsData.total}</p>
-              </div>
-              <FileText className="w-8 h-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-orange-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pending Review</p>
-                <p className="text-2xl font-bold text-gray-900">{statsData.pending}</p>
-              </div>
-              <Clock className="w-8 h-8 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-yellow-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Under Review</p>
-                <p className="text-2xl font-bold text-gray-900">{statsData.reviewed}</p>
-              </div>
-              <MessageCircle className="w-8 h-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Approved</p>
-                <p className="text-2xl font-bold text-gray-900">{statsData.approved}</p>
-              </div>
-              <CheckCircle2 className="w-8 h-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <Card>
@@ -972,395 +896,6 @@ const StudentAbstractReview: React.FC = () => {
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-// Faculty Reports Component
-const FacultyReports: React.FC = () => {
-  const { toast } = useToast();
-  const [reports, setReports] = useState<Report[]>([
-    {
-      id: "1",
-      title: "Q3 Research Progress Summary",
-      type: "progress",
-      department: "Computer Science",
-      dateRange: { start: "2024-07-01", end: "2024-09-30" },
-      generatedBy: "Dr. Maria Santos",
-      generatedAt: "2024-10-01",
-      status: "completed",
-      metrics: {
-        totalAbstracts: 45,
-        approvedAbstracts: 38,
-        pendingReviews: 7,
-        averageScore: 4.2,
-        topKeywords: ["Machine Learning", "Deep Learning", "Computer Vision"],
-        researchAreas: ["AI", "Data Science", "Computer Graphics"]
-      }
-    },
-    {
-      id: "2",
-      title: "Student Research Trends Analysis",
-      type: "analytics",
-      department: "Computer Science",
-      dateRange: { start: "2024-01-01", end: "2024-09-30" },
-      generatedBy: "Dr. Juan Rodriguez",
-      generatedAt: "2024-09-28",
-      status: "completed",
-      metrics: {
-        totalAbstracts: 120,
-        approvedAbstracts: 102,
-        pendingReviews: 18,
-        averageScore: 4.1,
-        topKeywords: ["Neural Networks", "Data Analysis", "Web Development"],
-        researchAreas: ["Machine Learning", "Software Engineering", "HCI"]
-      }
-    }
-  ]);
-
-  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
-  const [generateForm, setGenerateForm] = useState({
-    title: "",
-    type: "progress",
-    department: "Computer Science",
-    startDate: "",
-    endDate: "",
-    includeMetrics: true,
-    includeVisualizations: true,
-    format: "pdf"
-  });
-
-  const handleGenerateReport = () => {
-    const newReport: Report = {
-      id: (reports.length + 1).toString(),
-      title: generateForm.title,
-      type: generateForm.type as any,
-      department: generateForm.department,
-      dateRange: { start: generateForm.startDate, end: generateForm.endDate },
-      generatedBy: "Dr. Maria Santos",
-      generatedAt: new Date().toISOString().split('T')[0],
-      status: "generating",
-      metrics: {
-        totalAbstracts: Math.floor(Math.random() * 100) + 20,
-        approvedAbstracts: Math.floor(Math.random() * 80) + 15,
-        pendingReviews: Math.floor(Math.random() * 20) + 1,
-        averageScore: parseFloat((Math.random() * 2 + 3).toFixed(1)),
-        topKeywords: ["Machine Learning", "Deep Learning", "Data Science"],
-        researchAreas: ["AI", "Computer Science", "Engineering"]
-      }
-    };
-
-    setReports([newReport, ...reports]);
-    setIsGenerateDialogOpen(false);
-    setGenerateForm({
-      title: "",
-      type: "progress",
-      department: "Computer Science",
-      startDate: "",
-      endDate: "",
-      includeMetrics: true,
-      includeVisualizations: true,
-      format: "pdf"
-    });
-
-    toast({
-      title: "Report Generation Started",
-      description: `"${newReport.title}" is being generated. You'll be notified when it's ready.`,
-    });
-
-    // Simulate report completion
-    setTimeout(() => {
-      setReports(prev => prev.map(report => 
-        report.id === newReport.id 
-          ? { ...report, status: "completed" }
-          : report
-      ));
-      
-      toast({
-        title: "Report Completed",
-        description: `"${newReport.title}" is now available for download.`,
-      });
-    }, 3000);
-  };
-
-  const downloadReport = (reportId: string) => {
-    const report = reports.find(r => r.id === reportId);
-    if (report) {
-      toast({
-        title: "Download Started",
-        description: `Downloading "${report.title}" as PDF...`,
-      });
-      // Simulate download
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "completed": return <Badge className="bg-green-500">Completed</Badge>;
-      case "generating": return <Badge className="bg-orange-500">Generating</Badge>;
-      case "failed": return <Badge variant="destructive">Failed</Badge>;
-      default: return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
-  const getReportTypeIcon = (type: string) => {
-    switch (type) {
-      case "progress": return <FileBarChart className="w-4 h-4" />;
-      case "analytics": return <BarChart3 className="w-4 h-4" />;
-      case "summary": return <FileText className="w-4 h-4" />;
-      default: return <FileText className="w-4 h-4" />;
-    }
-  };
-
-  // Summary statistics
-  const summaryStats = {
-    totalReports: reports.length,
-    completedReports: reports.filter(r => r.status === "completed").length,
-    totalAbstracts: reports.reduce((sum, r) => sum + (r.metrics?.totalAbstracts || 0), 0),
-    averageScore: (reports.reduce((sum, r) => sum + (r.metrics?.averageScore || 0), 0) / reports.length).toFixed(1),
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Faculty Reports</h2>
-          <p className="text-gray-600">Generate and access comprehensive departmental reports</p>
-        </div>
-        <Button onClick={() => setIsGenerateDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Generate Report
-        </Button>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Reports</p>
-                <p className="text-2xl font-bold text-gray-900">{summaryStats.totalReports}</p>
-              </div>
-              <FileText className="w-8 h-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Completed</p>
-                <p className="text-2xl font-bold text-gray-900">{summaryStats.completedReports}</p>
-              </div>
-              <CheckCircle className="w-8 h-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Abstracts Analyzed</p>
-                <p className="text-2xl font-bold text-gray-900">{summaryStats.totalAbstracts}</p>
-              </div>
-              <Database className="w-8 h-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-orange-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Avg Score</p>
-                <p className="text-2xl font-bold text-gray-900">{summaryStats.averageScore}</p>
-              </div>
-              <Star className="w-8 h-8 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Reports Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Generated Reports</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Report</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Period</TableHead>
-                <TableHead>Generated</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reports.map((report) => (
-                <TableRow key={report.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{report.title}</div>
-                      <div className="text-sm text-gray-600">{report.department}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="flex items-center space-x-1 w-fit">
-                      {getReportTypeIcon(report.type)}
-                      <span>{report.type}</span>
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {new Date(report.dateRange.start).toLocaleDateString()} - {new Date(report.dateRange.end).toLocaleDateString()}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div>{new Date(report.generatedAt).toLocaleDateString()}</div>
-                      <div className="text-gray-600">by {report.generatedBy}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(report.status)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      {report.status === "completed" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => downloadReport(report.id)}
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      )}
-                      <Button variant="outline" size="sm">
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Report Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Quality Metrics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Average Score</span>
-                <Badge className="bg-green-500">4.2/5.0</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Approval Rate</span>
-                <Badge className="bg-blue-500">84%</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Completion Rate</span>
-                <Badge className="bg-purple-500">92%</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Review Time</span>
-                <Badge variant="outline">3.2 days avg</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Generate Report Dialog */}
-      <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Generate New Report</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Report Title</Label>
-              <Input
-                placeholder="e.g., Q4 Research Progress Summary"
-                value={generateForm.title}
-                onChange={(e) => setGenerateForm({...generateForm, title: e.target.value})}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Report Type</Label>
-                <Select value={generateForm.type} onValueChange={(value) => setGenerateForm({...generateForm, type: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="progress">Progress Report</SelectItem>
-                    <SelectItem value="analytics">Analytics Report</SelectItem>
-                    <SelectItem value="summary">Summary Report</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Department</Label>
-                <Select value={generateForm.department} onValueChange={(value) => setGenerateForm({...generateForm, department: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Computer Science">Computer Science</SelectItem>
-                    <SelectItem value="Engineering">Engineering</SelectItem>
-                    <SelectItem value="Mathematics">Mathematics</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Input
-                  type="date"
-                  value={generateForm.startDate}
-                  onChange={(e) => setGenerateForm({...generateForm, startDate: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>End Date</Label>
-                <Input
-                  type="date"
-                  value={generateForm.endDate}
-                  onChange={(e) => setGenerateForm({...generateForm, endDate: e.target.value})}
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button variant="outline" onClick={() => setIsGenerateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleGenerateReport}>
-                <FileBarChart className="w-4 h-4 mr-2" />
-                Generate Report
-              </Button>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
     </div>
@@ -1740,6 +1275,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ overviewStats }) 
 
 const FacultyDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const [isExporting, setIsExporting] = useState(false);
   const { user, profile, logout } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -1778,6 +1314,28 @@ const FacultyDashboard: React.FC = () => {
       status: "completed"
     }
   ];
+
+  const handleExportPDF = async () => {
+    try {
+      setIsExporting(true);
+      await exportDashboardToPDF({ 
+        filename: `research-analytics-report-${new Date().toISOString().split('T')[0]}.pdf` 
+      });
+      toast({ 
+        title: "Report Generated", 
+        description: "Research analytics report has been downloaded successfully" 
+      });
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to generate report. Please try again.", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
@@ -1847,7 +1405,7 @@ const FacultyDashboard: React.FC = () => {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 lg:grid-cols-8 gap-1">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-1">
             <TabsTrigger value="overview" className="flex items-center space-x-2">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -1859,10 +1417,6 @@ const FacultyDashboard: React.FC = () => {
             <TabsTrigger value="visualization" className="flex items-center space-x-2">
               <TrendingUp className="w-4 h-4" />
               <span className="hidden sm:inline">Visualization</span>
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center space-x-2">
-              <FileBarChart className="w-4 h-4" />
-              <span className="hidden sm:inline">Reports</span>
             </TabsTrigger>
             {/* v2.0: New Admin Features for Faculty */}
             <TabsTrigger value="all-abstracts" className="flex items-center space-x-2">
@@ -1887,12 +1441,36 @@ const FacultyDashboard: React.FC = () => {
           <TabsContent value="overview" className="space-y-6">
             {/* System-Wide Statistics (Admin-level view) */}
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">System Overview</h2>
-              <AdminStatsCards />
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">System Overview</h2>
+                  <p className="text-sm text-gray-600 mt-1">Comprehensive dashboard analytics and statistics</p>
+                </div>
+                <Button
+                  onClick={handleExportPDF}
+                  disabled={isExporting}
+                  className="flex items-center gap-2"
+                >
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Generating Report...
+                    </>
+                  ) : (
+                    <>
+                      <FileDown className="w-4 h-4" />
+                      Generate Report
+                    </>
+                  )}
+                </Button>
+              </div>
+              <div data-pdf-section="stats">
+                <AdminStatsCards />
+              </div>
             </div>
 
             {/* New Comprehensive Charts - Top Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-pdf-section="charts-row-1">
               {/* Submission Trends Chart */}
               <Card>
                 <CardHeader>
@@ -1927,16 +1505,16 @@ const FacultyDashboard: React.FC = () => {
             </div>
 
             {/* New Comprehensive Charts - Bottom Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-pdf-section="charts-row-2">
               {/* Top Research Domains Chart */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-green-600" />
-                    Top Research Domains
+                    Top Research Trends
                   </CardTitle>
                   <CardDescription>
-                    Most popular research areas across all submissions
+                    Most popular domains, technologies, and methodologies
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -1949,7 +1527,7 @@ const FacultyDashboard: React.FC = () => {
             </div>
 
             {/* Recent Activities */}
-            <Card>
+            <Card data-pdf-section="recent-activities">
               <CardHeader>
                 <CardTitle>Recent Activities</CardTitle>
                 <CardDescription>
@@ -2041,10 +1619,6 @@ const FacultyDashboard: React.FC = () => {
 
           <TabsContent value="visualization">
             <FacultyVisualization />
-          </TabsContent>
-
-          <TabsContent value="reports">
-            <FacultyReports />
           </TabsContent>
 
           {/* v2.0: New Admin Feature Tabs for Faculty */}
