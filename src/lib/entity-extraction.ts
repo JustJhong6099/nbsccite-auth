@@ -37,7 +37,14 @@ const FALSE_POSITIVES = [
   'Experience',
   'Document',
   'Experiment',
-  'Reductionism'
+  'Reductionism',
+  'Research',
+  'Design',
+  'User-centered Design',
+  'User-Centered Design',
+  'Methodology',
+  'System', // Too generic, use specific system types instead
+  'Secondary Education' // Redundant, covered by broader "Education" category
 ];
 
 // Helper function to check if entity is a false positive
@@ -55,11 +62,17 @@ const TECHNOLOGY_KEYWORDS = [
   'Artificial Intelligence', 'AI', 'Natural Language Processing', 'NLP',
   'Computer Vision', 'IoT', 'Internet of Things', 'Blockchain', 'Cloud Computing',
   'Big Data', 'Data Mining', 'Data Analytics', 'Predictive Analytics',
-  'Augmented Reality', 'AR', 'Virtual Reality', 'VR', 'Smart Contracts',
-  'API', 'Framework', 'Algorithm', 'Model', 'System', 'Platform',
+  'Augmented Reality', 'Virtual Reality', 'VR', 'Smart Contracts',
+  'API', 'Framework', 'Algorithm', 'Model', 'Platform',
   'Mobile App', 'Web Application', 'Database', 'SQL', 'NoSQL',
   'Python', 'JavaScript', 'React', 'Node.js', 'TensorFlow', 'PyTorch',
-  'Sensor', 'Network', 'Automation', 'Robotics', 'Drone'
+  'Sensor', 'Network', 'Automation', 'Robotics', 'Drone', 'RFID', 'SMS',
+  // System Types
+  'Information Management System', 'Record Management System', 'Geographic Information System',
+  'Supply Management System', 'Inventory System', 'Reservation System', 'Booking System',
+  'Monitoring System', 'Notification System', 'Scheduling System', 'Queueing System',
+  'Interactive System', 'Decision Support System', 'Profiling System', 'Tracer System',
+  'Irrigation System', 'Waste Management System', 'Management Information System'
 ];
 
 // Domain keywords database
@@ -70,7 +83,7 @@ const DOMAIN_KEYWORDS = [
   'Energy', 'Renewable Energy', 'Sustainability', 'Environment',
   'Transportation', 'Automotive', 'Security', 'Cybersecurity',
   'Social Media', 'Communication', 'Entertainment', 'Gaming',
-  'Construction', 'Real Estate', 'Tourism', 'Hospitality'
+  'Construction', 'Real Estate', 'Tourism', 'Hospitality', 'Livelihood'
 ];
 
 // Methodology keywords database

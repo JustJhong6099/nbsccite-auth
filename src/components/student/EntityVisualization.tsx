@@ -52,6 +52,123 @@ interface Link {
   type: string;
 }
 
+// Donut Chart Component
+interface DonutChartProps {
+  data: Array<{
+    category: string;
+    count: number;
+    percentage: string;
+  }>;
+}
+
+const DonutChart: React.FC<DonutChartProps> = ({ data }) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [hoveredSlice, setHoveredSlice] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!svgRef.current || data.length === 0) return;
+
+    const svg = d3.select(svgRef.current);
+    svg.selectAll("*").remove();
+
+    const width = 320;
+    const height = 320;
+    const radius = Math.min(width, height) / 2;
+    const innerRadius = radius * 0.6; // Donut hole
+
+    const g = svg
+      .append("g")
+      .attr("transform", `translate(${width / 2}, ${height / 2})`);
+
+    // Color scale
+    const colors = [
+      '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e',
+      '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
+      '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#a855f7'
+    ];
+
+    const color = d3.scaleOrdinal()
+      .domain(data.map(d => d.category))
+      .range(colors);
+
+    // Pie layout
+    const pie = d3.pie<any>()
+      .value((d: any) => d.count)
+      .sort(null);
+
+    // Arc generator
+    const arc = d3.arc()
+      .innerRadius(innerRadius)
+      .outerRadius(radius);
+
+    const arcHover = d3.arc()
+      .innerRadius(innerRadius)
+      .outerRadius(radius + 10);
+
+    // Draw arcs
+    const arcs = g.selectAll(".arc")
+      .data(pie(data))
+      .enter().append("g")
+      .attr("class", "arc");
+
+    arcs.append("path")
+      .attr("d", arc as any)
+      .attr("fill", (d: any) => color(d.data.category) as string)
+      .attr("stroke", "white")
+      .attr("stroke-width", 2)
+      .style("cursor", "pointer")
+      .on("mouseenter", function(event, d: any) {
+        const index = data.findIndex(item => item.category === d.data.category);
+        setHoveredSlice(index);
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr("d", arcHover as any);
+      })
+      .on("mouseleave", function() {
+        setHoveredSlice(null);
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr("d", arc as any);
+      });
+
+    // Center text
+    const centerGroup = g.append("g")
+      .attr("class", "center-text");
+
+    centerGroup.append("text")
+      .attr("text-anchor", "middle")
+      .attr("dy", "-0.5em")
+      .style("font-size", "28px")
+      .style("font-weight", "bold")
+      .style("fill", "#1f2937")
+      .text(data.reduce((sum, d) => sum + d.count, 0));
+
+    centerGroup.append("text")
+      .attr("text-anchor", "middle")
+      .attr("dy", "1.2em")
+      .style("font-size", "14px")
+      .style("fill", "#6b7280")
+      .text("Total Entities");
+
+  }, [data]);
+
+  return (
+    <div className="relative">
+      <svg ref={svgRef} width={320} height={320}></svg>
+      {hoveredSlice !== null && (
+        <div className="absolute top-2 left-2 bg-white shadow-lg rounded-lg p-3 border z-10">
+          <div className="text-sm font-medium">{data[hoveredSlice].category}</div>
+          <div className="text-xs text-gray-600">
+            Count: <span className="font-semibold">{data[hoveredSlice].count}</span> ({data[hoveredSlice].percentage}%)
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const EntityVisualization: React.FC = () => {
   const [activeTab, setActiveTab] = useState('graph');
   const [selectedNode, setSelectedNode] = useState<any>(null);
@@ -744,29 +861,89 @@ export const EntityVisualization: React.FC = () => {
               <CardDescription>Top entities extracted from approved abstracts</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {frequencyData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-sm">
-                        {index + 1}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left pane - Bar Chart with Color Legend */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-gray-700">Top Entities by Count</h4>
+                  {frequencyData.map((item, index) => {
+                    const colors = [
+                      'bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-rose-500',
+                      'bg-orange-500', 'bg-amber-500', 'bg-yellow-500', 'bg-lime-500', 'bg-green-500',
+                      'bg-emerald-500', 'bg-teal-500', 'bg-cyan-500', 'bg-sky-500', 'bg-violet-500'
+                    ];
+                    const barColors = [
+                      'from-blue-500 to-blue-600', 'from-indigo-500 to-indigo-600', 'from-purple-500 to-purple-600', 
+                      'from-pink-500 to-pink-600', 'from-rose-500 to-rose-600', 'from-orange-500 to-orange-600', 
+                      'from-amber-500 to-amber-600', 'from-yellow-500 to-yellow-600', 'from-lime-500 to-lime-600', 
+                      'from-green-500 to-green-600', 'from-emerald-500 to-emerald-600', 'from-teal-500 to-teal-600', 
+                      'from-cyan-500 to-cyan-600', 'from-sky-500 to-sky-600', 'from-violet-500 to-violet-600'
+                    ];
+                    
+                    return (
+                      <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div className="flex items-center space-x-4 flex-1 min-w-0">
+                          {/* Color indicator matching donut chart */}
+                          <div className={`w-4 h-4 rounded-full ${colors[index % colors.length]} flex-shrink-0`}></div>
+                          <div className="w-8 h-8 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center text-gray-700 font-semibold text-sm flex-shrink-0">
+                            {index + 1}
+                          </div>
+                          <span className="font-medium truncate">{item.category}</span>
+                        </div>
+                        <div className="flex items-center space-x-6 flex-shrink-0">
+                          <div className="text-right">
+                            <div className="font-semibold">{item.count}</div>
+                            <div className="text-sm text-gray-600">{item.percentage}%</div>
+                          </div>
+                          <div className="w-32 h-3 bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full bg-gradient-to-r ${barColors[index % barColors.length]} transition-all duration-300`}
+                              style={{ width: `${Math.min(parseFloat(item.percentage), 100)}%` }}
+                            ></div>
+                          </div>
+                        </div>
                       </div>
-                      <span className="font-medium">{item.category}</span>
-                    </div>
-                    <div className="flex items-center space-x-6">
-                      <div className="text-right">
-                        <div className="font-semibold">{item.count}</div>
-                        <div className="text-sm text-gray-600">{item.percentage}%</div>
+                    );
+                  })}
+                </div>
+
+                {/* Right pane - Donut Chart Only */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-gray-700">Distribution Overview</h4>
+                  <div className="flex items-center justify-center">
+                    <DonutChart data={frequencyData} />
+                  </div>
+                  
+                  {/* Summary Stats */}
+                  <div className="mt-6 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                    <h5 className="font-semibold text-sm text-gray-700 mb-3">Summary Statistics</h5>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Total Entities:</span>
+                        <span className="font-bold text-lg text-blue-600">{frequencyData.reduce((sum, d) => sum + d.count, 0)}</span>
                       </div>
-                      <div className="w-32 h-3 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500 transition-all duration-300"
-                          style={{ width: `${Math.min(parseFloat(item.percentage), 100)}%` }}
-                        ></div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Unique Categories:</span>
+                        <span className="font-semibold text-gray-700">{frequencyData.length}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Most Frequent:</span>
+                        <span className="font-semibold text-gray-700">{frequencyData[0]?.category}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Top Entity Count:</span>
+                        <span className="font-semibold text-gray-700">{frequencyData[0]?.count} ({frequencyData[0]?.percentage}%)</span>
                       </div>
                     </div>
                   </div>
-                ))}
+
+                  {/* Info Card */}
+                  <div className="p-4 bg-gray-50 rounded-lg border">
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      <strong className="text-gray-700">Tip:</strong> The colors on the left match the donut chart slices. 
+                      Hover over the donut chart for detailed information about each entity.
+                    </p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

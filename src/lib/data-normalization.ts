@@ -9,6 +9,12 @@ export const FALSE_POSITIVES = [
   'document',
   'experiment',
   'reductionism',
+  'research',
+  'design',
+  'user-centered design',
+  'methodology',
+  'system', // Too generic, use specific system types instead
+  'secondary education', // Redundant, covered by broader "Education" category
   // Current institution name
   'northern bukidnon state college',
   'nbsc',

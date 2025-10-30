@@ -1933,10 +1933,10 @@ const FacultyDashboard: React.FC = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-green-600" />
-                    Top Research Domains
+                    Top Research Trends
                   </CardTitle>
                   <CardDescription>
-                    Most popular research areas across all submissions
+                    Most popular domains, technologies, and methodologies
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

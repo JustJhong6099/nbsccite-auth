@@ -63,11 +63,17 @@ const TECHNOLOGY_KEYWORDS = [
   'machine learning', 'deep learning', 'neural network', 'artificial intelligence',
   'computer vision', 'natural language processing', 'nlp', 'blockchain', 'iot',
   'cloud computing', 'big data', 'data mining', 'virtual reality', 'vr',
-  'augmented reality', 'ar', 'algorithm', 'framework', 'platform', 'system',
+  'augmented reality', 'algorithm', 'framework', 'platform',
   'model', 'network', 'automation', 'robotics', 'sensor', 'web', 'mobile',
   'database', 'api', 'software', 'application', 'cnn', 'rnn', 'lstm',
   'tensorflow', 'pytorch', 'react', 'node', 'python', 'javascript',
-  'monitoring', 'tracking', 'detection', 'recognition', 'prediction'
+  'monitoring', 'tracking', 'detection', 'recognition', 'prediction', 'rfid', 'sms',
+  // System Types
+  'information management system', 'record management system', 'geographic information system',
+  'supply management system', 'inventory system', 'reservation system', 'booking system',
+  'monitoring system', 'notification system', 'scheduling system', 'queueing system',
+  'interactive system', 'decision support system', 'profiling system', 'tracer system',
+  'irrigation system', 'waste management system', 'management information system'
 ];
 
 // Research domain types
@@ -88,7 +94,7 @@ const DOMAIN_KEYWORDS = [
   'energy', 'environment', 'environmental', 'security', 'cybersecurity',
   'manufacturing', 'construction', 'retail', 'ecommerce', 'e-commerce',
   'communication', 'entertainment', 'tourism', 'logistics', 'supply chain',
-  'smart city', 'urban', 'business', 'management', 'marketing'
+  'smart city', 'urban', 'business', 'management', 'marketing', 'livelihood'
 ];
 
 // Methodology types
@@ -224,7 +230,9 @@ function filterRelevantEntities(entities: DandelionEntity[], text: string): Dand
     const falsePositives = [
       'and', 'the', 'for', 'with', 'from', 'this', 'that', 'are', 'was', 'were',
       'ar', // Filter out "AR" in all cases (too ambiguous)
-      'experience', 'document', 'experiment', 'reductionism',
+      'experience', 'document', 'experiment', 'reductionism', 'research',
+      'design', 'user-centered design', 'methodology', 'system', // system is too generic
+      'secondary education', // Redundant with broader "Education" category
       // Current institution
       'northern bukidnon state college', 'nbsc', 'bukidnon',
       // Old institution (for backward compatibility with existing data)
