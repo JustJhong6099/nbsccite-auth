@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,8 @@ import {
   GitBranch,
   Calendar,
   Search,
-  Brain
+  Brain,
+  Loader2
 } from "lucide-react";
 
 // Import student dashboard components
@@ -25,27 +26,99 @@ import { ResearchInsights } from "@/components/student/ResearchInsights";
 import { ProfileManagement } from "@/components/student/ProfileManagement";
 import { MyAbstracts } from "@/components/student/MyAbstracts";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 
-// Mock student data
-const mockStudent = {
-  id: 'student_1',
-  full_name: 'John Smith',
-  email: 'john.smith@student.nbsc.edu',
-  student_id: '2021-00123',
-  program: 'Bachelor of Science in Computer Science',
-  year_level: '4th Year',
-  phone: '+1-555-0123',
-  profile_picture: null,
-  abstracts_submitted: 3,
-  abstracts_approved: 2,
-  abstracts_pending: 1,
-  research_interests: ['Machine Learning', 'Web Development', 'Data Science'],
-  joined_date: '2021-08-15'
-};
+// Interface for abstract data
+interface Abstract {
+  id: string;
+  title: string;
+  content: string;
+  status: 'pending' | 'reviewed' | 'approved' | 'rejected' | 'needs-revision';
+  submitted_date: string;
+  review_comments?: string;
+}
 
 const StudentDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const { user } = useAuth();
+  
+  // Real-time data state
+  const [abstracts, setAbstracts] = useState<Abstract[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Calculate real stats from fetched data
+  const stats = {
+    abstracts_submitted: abstracts.length,
+    abstracts_approved: abstracts.filter(a => a.status === 'approved').length,
+    abstracts_pending: abstracts.filter(a => a.status === 'pending' || a.status === 'reviewed').length,
+    abstracts_rejected: abstracts.filter(a => a.status === 'rejected').length,
+  };
+  
+  // Debug logging
+  console.log('StudentDashboard - Current state:', {
+    userLoaded: !!user,
+    userId: user?.id,
+    isLoading,
+    abstractsCount: abstracts.length,
+    stats
+  });
+  
+  // Fetch student's abstracts
+  useEffect(() => {
+    const fetchAbstracts = async () => {
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        setIsLoading(true);
+        console.log('Fetching abstracts for user:', user.id);
+        
+        const { data, error } = await supabase
+          .from('abstracts')
+          .select('*')
+          .eq('student_id', user.id)
+          .order('submitted_date', { ascending: false });
+        
+        if (error) {
+          console.error('Supabase error:', error);
+          throw error;
+        }
+        
+        console.log('Fetched abstracts:', data);
+        setAbstracts(data || []);
+      } catch (error) {
+        console.error('Error fetching abstracts:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchAbstracts();
+    
+    // Set up real-time subscription for updates
+    const channel = supabase
+      .channel('abstracts_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'abstracts',
+          filter: `student_id=eq.${user?.id}`
+        },
+        (payload) => {
+          console.log('Real-time update:', payload);
+          fetchAbstracts();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -59,13 +132,10 @@ const StudentDashboard: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Welcome back, {user?.full_name || 'Student'}!</h1>
-                <p className="text-gray-600">{mockStudent.program} • {mockStudent.year_level}</p>
+                <p className="text-gray-600">Student Dashboard</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                Student ID: {mockStudent.student_id}
-              </Badge>
               <Button variant="outline">
                 <Calendar className="h-4 w-4 mr-2" />
                 Academic Year 2024-2025
@@ -107,149 +177,135 @@ const StudentDashboard: React.FC = () => {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              {/* Quick Stats */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Abstracts Submitted</p>
-                      <p className="text-2xl font-bold text-blue-600">{mockStudent.abstracts_submitted}</p>
-                    </div>
-                    <FileText className="h-8 w-8 text-blue-600" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Approved</p>
-                      <p className="text-2xl font-bold text-green-600">{mockStudent.abstracts_approved}</p>
-                    </div>
-                    <Eye className="h-8 w-8 text-green-600" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Pending Review</p>
-                      <p className="text-2xl font-bold text-yellow-600">{mockStudent.abstracts_pending}</p>
-                    </div>
-                    <Search className="h-8 w-8 text-yellow-600" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Research Areas</p>
-                      <p className="text-2xl font-bold text-purple-600">{mockStudent.research_interests.length}</p>
-                    </div>
-                    <Brain className="h-8 w-8 text-purple-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Submissions</CardTitle>
-                  <CardDescription>Your latest abstract submissions</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <div className="font-medium">ML Applications in Education</div>
-                        <div className="text-sm text-gray-600">Submitted 2 days ago</div>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <span className="ml-2 text-gray-600">Loading your data...</span>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  {/* Quick Stats */}
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Abstracts Submitted</p>
+                          <p className="text-2xl font-bold text-blue-600">{stats.abstracts_submitted}</p>
+                        </div>
+                        <FileText className="h-8 w-8 text-blue-600" />
                       </div>
-                      <Badge className="bg-green-100 text-green-800">Approved</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <div className="font-medium">Web Development Framework</div>
-                        <div className="text-sm text-gray-600">Submitted 1 week ago</div>
-                      </div>
-                      <Badge className="bg-yellow-100 text-yellow-800">Under Review</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <div className="font-medium">Database Optimization Study</div>
-                        <div className="text-sm text-gray-600">Submitted 2 weeks ago</div>
-                      </div>
-                      <Badge className="bg-green-100 text-green-800">Approved</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Research Interests</CardTitle>
-                  <CardDescription>Your current research focus areas</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {mockStudent.research_interests.map((interest, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                        <span className="font-medium text-blue-800">{interest}</span>
-                        <Badge variant="outline" className="bg-blue-100 text-blue-700">
-                          Active
-                        </Badge>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Approved</p>
+                          <p className="text-2xl font-bold text-green-600">{stats.abstracts_approved}</p>
+                        </div>
+                        <Eye className="h-8 w-8 text-green-600" />
                       </div>
-                    ))}
-                  </div>
-                  <Button variant="outline" className="w-full mt-4">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Interests
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+                    </CardContent>
+                  </Card>
 
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-                <CardDescription>Get started with common tasks</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Button 
-                    onClick={() => setActiveTab('submit')}
-                    className="h-20 flex flex-col items-center gap-2"
-                  >
-                    <Upload className="h-6 w-6" />
-                    Submit New Abstract
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => setActiveTab('visualization')}
-                    className="h-20 flex flex-col items-center gap-2"
-                  >
-                    <GitBranch className="h-6 w-6" />
-                    View Entity Graph
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => setActiveTab('insights')}
-                    className="h-20 flex flex-col items-center gap-2"
-                  >
-                    <TrendingUp className="h-6 w-6" />
-                    Research Trends
-                  </Button>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Under Review</p>
+                          <p className="text-2xl font-bold text-yellow-600">{stats.abstracts_pending}</p>
+                        </div>
+                        <Search className="h-8 w-8 text-yellow-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Needs Revision</p>
+                          <p className="text-2xl font-bold text-orange-600">{stats.abstracts_rejected}</p>
+                        </div>
+                        <Edit className="h-8 w-8 text-orange-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
-              </CardContent>
-            </Card>
+
+                {/* Recent Activity */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Recent Submissions</CardTitle>
+                      <CardDescription>Your latest abstract submissions</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {abstracts.length === 0 ? (
+                        <p className="text-gray-500 text-center py-8">No submissions yet. Submit your first abstract!</p>
+                      ) : (
+                        <div className="space-y-4">
+                          {abstracts.slice(0, 3).map((abstract) => (
+                            <div key={abstract.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <div className="flex-1">
+                                <div className="font-medium">{abstract.title}</div>
+                                <div className="text-sm text-gray-600">
+                                  Submitted {new Date(abstract.submitted_date).toLocaleDateString()}
+                                </div>
+                              </div>
+                              <Badge 
+                                className={
+                                  abstract.status === 'approved' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : abstract.status === 'rejected'
+                                    ? 'bg-red-100 text-red-800'
+                                    : abstract.status === 'needs-revision'
+                                    ? 'bg-orange-100 text-orange-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }
+                              >
+                                {abstract.status === 'approved' && 'Approved'}
+                                {abstract.status === 'rejected' && 'Rejected'}
+                                {abstract.status === 'needs-revision' && 'Needs Revision'}
+                                {(abstract.status === 'pending' || abstract.status === 'reviewed') && 'Under Review'}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Quick Actions</CardTitle>
+                      <CardDescription>Get started with common tasks</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Button 
+                          onClick={() => setActiveTab('submit')}
+                          className="h-20 flex flex-col items-center gap-2"
+                        >
+                          <Upload className="h-6 w-6" />
+                          Submit New Abstract
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          onClick={() => setActiveTab('abstracts')}
+                          className="h-20 flex flex-col items-center gap-2"
+                        >
+                          <FileText className="h-6 w-6" />
+                          View All Abstracts
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
+            )}
           </TabsContent>
 
           {/* Submit Abstract Tab */}
