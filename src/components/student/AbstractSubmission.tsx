@@ -21,7 +21,8 @@ import {
   CheckCircle,
   ZoomIn,
   ZoomOut,
-  Maximize2
+  Maximize2,
+  Edit2
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -30,6 +31,7 @@ import { performEntityExtraction, type ExtractedEntities } from '@/lib/dandelion
 import * as d3 from "d3";
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import { EntityEditor } from './EntityEditor';
 
 interface AbstractFormData {
   title: string;
@@ -71,6 +73,7 @@ export const AbstractSubmission: React.FC = () => {
   const [extractedEntities, setExtractedEntities] = useState<ExtractedEntities | null>(null);
   const [isExtractingEntities, setIsExtractingEntities] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [isEditingEntities, setIsEditingEntities] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const svgRef = React.useRef<SVGSVGElement>(null);
   const simulationRef = React.useRef<d3.Simulation<Node, Link> | null>(null);
@@ -171,6 +174,22 @@ export const AbstractSubmission: React.FC = () => {
       setIsExtractingEntities(false);
     }
   }, [formData.abstract, formData.keywords]);
+
+  const handleSaveEditedEntities = (updatedEntities: ExtractedEntities) => {
+    setExtractedEntities(updatedEntities);
+    setIsEditingEntities(false);
+    
+    // Rebuild visualization with updated entities
+    setTimeout(() => {
+      if (svgRef.current && updatedEntities) {
+        buildEntityGraph(updatedEntities);
+      }
+    }, 100);
+  };
+
+  const handleCancelEditEntities = () => {
+    setIsEditingEntities(false);
+  };
 
   const buildEntityGraph = (entities: ExtractedEntities) => {
     if (!svgRef.current) return;
@@ -844,14 +863,27 @@ export const AbstractSubmission: React.FC = () => {
             {/* Extracted Entities */}
             {extractedEntities && (
               <div className="space-y-4 border-t pt-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Extracted Entities</h3>
-                  <Badge variant="outline" className="bg-green-50 text-green-700">
-                    {Math.round(extractedEntities.confidence * 100)}% Confidence
-                  </Badge>
-                </div>
+                {!isEditingEntities ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-gray-900">Extracted Entities</h3>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-green-50 text-green-700">
+                          {Math.round(extractedEntities.confidence * 100)}% Confidence
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsEditingEntities(true)}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          <Edit2 className="h-4 w-4 mr-2" />
+                          Edit Entities
+                        </Button>
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Technologies */}
                   <div>
                     <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -974,6 +1006,15 @@ export const AbstractSubmission: React.FC = () => {
                     <svg ref={svgRef} className="w-full h-full"></svg>
                   </div>
                 </div>
+                  </>
+                ) : (
+                  /* Entity Editor Mode */
+                  <EntityEditor
+                    entities={extractedEntities}
+                    onSave={handleSaveEditedEntities}
+                    onCancel={handleCancelEditEntities}
+                  />
+                )}
               </div>
             )}
 
