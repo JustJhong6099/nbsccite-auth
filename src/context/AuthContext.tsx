@@ -259,7 +259,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
       if (error) {
         console.error('❌ Signup error:', error);
+        
+        // Check for specific error messages related to existing email
+        if (error.message.toLowerCase().includes('user already registered') || 
+            error.message.toLowerCase().includes('email already exists') ||
+            error.message.toLowerCase().includes('already registered')) {
+          throw new Error('This email address is already registered. Please sign in or use a different email address.');
+        }
+        
         throw new Error(error.message);
+      }
+
+      // Additional check: if user exists but email not confirmed
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        throw new Error('This email address is already registered. Please sign in or use a different email address.');
       }
 
       if (data.user && !data.session) {

@@ -56,6 +56,8 @@ const Signup: React.FC = () => {
       setRegisteredRole(data.role);
       setShowSuccessModal(true);
     } catch (error: any) {
+      console.error('Signup error:', error);
+      
       toast({
         title: "Registration Failed",
         description: error.message || "Something went wrong. Please try again.",

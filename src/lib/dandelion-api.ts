@@ -4,6 +4,9 @@
  * https://dandelion.eu/docs/api/datatxt/nex/
  */
 
+// Import improved entity extraction logic
+import { performEntityExtraction as performLocalExtraction } from './entity-extraction';
+
 export interface DandelionEntity {
   id: string;
   title: string;
@@ -284,77 +287,14 @@ function filterRelevantEntities(entities: DandelionEntity[], text: string): Dand
 /**
  * Fallback extraction using keyword matching (when Dandelion API is not available)
  */
+/**
+ * Fallback to improved local entity extraction when API is unavailable
+ */
 function fallbackExtraction(text: string, keywords: string[]): ExtractedEntities {
-  console.log('=== Fallback Extraction ===');
-  const lowerText = text.toLowerCase();
-  const fullText = `${text} ${keywords.join(' ')}`.toLowerCase();
+  console.log('=== Using Improved Local Extraction (Fallback) ===');
   
-  // Extract technologies
-  const technologies = TECHNOLOGY_KEYWORDS.filter(tech => {
-    const found = fullText.includes(tech);
-    if (found) console.log('Found technology:', tech);
-    return found;
-  });
-  
-  // Extract domains
-  const domains = DOMAIN_KEYWORDS.filter(domain => {
-    const found = fullText.includes(domain);
-    if (found) console.log('Found domain:', domain);
-    return found;
-  });
-  
-  // Extract methodologies
-  const methodologies = METHODOLOGY_KEYWORDS.filter(method => {
-    const found = fullText.includes(method);
-    if (found) console.log('Found methodology:', method);
-    return found;
-  });
-  
-  // Also check user-provided keywords
-  keywords.forEach(keyword => {
-    const lowerKeyword = keyword.toLowerCase();
-    if (TECHNOLOGY_KEYWORDS.some(t => t === lowerKeyword)) {
-      if (!technologies.includes(keyword)) {
-        technologies.push(keyword);
-        console.log('Added technology from keywords:', keyword);
-      }
-    } else if (DOMAIN_KEYWORDS.some(d => d === lowerKeyword)) {
-      if (!domains.includes(keyword)) {
-        domains.push(keyword);
-        console.log('Added domain from keywords:', keyword);
-      }
-    } else {
-      // If keyword doesn't match any category, add to technologies by default
-      if (!technologies.includes(keyword)) {
-        technologies.push(keyword);
-        console.log('Added keyword as technology:', keyword);
-      }
-    }
-  });
-  
-  // Remove duplicates and capitalize
-  const uniqueTechs = [...new Set(technologies)].map(t => 
-    t.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-  );
-  const uniqueDomains = [...new Set(domains)].map(d => 
-    d.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-  );
-  const uniqueMethodologies = [...new Set(methodologies)].map(m => 
-    m.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-  );
-  
-  const totalFound = uniqueTechs.length + uniqueDomains.length + uniqueMethodologies.length;
-  const confidence = Math.min(0.7, 0.4 + (totalFound * 0.05)); // Lower confidence for fallback
-  
-  console.log('Fallback results - Tech:', uniqueTechs.length, 'Domains:', uniqueDomains.length, 'Methods:', uniqueMethodologies.length);
-  console.log('Confidence:', confidence);
-  
-  return {
-    technologies: uniqueTechs.slice(0, 8),
-    domains: uniqueDomains.slice(0, 6),
-    methodologies: uniqueMethodologies.slice(0, 5),
-    confidence: Number(confidence.toFixed(2))
-  };
+  // Use the improved entity extraction logic from entity-extraction.ts
+  return performLocalExtraction(text, keywords);
 }
 
 /**

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { FacultyAbstractSubmission } from "./FacultyAbstractSubmission";
 import { 
   Upload, 
   FileText, 
@@ -201,100 +202,27 @@ const AbstractManagement: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">Abstract Management</h2>
           <p className="text-gray-600">Manage your research abstracts and publications</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center space-x-2">
-              <Plus className="w-4 h-4" />
-              <span>Add New Abstract</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Add New Research Abstract</DialogTitle>
-              <DialogDescription>
-                Upload or create a new research abstract entry
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  placeholder="Enter research title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="authors">Authors (comma-separated)</Label>
-                <Input
-                  id="authors"
-                  placeholder="Dr. John Smith, Jane Doe (Student)"
-                  value={formData.authors}
-                  onChange={(e) => setFormData({...formData, authors: e.target.value})}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <Input
-                    id="department"
-                    placeholder="Computer Science"
-                    value={formData.department}
-                    onChange={(e) => setFormData({...formData, department: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="researchType">Research Type</Label>
-                  <Select value={formData.researchType} onValueChange={(value: any) => setFormData({...formData, researchType: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="faculty">Faculty Research</SelectItem>
-                      <SelectItem value="student-assisted">Student-Assisted</SelectItem>
-                      <SelectItem value="collaborative">Collaborative</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="keywords">Keywords (comma-separated)</Label>
-                <Input
-                  id="keywords"
-                  placeholder="Machine Learning, IoT, Agriculture"
-                  value={formData.keywords}
-                  onChange={(e) => setFormData({...formData, keywords: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="abstract">Abstract</Label>
-                <Textarea
-                  id="abstract"
-                  placeholder="Enter your research abstract here..."
-                  className="min-h-32"
-                  value={formData.abstract}
-                  onChange={(e) => setFormData({...formData, abstract: e.target.value})}
-                />
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAddAbstract}>
-                  Add Abstract
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          onClick={() => setIsAddDialogOpen(true)} 
+          className="flex items-center space-x-2"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add New Abstract</span>
+        </Button>
       </div>
+
+      {/* Use FacultyAbstractSubmission component with entity extraction and editing */}
+      <FacultyAbstractSubmission
+        isOpen={isAddDialogOpen}
+        onClose={() => setIsAddDialogOpen(false)}
+        onSuccess={() => {
+          setIsAddDialogOpen(false);
+          toast({
+            title: "Abstract Added",
+            description: "Your research abstract has been successfully added with entity extraction.",
+          });
+        }}
+      />
 
       {/* Filters and Search */}
       <Card>
