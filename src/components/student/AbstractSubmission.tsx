@@ -151,6 +151,8 @@ export const AbstractSubmission: React.FC = () => {
     setIsExtractingEntities(true);
     try {
       // Perform entity extraction using Dandelion API
+      // NOTE: Entities are kept in memory only, not saved to database
+      // They will only be saved when the abstract is actually submitted
       const entities = await performEntityExtraction(formData.abstract, formData.keywords);
       setExtractedEntities(entities);
       
@@ -395,7 +397,7 @@ export const AbstractSubmission: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      // Submit to Supabase
+      // Submit to Supabase - entities are ONLY saved here upon actual submission
       const { data, error } = await supabase.from('abstracts').insert({
         student_id: user.id,
         title: formData.title,
@@ -403,7 +405,7 @@ export const AbstractSubmission: React.FC = () => {
         abstract_text: formData.abstract,
         keywords: formData.keywords,
         year: parseInt(formData.year),
-        extracted_entities: extractedEntities,
+        extracted_entities: extractedEntities, // Saved only on submit
         entity_extraction_confidence: extractedEntities?.confidence || 0,
         status: 'pending',
         submitted_date: new Date().toISOString()
@@ -415,7 +417,7 @@ export const AbstractSubmission: React.FC = () => {
       setShowSubmitModal(false);
       toast.success("Abstract submitted for review!");
       
-      // Reset form
+      // Reset form and clear temporary entities
       setFormData({
         title: '',
         authors: '',
@@ -423,7 +425,7 @@ export const AbstractSubmission: React.FC = () => {
         keywords: [],
         year: '2025'
       });
-      setExtractedEntities(null);
+      setExtractedEntities(null); // Clear extracted entities from memory
       setOcrImage(null);
     } catch (error: any) {
       console.error('Submission error:', error);
@@ -431,6 +433,21 @@ export const AbstractSubmission: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Cleanup function to clear extracted entities when component unmounts or form is cancelled
+  const handleCancel = useCallback(() => {
+    setExtractedEntities(null); // Clear temporary entities
+    setShowSubmitModal(false);
+    toast.info("Submission cancelled. Extracted entities discarded.");
+  }, []);
+
+  // Add cleanup on component unmount
+  React.useEffect(() => {
+    return () => {
+      // Clear any temporary extracted entities when user navigates away
+      setExtractedEntities(null);
+    };
+  }, []);
 
   if (previewMode) {
     return (
@@ -964,7 +981,7 @@ export const AbstractSubmission: React.FC = () => {
             <div className="flex gap-3 pt-4 border-t">
               <Button 
                 variant="outline" 
-                onClick={() => setShowSubmitModal(false)}
+                onClick={handleCancel}
                 disabled={isSubmitting}
                 className="flex-1"
               >

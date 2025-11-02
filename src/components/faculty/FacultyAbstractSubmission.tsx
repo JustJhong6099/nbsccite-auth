@@ -147,7 +147,7 @@ export const FacultyAbstractSubmission: React.FC<FacultyAbstractSubmissionProps>
     }
   }, [formData.abstract]);
 
-  const handleExtractEntities = useCallback(async () => {
+    const handleExtractEntities = useCallback(async () => {
     if (!formData.abstract.trim()) {
       toast.error("Please enter abstract content first");
       return;
@@ -155,9 +155,13 @@ export const FacultyAbstractSubmission: React.FC<FacultyAbstractSubmissionProps>
 
     setIsExtractingEntities(true);
     try {
+      // Perform entity extraction using Dandelion API
+      // NOTE: Entities are kept in memory only, not saved to database
+      // They will only be saved when the abstract is actually published
       const entities = await performEntityExtraction(formData.abstract, formData.keywords);
       setExtractedEntities(entities);
       
+      // Build visualization
       setTimeout(() => {
         if (svgRef.current && entities) {
           buildEntityGraph(entities);
@@ -371,7 +375,7 @@ export const FacultyAbstractSubmission: React.FC<FacultyAbstractSubmissionProps>
     setIsSubmitting(true);
     
     try {
-      // Submit to Supabase with status 'approved' (auto-approve for faculty)
+      // Submit to Supabase with status 'approved' - entities are ONLY saved here upon actual publish
       const { data, error } = await supabase.from('abstracts').insert({
         student_id: user.id,
         title: formData.title,
@@ -379,7 +383,7 @@ export const FacultyAbstractSubmission: React.FC<FacultyAbstractSubmissionProps>
         abstract_text: formData.abstract,
         keywords: formData.keywords,
         year: parseInt(formData.year),
-        extracted_entities: extractedEntities,
+        extracted_entities: extractedEntities, // Saved only on publish
         entity_extraction_confidence: extractedEntities?.confidence || 0,
         status: 'approved', // Auto-approve for faculty
         submitted_date: new Date().toISOString(),
@@ -393,7 +397,7 @@ export const FacultyAbstractSubmission: React.FC<FacultyAbstractSubmissionProps>
       setShowPreviewModal(false);
       toast.success("Abstract published successfully!");
       
-      // Reset form
+      // Reset form and clear temporary entities
       setFormData({
         title: '',
         authors: '',
@@ -401,7 +405,7 @@ export const FacultyAbstractSubmission: React.FC<FacultyAbstractSubmissionProps>
         keywords: [],
         year: '2025'
       });
-      setExtractedEntities(null);
+      setExtractedEntities(null); // Clear extracted entities from memory
       setOcrImage(null);
       
       // Call success callback
@@ -417,6 +421,22 @@ export const FacultyAbstractSubmission: React.FC<FacultyAbstractSubmissionProps>
       setIsSubmitting(false);
     }
   };
+
+  // Cleanup function to clear extracted entities when modal is cancelled or closed
+  const handleCancel = useCallback(() => {
+    setExtractedEntities(null); // Clear temporary entities
+    setShowPreviewModal(false);
+    onClose();
+    toast.info("Submission cancelled. Extracted entities discarded.");
+  }, [onClose]);
+
+  // Add cleanup on component unmount or when modal closes
+  React.useEffect(() => {
+    if (!isOpen) {
+      // Clear any temporary extracted entities when modal closes
+      setExtractedEntities(null);
+    }
+  }, [isOpen]);
 
   return (
     <>
@@ -629,7 +649,7 @@ export const FacultyAbstractSubmission: React.FC<FacultyAbstractSubmissionProps>
             <div className="flex gap-3 pt-4 border-t">
               <Button 
                 variant="outline" 
-                onClick={onClose}
+                onClick={handleCancel}
                 disabled={isExtractingEntities || isSubmitting}
                 className="flex-1"
               >

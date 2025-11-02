@@ -14,13 +14,46 @@ export const FALSE_POSITIVES = [
   'user-centered design',
   'methodology',
   'system', // Too generic, use specific system types instead
-  'management', // Too generic, use specific management system types instead
   'secondary education', // Redundant, covered by broader "Education" category
-  // Current institution name
-  'northern bukidnon state college',
-  'nbsc',
-  'bukidnon',
-  'state college',
+  'world wide web', // Too generic/ubiquitous
+  'www', // Too generic/ubiquitous
+  'web', // Too generic without context
+  // Geographic places (should not be research entities)
+  'philippines',
+  'manila',
+  'cebu',
+  'davao',
+  'mindanao',
+  'luzon',
+  'visayas',
+  'quezon city',
+  'makati',
+  'pasig',
+  'taguig',
+  'united states',
+  'usa',
+  'america',
+  'europe',
+  'asia',
+  'africa',
+  'australia',
+  'china',
+  'japan',
+  'korea',
+  'singapore',
+  'malaysia',
+  'indonesia',
+  'thailand',
+  'vietnam',
+  'india',
+  'city',
+  'town',
+  'province',
+  'region',
+  'country',
+  'municipality',
+  'barangay',
+  // Old institution name (for backward compatibility)
   // Old institution name (for backward compatibility with existing data)
   'northern beaches secondary college',
   'beaches',
@@ -40,7 +73,8 @@ export const FALSE_POSITIVES = [
   'paper',
   'student',
   'teacher',
-  'professor'
+  'professor',
+  'faculty'
 ];
 
 // Replacement mappings for standardizing terminology
@@ -49,6 +83,96 @@ export const TERM_REPLACEMENTS: { [key: string]: string } = {
   'iot': 'Internet of Things',
   'i.o.t': 'Internet of Things',
   'i.o.t.': 'Internet of Things',
+  
+  // Map generic/partial terms to specific correct forms
+  'information management': 'Information Management System',
+  'document management': 'Document Management System',
+  'electronic health record': 'Electronic Health Record System',
+  'web application': 'Web Application',
+  'agile': 'Agile Software Development',
+  'agile software': 'Agile Software Development',
+  'software development': 'Agile Software Development',
+  'operations': 'Operations Research',
+  'data collection': 'Data Collection',
+  'data collection method': 'Data Collection',
+  'implementation': 'Implementation',
+  'implementation process': 'Implementation',
+  'irrigation': 'Agriculture', // Map generic irrigation to agriculture domain
+  'irrigation system': 'Irrigation Management System',
+  // Misclassified terms
+  'software': 'Software',
+  'geographic information system': 'Geographic Information System',
+  'gis': 'Geographic Information System',
+  'agile software development': 'Agile Software Development',
+  'software development process': 'Agile Software Development',
+  'information': 'Information Science',
+  'information science': 'Information Science',
+  'educational technology': 'Educational Technology',
+  'learning disability': 'Learning Disability',
+  'distance education': 'Distance Education',
+  'mobile app': 'Mobile App',
+  'application software': 'Application Software',
+  'ebook': 'Ebook',
+  'e-book': 'Ebook',
+  'java': 'Java',
+  'android': 'Android',
+  'automated planning and scheduling': 'Automated Planning and Scheduling',
+  'user': 'User',
+  'user computing': 'User',
+  'usability': 'Usability',
+  'system integration': 'System Integration',
+  'technology': 'Technology',
+  'mental health': 'Mental Health',
+  'health care': 'Health Care',
+  'healthcare': 'Health Care',
+  'reliability engineering': 'Reliability Engineering',
+  'management': 'Management',
+  'international organization for standardization': 'International Organization for Standardization',
+  'iso': 'ISO',
+  'scientific method': 'Scientific Method',
+  // Security and management research areas
+  'information security': 'Information Security',
+  'data management': 'Data Management',
+  'records management': 'Records Management',
+  'computer security': 'Computer Security',
+  'security': 'Security',
+  'computer': 'Computer',
+  'file manager': 'File Manager',
+  'information sensitivity': 'Information Sensitivity',
+  'computer accessibility': 'Computer Accessibility',
+  // Local geographic focus areas (normalize variations)
+  'manolo fortich': 'Manolo Fortich',
+  'municipality of manolo fortich': 'Manolo Fortich',
+  'northern mindanao': 'Northern Mindanao',
+  'bukidnon': 'Bukidnon',
+  'alae': 'Alae',
+  'barangay alae': 'Alae',
+  'alae barangay health center': 'Alae Barangay Health Center',
+  'barangay lingi-on': 'Barangay Lingi-on',
+  'lingion': 'Barangay Lingi-on',
+  'barangay maluko': 'Barangay Maluko',
+  'brgy. maluko': 'Barangay Maluko',
+  'brgy maluko': 'Barangay Maluko',
+  'barangay puntian': 'Barangay Puntian',
+  'communal ranch and tree park': 'Communal Ranch and Tree Park',
+  'dahilayan forest park resort': 'Dahilayan Forest Park Resort',
+  'district i': 'District I',
+  'district ii': 'District II',
+  'district iii': 'District III',
+  'district iv': 'District IV',
+  'impasug-ong': 'Impasug-ong',
+  'kampo juan': 'Kampo Juan',
+  'kampo juan bukidnon': 'Kampo Juan',
+  'libona': 'Libona',
+  'manolo fortich national high school': 'Manolo Fortich National High School',
+  'manolo fortich mswd office': 'Manolo Fortich MSWD Office',
+  'st. jude thaddeus high school': 'St. Jude Thaddeus High School',
+  'st jude thaddeus high school': 'St. Jude Thaddeus High School',
+  'northern bukidnon state college': 'Northern Bukidnon State College',
+  'nbsc': 'NBSC',
+  'nbsc campus': 'NBSC Campus',
+  'sumilao': 'Sumilao',
+  'tankulan': 'Tankulan',
   
   // Specific Management Systems (keep these as valid system types)
   'information management system': 'Information Management System',
@@ -67,9 +191,11 @@ export const TERM_REPLACEMENTS: { [key: string]: string } = {
   'ems': 'Event Management System',
   'project management system': 'Project Management System',
   'pms': 'Project Management System',
-  'data management': 'Data Management System',
   'database management system': 'Database Management System',
   'dbms': 'Database Management System',
+  'electronic health record system': 'Electronic Health Record System',
+  'ehr': 'Electronic Health Record System',
+  'operations research': 'Operations Research',
 };
 
 /**
@@ -91,16 +217,6 @@ export function normalizeTerm(term: string, applyCapitalization: boolean = true)
   
   // Filter out false positives (exact matches)
   if (FALSE_POSITIVES.includes(normalized)) return null;
-  
-  // Filter out terms containing institution name keywords (current and old)
-  if (normalized.includes('bukidnon') || 
-      normalized.includes('nbsc') || 
-      normalized.includes('state college') ||
-      normalized.includes('beaches') ||
-      normalized.includes('secondary college') ||
-      normalized.includes('northern beaches')) {
-    return null;
-  }
   
   // Apply replacements
   if (TERM_REPLACEMENTS[normalized]) {
