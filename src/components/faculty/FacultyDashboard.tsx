@@ -81,7 +81,8 @@ import {
   MapPin,
   Briefcase,
   Activity,
-  PieChart
+  PieChart,
+  Archive
 } from "lucide-react";
 
 // Interfaces for data types
@@ -247,6 +248,10 @@ const StudentAbstractReview: React.FC = () => {
     rating: 0,
     advisorNotes: ""
   });
+
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [archiveFilterStatus, setArchiveFilterStatus] = useState<"approved" | "rejected" | "all">("all");
 
   const openReviewDialog = (submission: StudentSubmission) => {
     setSelectedSubmission(submission);
@@ -599,6 +604,23 @@ const StudentAbstractReview: React.FC = () => {
     }
   };
 
+  // Separate active submissions from archived
+  const activeSubmissions = submissions.filter(s => 
+    s.status === "pending" || s.status === "reviewed" || s.status === "needs-revision"
+  );
+  
+  const archivedSubmissions = submissions.filter(s => 
+    s.status === "approved" || s.status === "rejected"
+  );
+
+  const filteredActiveSubmissions = activeSubmissions.filter(submission => 
+    filterStatus === "all" || submission.status === filterStatus
+  );
+
+  const filteredArchived = archivedSubmissions.filter(submission =>
+    archiveFilterStatus === "all" || submission.status === archiveFilterStatus
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -606,11 +628,22 @@ const StudentAbstractReview: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">Student Abstract Review</h2>
           <p className="text-gray-600">Review and provide feedback on student research submissions</p>
         </div>
+        <Button 
+          onClick={() => setIsArchiveModalOpen(true)}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <Archive className="h-4 w-4" />
+          View Archive ({archivedSubmissions.length})
+        </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Student Submissions</CardTitle>
+          <CardTitle>Active Submissions ({filteredActiveSubmissions.length})</CardTitle>
+          <CardDescription>
+            Review pending student research abstracts. Approved/rejected submissions are in the archive.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -618,12 +651,14 @@ const StudentAbstractReview: React.FC = () => {
               <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mr-2" />
               <span className="text-gray-600">Loading submissions...</span>
             </div>
-          ) : submissions.length === 0 ? (
+          ) : filteredActiveSubmissions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <FileText className="w-12 h-12 text-gray-300 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Submissions Yet</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Active Submissions</h3>
               <p className="text-gray-500 max-w-sm">
-                Student abstract submissions will appear here once they are submitted for review.
+                {filterStatus === "all" 
+                  ? "All submissions have been reviewed. Check the archive for completed reviews."
+                  : `No ${filterStatus} submissions found.`}
               </p>
             </div>
           ) : (
@@ -636,7 +671,7 @@ const StudentAbstractReview: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {submissions.map((submission) => (
+                {filteredActiveSubmissions.map((submission) => (
                   <TableRow key={submission.id}>
                     <TableCell>
                       <div className="space-y-2">
@@ -896,6 +931,174 @@ const StudentAbstractReview: React.FC = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive Modal */}
+      <Dialog open={isArchiveModalOpen} onOpenChange={setIsArchiveModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5 text-purple-600" />
+              Reviewed Abstracts Archive
+            </DialogTitle>
+            <DialogDescription>
+              View all approved and rejected abstract submissions
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Archive Stats */}
+            <div className="grid grid-cols-3 gap-4">
+              <Card className="border-l-4 border-l-purple-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Archived</p>
+                      <p className="text-2xl font-bold text-gray-900">{archivedSubmissions.length}</p>
+                    </div>
+                    <Archive className="w-6 h-6 text-purple-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-green-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Approved</p>
+                      <p className="text-2xl font-bold text-green-900">
+                        {archivedSubmissions.filter(s => s.status === "approved").length}
+                      </p>
+                    </div>
+                    <CheckCircle2 className="w-6 h-6 text-green-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-red-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Rejected</p>
+                      <p className="text-2xl font-bold text-red-900">
+                        {archivedSubmissions.filter(s => s.status === "rejected").length}
+                      </p>
+                    </div>
+                    <XCircle className="w-6 h-6 text-red-500" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Archive Filter */}
+            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border">
+              <Label className="text-sm font-medium">Filter:</Label>
+              <Select 
+                value={archiveFilterStatus} 
+                onValueChange={(value: any) => setArchiveFilterStatus(value)}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Archived</SelectItem>
+                  <SelectItem value="approved">Approved Only</SelectItem>
+                  <SelectItem value="rejected">Rejected Only</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-gray-600">
+                Showing {filteredArchived.length} of {archivedSubmissions.length} archived submissions
+              </span>
+            </div>
+
+            {/* Archive Table */}
+            {filteredArchived.length > 0 ? (
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Student & Title</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Review Date</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredArchived.map((submission) => (
+                        <TableRow key={submission.id}>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="font-medium text-gray-900">
+                                {submission.title}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-500">
+                                <User className="w-3 h-3 mr-1" />
+                                {submission.studentName} ({submission.studentId})
+                              </div>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {submission.keywords.map((keyword, idx) => (
+                                  <Badge key={idx} variant="outline" className="text-xs">
+                                    {keyword}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={getStatusColor(submission.status)}
+                              className="flex items-center space-x-1 w-fit"
+                            >
+                              {getStatusIcon(submission.status)}
+                              <span>{submission.status.charAt(0).toUpperCase() + submission.status.slice(1)}</span>
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center text-sm">
+                              <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                              {submission.lastReviewDate 
+                                ? new Date(submission.lastReviewDate).toLocaleDateString()
+                                : 'N/A'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openReviewDialog(submission)}
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Archive className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Archived Submissions</h3>
+                  <p className="text-gray-500">
+                    {archiveFilterStatus === "all" 
+                      ? "No approved or rejected submissions yet."
+                      : `No ${archiveFilterStatus} submissions found.`}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          <div className="flex justify-end pt-4 border-t">
+            <Button onClick={() => setIsArchiveModalOpen(false)}>
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
