@@ -475,7 +475,8 @@ const StudentAbstractReview: React.FC = () => {
         .update({
           status: 'approved',
           reviewed_date: new Date().toISOString(),
-          reviewed_by: user.id
+          reviewed_by: user.id,
+          review_comments: reviewForm.feedback
         })
         .eq('id', selectedSubmission.id);
 
@@ -488,6 +489,7 @@ const StudentAbstractReview: React.FC = () => {
               ...submission,
               status: "approved" as any,
               lastReviewDate: new Date().toISOString().split('T')[0],
+              feedback: reviewForm.feedback
             }
           : submission
       );
@@ -500,11 +502,11 @@ const StudentAbstractReview: React.FC = () => {
         title: "Abstract Approved",
         description: `"${selectedSubmission.title}" has been approved successfully.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error approving abstract:', error);
       toast({
         title: "Error",
-        description: "Failed to approve abstract. Please try again.",
+        description: error?.message || "Failed to approve abstract. Please try again.",
         variant: "destructive",
       });
     }
@@ -520,7 +522,8 @@ const StudentAbstractReview: React.FC = () => {
         .update({
           status: 'rejected',
           reviewed_date: new Date().toISOString(),
-          reviewed_by: user.id
+          reviewed_by: user.id,
+          review_comments: reviewForm.feedback
         })
         .eq('id', selectedSubmission.id);
 
@@ -533,6 +536,7 @@ const StudentAbstractReview: React.FC = () => {
               ...submission,
               status: "rejected" as any,
               lastReviewDate: new Date().toISOString().split('T')[0],
+              feedback: reviewForm.feedback
             }
           : submission
       );
@@ -546,11 +550,11 @@ const StudentAbstractReview: React.FC = () => {
         description: `"${selectedSubmission.title}" has been rejected.`,
         variant: "destructive",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error rejecting abstract:', error);
       toast({
         title: "Error",
-        description: "Failed to reject abstract. Please try again.",
+        description: error?.message || "Failed to reject abstract. Please try again.",
         variant: "destructive",
       });
     }
@@ -905,29 +909,105 @@ const StudentAbstractReview: React.FC = () => {
                 </div>
               )}
 
+              {/* Feedback Section - Conditional Display */}
+              {(selectedSubmission.status === 'approved' || selectedSubmission.status === 'rejected') && selectedSubmission.feedback ? (
+                /* Read-only Feedback Display for Archived Submissions */
+                <div className={`border-t-4 rounded-lg p-4 ${
+                  selectedSubmission.status === 'approved' 
+                    ? 'border-t-green-500 bg-green-50' 
+                    : 'border-t-red-500 bg-red-50'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    {selectedSubmission.status === 'approved' ? (
+                      <CheckCircle2 className="h-6 w-6 text-green-600 mt-1 flex-shrink-0" />
+                    ) : (
+                      <XCircle className="h-6 w-6 text-red-600 mt-1 flex-shrink-0" />
+                    )}
+                    <div className="flex-1">
+                      <h3 className={`text-lg font-semibold mb-1 ${
+                        selectedSubmission.status === 'approved' ? 'text-green-900' : 'text-red-900'
+                      }`}>
+                        Faculty Feedback - {selectedSubmission.status === 'approved' ? 'Approved' : 'Rejected'}
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-3">
+                        This feedback was provided to the student
+                      </p>
+                      <div className="bg-white border rounded-lg p-4">
+                        <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+                          {selectedSubmission.feedback}
+                        </p>
+                      </div>
+                      {selectedSubmission.lastReviewDate && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          Reviewed on {new Date(selectedSubmission.lastReviewDate).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Editable Feedback Form for Pending Submissions */
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 border-t-4 border-t-blue-500 bg-white rounded-lg p-4">
+                  {/* Left Column - Header & Instructions */}
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold text-gray-900">Faculty Feedback</h3>
+                    <p className="text-sm text-gray-600">
+                      Provide feedback to the student about their submission
+                    </p>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                      <p className="text-xs text-blue-800">
+                        <span className="font-semibold">Note:</span> This feedback will be visible to the student
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right Column - Textarea */}
+                  <div>
+                    <Label htmlFor="feedback" className="text-sm font-medium">
+                      Feedback/Comments
+                      <span className="text-red-500 ml-1">*</span>
+                    </Label>
+                    <textarea
+                      id="feedback"
+                      value={reviewForm.feedback}
+                      onChange={(e) => setReviewForm({ ...reviewForm, feedback: e.target.value })}
+                      placeholder="Provide detailed feedback about the abstract quality, strengths, weaknesses, or suggestions for improvement..."
+                      className="mt-2 w-full min-h-[140px] p-3 border rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex justify-end gap-3 pt-4">
                 <Button 
                   variant="outline" 
                   onClick={() => setIsReviewDialogOpen(false)}
                 >
-                  Cancel
+                  {(selectedSubmission.status === 'approved' || selectedSubmission.status === 'rejected') ? 'Close' : 'Cancel'}
                 </Button>
-                <Button 
-                  variant="destructive"
-                  onClick={handleReject}
-                  className="flex items-center space-x-2"
-                >
-                  <XCircle className="w-4 h-4" />
-                  <span>Reject</span>
-                </Button>
-                <Button 
-                  onClick={handleApprove}
-                  className="bg-green-600 hover:bg-green-700 flex items-center space-x-2"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Approve</span>
-                </Button>
+                {selectedSubmission.status !== 'approved' && selectedSubmission.status !== 'rejected' && (
+                  <>
+                    <Button 
+                      variant="destructive"
+                      onClick={handleReject}
+                      className="flex items-center space-x-2"
+                      disabled={!reviewForm.feedback.trim()}
+                    >
+                      <XCircle className="w-4 h-4" />
+                      <span>Reject</span>
+                    </Button>
+                    <Button 
+                      onClick={handleApprove}
+                      className="bg-green-600 hover:bg-green-700 flex items-center space-x-2"
+                      disabled={!reviewForm.feedback.trim()}
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Approve</span>
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           )}

@@ -116,7 +116,7 @@ export const MyAbstracts: React.FC = () => {
         status: abstract.status,
         submitted_date: abstract.submitted_date,
         review_date: abstract.reviewed_date,
-        feedback: null, // Will need to add feedback column to schema if needed
+        feedback: abstract.review_comments || null,
         entity_extraction: abstract.extracted_entities ? {
           technologies: abstract.extracted_entities.technologies || [],
           domains: abstract.extracted_entities.domains || [],
@@ -170,7 +170,7 @@ export const MyAbstracts: React.FC = () => {
   };
 
   const createEntityVisualization = (abstract: any) => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || !abstract.entity_extraction) return;
 
     // Clear previous visualization
     d3.select(svgRef.current).selectAll("*").remove();
@@ -187,48 +187,67 @@ export const MyAbstracts: React.FC = () => {
     // Create container for zoom/pan
     const container = svg.append("g");
 
-    // Filter and rank keywords by IT relevance, removing duplicates
-    const seenKeywords = new Set<string>();
-    const uniqueKeywords = abstract.keywords
-      .filter((keyword: string) => {
-        const normalizedKeyword = keyword.toLowerCase().trim();
-        if (seenKeywords.has(normalizedKeyword)) {
-          return false;
-        }
-        seenKeywords.add(normalizedKeyword);
-        return true;
-      });
+    // Collect all entities from extracted data
+    const allEntities: string[] = [
+      ...(abstract.entity_extraction.technologies || []),
+      ...(abstract.entity_extraction.domains || []),
+      ...(abstract.entity_extraction.methodologies || [])
+    ];
 
-    // Show top 10 or all if less than 12
-    const displayKeywords = uniqueKeywords.length < 12 
-      ? uniqueKeywords 
-      : uniqueKeywords.slice(0, 10);
+    // Remove duplicates (case-insensitive)
+    const seenEntities = new Set<string>();
+    const uniqueEntities = allEntities.filter((entity: string) => {
+      const normalized = entity.toLowerCase().trim();
+      if (seenEntities.has(normalized)) {
+        return false;
+      }
+      seenEntities.add(normalized);
+      return true;
+    });
 
-    // Create nodes: 1 center node + entity nodes from keywords
+    // Show top 15 or all if less
+    const displayEntities = uniqueEntities.length < 18 
+      ? uniqueEntities 
+      : uniqueEntities.slice(0, 15);
+
+    if (displayEntities.length === 0) {
+      // Show message if no entities
+      svg.append("text")
+        .attr("x", width / 2)
+        .attr("y", height / 2)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#9ca3af")
+        .text("No entities extracted yet");
+      return;
+    }
+
+    // Create nodes: 1 center node + entity nodes
     const nodes: Node[] = [
       { id: 'center', label: abstract.title.substring(0, 20) + '...', type: 'center', x: width / 2, y: height / 2 }
     ];
 
-    displayKeywords.forEach((keyword: string, index: number) => {
+    displayEntities.forEach((entity: string, index: number) => {
       nodes.push({
         id: `entity-${index}`,
-        label: keyword,
+        label: entity,
         type: 'entity'
       });
     });
 
     // Create links from center to all entities
-    const links: Link[] = displayKeywords.map((_: string, index: number) => ({
+    const links: Link[] = displayEntities.map((_: string, index: number) => ({
       source: 'center',
       target: `entity-${index}`
     }));
 
-    // Create force simulation
+    // Create force simulation with optimized settings for faster rendering
     const simulation = d3.forceSimulation(nodes)
-      .force("link", d3.forceLink(links).id((d: any) => d.id).distance(100))
-      .force("charge", d3.forceManyBody().strength(-300))
+      .force("link", d3.forceLink(links).id((d: any) => d.id).distance(80))
+      .force("charge", d3.forceManyBody().strength(-200))
       .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(40));
+      .force("collision", d3.forceCollide().radius(35))
+      .alphaDecay(0.05) // Faster convergence
+      .velocityDecay(0.6); // More friction for quicker settling
 
     // Create links
     const link = container.append("g")
@@ -244,14 +263,31 @@ export const MyAbstracts: React.FC = () => {
       .selectAll("g")
       .data(nodes)
       .join("g")
-      .style("cursor", "pointer");
+      .style("cursor", "grab")
+      .call(d3.drag<any, Node>()
+        .on("start", (event, d) => {
+          if (!event.active) simulation.alphaTarget(0.3).restart();
+          d.fx = d.x;
+          d.fy = d.y;
+        })
+        .on("drag", (event, d) => {
+          d.fx = event.x;
+          d.fy = event.y;
+        })
+        .on("end", (event, d) => {
+          if (!event.active) simulation.alphaTarget(0);
+          d.fx = null;
+          d.fy = null;
+        })
+      );
 
     // Add circles to nodes
     nodeGroup.append("circle")
       .attr("r", (d) => d.type === 'center' ? 40 : 25)
       .attr("fill", (d) => d.type === 'center' ? "#3b82f6" : "#fb923c")
       .attr("stroke", "#fff")
-      .attr("stroke-width", 2);
+      .attr("stroke-width", 2)
+      .attr("stroke-opacity", 0.9);
 
     // Add labels
     nodeGroup.append("text")
@@ -260,10 +296,31 @@ export const MyAbstracts: React.FC = () => {
       .attr("dy", (d) => d.type === 'center' ? 50 : 35)
       .attr("font-size", (d) => d.type === 'center' ? "11px" : "10px")
       .attr("font-weight", (d) => d.type === 'center' ? "600" : "500")
-      .attr("fill", "#374151");
+      .attr("fill", "#374151")
+      .style("pointer-events", "none");
 
-    // Update positions on tick
+    // Add hover effects
+    nodeGroup
+      .on("mouseover", function() {
+        d3.select(this).select("circle")
+          .transition()
+          .duration(200)
+          .attr("r", (d: any) => d.type === 'center' ? 45 : 30)
+          .attr("stroke-width", 3);
+      })
+      .on("mouseout", function() {
+        d3.select(this).select("circle")
+          .transition()
+          .duration(200)
+          .attr("r", (d: any) => d.type === 'center' ? 40 : 25)
+          .attr("stroke-width", 2);
+      });
+
+    // Update positions on tick with early stopping
+    let tickCount = 0;
     simulation.on("tick", () => {
+      tickCount++;
+      
       link
         .attr("x1", (d: any) => d.source.x)
         .attr("y1", (d: any) => d.source.y)
@@ -271,15 +328,25 @@ export const MyAbstracts: React.FC = () => {
         .attr("y2", (d: any) => d.target.y);
 
       nodeGroup.attr("transform", (d) => `translate(${d.x},${d.y})`);
+      
+      // Stop simulation after 100 ticks for faster rendering
+      if (tickCount > 100) {
+        simulation.stop();
+      }
     });
+
+    // Warm start - run a few iterations immediately
+    for (let i = 0; i < 50; i++) {
+      simulation.tick();
+    }
   };
 
-  // Create visualization when dialog opens
+  // Create visualization when dialog opens with shorter delay
   React.useEffect(() => {
     if (isViewDialogOpen && selectedAbstract && svgRef.current) {
       const timer = setTimeout(() => {
         createEntityVisualization(selectedAbstract);
-      }, 100);
+      }, 50); // Reduced from 100ms to 50ms
       return () => clearTimeout(timer);
     }
   }, [isViewDialogOpen, selectedAbstract]);
@@ -667,12 +734,45 @@ export const MyAbstracts: React.FC = () => {
 
               {/* Feedback Section */}
               {selectedAbstract.feedback && (
-                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="h-4 w-4 text-blue-600" />
-                    <h4 className="font-semibold text-sm text-blue-900">Reviewer Feedback</h4>
+                <div className={`border p-4 rounded-lg ${
+                  selectedAbstract.status === 'approved' 
+                    ? 'bg-green-50 border-green-200' 
+                    : selectedAbstract.status === 'rejected'
+                    ? 'bg-red-50 border-red-200'
+                    : 'bg-yellow-50 border-yellow-200'
+                }`}>
+                  <div className="flex items-start gap-2 mb-2">
+                    {selectedAbstract.status === 'approved' ? (
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                    ) : selectedAbstract.status === 'rejected' ? (
+                      <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      <h4 className={`font-semibold text-sm mb-1 ${
+                        selectedAbstract.status === 'approved' 
+                          ? 'text-green-900' 
+                          : selectedAbstract.status === 'rejected'
+                          ? 'text-red-900'
+                          : 'text-yellow-900'
+                      }`}>
+                        Faculty Feedback
+                        {selectedAbstract.status === 'approved' && ' - Approved'}
+                        {selectedAbstract.status === 'rejected' && ' - Rejected'}
+                        {(selectedAbstract.status === 'reviewed' || selectedAbstract.status === 'needs-revision') && ' - Needs Revision'}
+                      </h4>
+                      <p className={`text-sm leading-relaxed ${
+                        selectedAbstract.status === 'approved' 
+                          ? 'text-green-800' 
+                          : selectedAbstract.status === 'rejected'
+                          ? 'text-red-800'
+                          : 'text-yellow-800'
+                      }`}>
+                        {selectedAbstract.feedback}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm text-blue-800 leading-relaxed">{selectedAbstract.feedback}</p>
                 </div>
               )}
             </div>
