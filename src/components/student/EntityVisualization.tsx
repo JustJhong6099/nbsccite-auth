@@ -155,6 +155,30 @@ export const EntityVisualization: React.FC = () => {
   // Fetch approved abstracts from Supabase
   useEffect(() => {
     fetchApprovedAbstracts();
+    
+    // Set up real-time subscription for approved abstracts
+    const channel = supabase
+      .channel('entity_visualization_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'abstracts',
+          filter: 'status=eq.approved'
+        },
+        (payload) => {
+          console.log('Real-time update received:', payload);
+          // Refresh data when approved abstracts change
+          fetchApprovedAbstracts();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Filter abstracts by year
@@ -826,7 +850,9 @@ export const EntityVisualization: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle>Research Entity Frequency</CardTitle>
-              <CardDescription>Top entities extracted from approved abstracts</CardDescription>
+              <CardDescription>
+                Real-time analysis of top entities extracted from all approved research abstracts
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -905,10 +931,24 @@ export const EntityVisualization: React.FC = () => {
                   </div>
 
                   {/* Info Card */}
+                  <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                    <div className="flex items-start gap-2 mb-2">
+                      <Zap className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-semibold text-green-800 mb-1">Real-Time Entity Tracking</p>
+                        <p className="text-xs text-gray-700 leading-relaxed">
+                          This chart displays the <strong>top {frequencyData.length} most frequent entities</strong> extracted from <strong>{filteredAbstracts.length} approved research abstracts</strong>.
+                          Data includes technologies, domains, and methodologies, and updates automatically when new abstracts are approved.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Visualization Tip */}
                   <div className="p-4 bg-gray-50 rounded-lg border">
                     <p className="text-xs text-gray-600 leading-relaxed">
                       <strong className="text-gray-700">Tip:</strong> The colors on the left match the pie chart slices. 
-                      Hover over the pie chart for detailed information about each entity. Each slice animates in sequence.
+                      Hover over the pie chart for detailed information about each entity.
                     </p>
                   </div>
                 </div>

@@ -320,6 +320,9 @@ export const ResearchInsights: React.FC = () => {
   const [selectedTech, setSelectedTech] = useState<EmergingTech | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  // State for Classification Guide modal
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
+  
   // State for Emerging Technologies filtering
   const [techSearchTerm, setTechSearchTerm] = useState('');
   const [techCategoryFilter, setTechCategoryFilter] = useState<string>('all');
@@ -844,10 +847,177 @@ export const ResearchInsights: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Research Insights</h2>
-        <p className="text-gray-600">Discover patterns and opportunities in your research portfolio</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Research Insights</h2>
+          <p className="text-gray-600">Discover patterns and opportunities in your research portfolio</p>
+        </div>
+        
+        {/* Classification Guide Button */}
+        <Button
+          variant="outline"
+          onClick={() => setIsGuideModalOpen(true)}
+          className="flex items-center gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+        >
+          <Brain className="h-4 w-4" />
+          Understanding Classifications
+        </Button>
       </div>
+
+      {/* Classification Guide Modal */}
+      <Dialog open={isGuideModalOpen} onOpenChange={setIsGuideModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-900">
+              <Brain className="h-5 w-5" />
+              Understanding Research Classifications
+            </DialogTitle>
+            <DialogDescription className="text-blue-700">
+              How we analyze and categorize research abstracts in the system
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b-2 border-blue-200 bg-blue-50">
+                  <th className="text-left py-3 px-4 font-semibold text-blue-900">Category</th>
+                  <th className="text-left py-3 px-4 font-semibold text-blue-900">Basis</th>
+                  <th className="text-left py-3 px-4 font-semibold text-blue-900">How to Identify</th>
+                  <th className="text-left py-3 px-4 font-semibold text-blue-900">Example Output</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {/* Domains */}
+                <tr className="border-b border-gray-200 hover:bg-green-50">
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2 font-medium text-green-700">
+                      🎯 <span>Domains</span>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">Application areas</div>
+                  </td>
+                  <td className="py-3 px-4 text-gray-700">
+                    Application areas or fields of study your research focuses on
+                  </td>
+                  <td className="py-3 px-4 text-gray-600">
+                    Keywords indicating <strong>where</strong> the technology or method is applied
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="flex flex-wrap gap-1">
+                      <Badge variant="outline" className="text-xs">Education</Badge>
+                      <Badge variant="outline" className="text-xs">Healthcare</Badge>
+                      <Badge variant="outline" className="text-xs">Agriculture</Badge>
+                    </div>
+                  </td>
+                </tr>
+
+                {/* Technologies */}
+                <tr className="border-b border-gray-200 hover:bg-blue-50">
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2 font-medium text-blue-700">
+                      ⚙️ <span>Technologies</span>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">Tools & systems</div>
+                  </td>
+                  <td className="py-3 px-4 text-gray-700">
+                    Tools, systems, computing models, or software frameworks used
+                  </td>
+                  <td className="py-3 px-4 text-gray-600">
+                    Keywords describing <strong>what</strong> is being built or used
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="flex flex-wrap gap-1">
+                      <Badge variant="outline" className="text-xs">AI</Badge>
+                      <Badge variant="outline" className="text-xs">IoT</Badge>
+                      <Badge variant="outline" className="text-xs">Web-Based Systems</Badge>
+                    </div>
+                  </td>
+                </tr>
+
+                {/* Methodologies */}
+                <tr className="border-b border-gray-200 hover:bg-orange-50">
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2 font-medium text-orange-700">
+                      📊 <span>Methodologies</span>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">Approaches used</div>
+                  </td>
+                  <td className="py-3 px-4 text-gray-700">
+                    Research approaches, techniques, or frameworks used to conduct the study
+                  </td>
+                  <td className="py-3 px-4 text-gray-600">
+                    Keywords describing <strong>how</strong> the research is done
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="flex flex-wrap gap-1">
+                      <Badge variant="outline" className="text-xs">Agile Development</Badge>
+                      <Badge variant="outline" className="text-xs">Data Mining</Badge>
+                      <Badge variant="outline" className="text-xs">Machine Learning</Badge>
+                    </div>
+                  </td>
+                </tr>
+
+                {/* Recurring Themes */}
+                <tr className="border-b border-gray-200 hover:bg-purple-50">
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2 font-medium text-purple-700">
+                      <Brain className="h-4 w-4" /> <span>Recurring Themes</span>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">Pattern analysis</div>
+                  </td>
+                  <td className="py-3 px-4 text-gray-700">
+                    Frequent combinations of domain-tech-methodology
+                  </td>
+                  <td className="py-3 px-4 text-gray-600">
+                    Count and cluster repeated topics
+                  </td>
+                  <td className="py-3 px-4 text-gray-700 italic">
+                    "Management Systems in Education"
+                  </td>
+                </tr>
+
+                {/* Trends & Analysis */}
+                <tr className="border-b border-gray-200 hover:bg-green-50">
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2 font-medium text-green-700">
+                      <Activity className="h-4 w-4" /> <span>Trends & Analysis</span>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">Temporal changes</div>
+                  </td>
+                  <td className="py-3 px-4 text-gray-700">
+                    Changes over time in research focus
+                  </td>
+                  <td className="py-3 px-4 text-gray-600">
+                    Year-based counts and graphs
+                  </td>
+                  <td className="py-3 px-4 text-gray-700 italic">
+                    "Rise of Mobile-Based Systems (2020-2025)"
+                  </td>
+                </tr>
+
+                {/* Emerging Technologies */}
+                <tr className="hover:bg-yellow-50">
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2 font-medium text-yellow-700">
+                      <Zap className="h-4 w-4" /> <span>Emerging Technologies</span>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">Innovation indicators</div>
+                  </td>
+                  <td className="py-3 px-4 text-gray-700">
+                    Recently introduced tools or concepts
+                  </td>
+                  <td className="py-3 px-4 text-gray-600">
+                    New, low-frequency, modern keywords
+                  </td>
+                  <td className="py-3 px-4 text-gray-700 italic">
+                    "AI Chatbots, Blockchain, AR/VR"
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {isLoading ? (
         <Card>
@@ -872,20 +1042,31 @@ export const ResearchInsights: React.FC = () => {
         </Card>
       ) : (
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="themes" className="flex items-center gap-2">
-            <Brain className="h-4 w-4" />
-            Research Themes
-          </TabsTrigger>
-          <TabsTrigger value="trends" className="flex items-center gap-2">
-            <Activity className="h-4 w-4" />
-            Trend Analysis
-          </TabsTrigger>
-          <TabsTrigger value="emerging" className="flex items-center gap-2">
-            <Zap className="h-4 w-4" />
-            Emerging Technologies
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between mb-2">
+          <TabsList className="grid w-full grid-cols-3 max-w-2xl">
+            <TabsTrigger value="themes" className="flex items-center gap-2">
+              <Brain className="h-4 w-4" />
+              Research Themes
+            </TabsTrigger>
+            <TabsTrigger value="trends" className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Trend Analysis
+            </TabsTrigger>
+            <TabsTrigger value="emerging" className="flex items-center gap-2">
+              <Zap className="h-4 w-4" />
+              Emerging Technologies
+            </TabsTrigger>
+          </TabsList>
+          
+          {/* Real-Time Indicator Badge */}
+          <Badge variant="outline" className="ml-auto flex items-center gap-1 border-green-300 text-green-700 bg-green-50">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            Live Data
+          </Badge>
+        </div>
 
         {/* Research Themes Tab */}
         <TabsContent value="themes" className="space-y-6">
@@ -893,7 +1074,7 @@ export const ResearchInsights: React.FC = () => {
             <CardHeader>
               <CardTitle>Recurring Research Themes in NBSC-ICS</CardTitle>
               <CardDescription>
-                Analysis of research patterns and emerging themes based on abstract submissions
+                Real-time analysis of research patterns and emerging themes based on approved abstract submissions
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -985,7 +1166,7 @@ export const ResearchInsights: React.FC = () => {
             <CardHeader>
               <CardTitle>Research Evolution Timeline</CardTitle>
               <CardDescription>
-                Track how research themes have evolved from 2020-2025 at NBSC-ICS
+                Real-time tracking of how research themes have evolved from 2020-2025 at NBSC-ICS
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1033,7 +1214,7 @@ export const ResearchInsights: React.FC = () => {
                 Emerging Technologies in Information Technology
               </CardTitle>
               <CardDescription>
-                Explore cutting-edge technologies with high research potential for NBSC-ICS students
+                Real-time exploration of cutting-edge technologies with high research potential for NBSC-ICS students
               </CardDescription>
             </CardHeader>
             <CardContent>
