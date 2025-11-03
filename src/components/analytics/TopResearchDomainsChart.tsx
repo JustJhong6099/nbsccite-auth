@@ -1,7 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { countNormalizedTerms, getTopTerms } from '@/lib/data-normalization';
+import { countNormalizedTerms, getTopTermsByCategory } from '@/lib/data-normalization';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Bar } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ChartOptions,
+} from 'chart.js';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 interface DomainData {
   name: string;
@@ -11,15 +32,35 @@ interface DomainData {
 
 type FilterType = 'domains' | 'technologies' | 'methodologies';
 
-const COLORS = [
-  '#3b82f6', // blue
-  '#10b981', // green
-  '#f59e0b', // orange
-  '#a855f7', // purple
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#8b5cf6', // violet
-  '#f97316', // orange-red
+// Diverse light color palette - each bar gets a different color
+const LIGHT_COLORS = [
+  'rgba(147, 197, 253, 0.7)',  // Light blue
+  'rgba(167, 243, 208, 0.7)',  // Light emerald
+  'rgba(253, 186, 116, 0.7)',  // Light orange
+  'rgba(196, 181, 253, 0.7)',  // Light purple
+  'rgba(251, 207, 232, 0.7)',  // Light pink
+  'rgba(165, 243, 252, 0.7)',  // Light cyan
+  'rgba(196, 181, 253, 0.7)',  // Light violet
+  'rgba(254, 215, 170, 0.7)',  // Light amber
+  'rgba(191, 219, 254, 0.7)',  // Light sky blue
+  'rgba(187, 247, 208, 0.7)',  // Light green
+  'rgba(254, 202, 202, 0.7)',  // Light red
+  'rgba(224, 231, 255, 0.7)',  // Light indigo
+];
+
+const BORDER_COLORS = [
+  'rgba(59, 130, 246, 1)',     // blue-500
+  'rgba(16, 185, 129, 1)',     // emerald-500
+  'rgba(249, 115, 22, 1)',     // orange-500
+  'rgba(168, 85, 247, 1)',     // purple-500
+  'rgba(236, 72, 153, 1)',     // pink-500
+  'rgba(6, 182, 212, 1)',      // cyan-500
+  'rgba(139, 92, 246, 1)',     // violet-500
+  'rgba(245, 158, 11, 1)',     // amber-500
+  'rgba(14, 165, 233, 1)',     // sky-500
+  'rgba(34, 197, 94, 1)',      // green-500
+  'rgba(239, 68, 68, 1)',      // red-500
+  'rgba(99, 102, 241, 1)',     // indigo-500
 ];
 
 export const TopResearchDomainsChart: React.FC = () => {
@@ -72,16 +113,16 @@ export const TopResearchDomainsChart: React.FC = () => {
 
       console.log(`${activeFilter} counts:`, domainCounts);
 
-      // Get top 8 items using utility function
-      const sortedDomains = getTopTerms(domainCounts, 8);
+      // Get top 8 items using category-filtered utility function
+      const sortedDomains = getTopTermsByCategory(domainCounts, 8, activeFilter);
 
-      console.log(`Top ${activeFilter}:`, sortedDomains);
+      console.log(`Top ${activeFilter} (filtered):`, sortedDomains);
 
-      // Add colors
-      const chartData: DomainData[] = sortedDomains.map(([name, count], index) => ({
+      // Format data for Chart.js
+      const chartData: DomainData[] = sortedDomains.map(([name, count]) => ({
         name,
         count,
-        color: COLORS[index % COLORS.length]
+        color: '' // Will use gradient instead
       }));
 
       setData(chartData);
@@ -115,37 +156,107 @@ export const TopResearchDomainsChart: React.FC = () => {
       );
     }
 
+    // Prepare data for horizontal bar chart with diverse light colors
+    const chartData = {
+      labels: data.map(d => d.name),
+      datasets: [
+        {
+          label: `Number of Papers`,
+          data: data.map(d => d.count),
+          backgroundColor: data.map((_, index) => LIGHT_COLORS[index % LIGHT_COLORS.length]),
+          borderColor: data.map((_, index) => BORDER_COLORS[index % BORDER_COLORS.length]),
+          borderWidth: 2,
+          borderRadius: 6,
+          barThickness: 28,
+        },
+      ],
+    };
+
+    const options: ChartOptions<'bar'> = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: {
+        duration: 1200,
+        delay: (context) => {
+          let delay = 0;
+          if (context.type === 'data' && context.mode === 'default') {
+            delay = context.dataIndex * 120; // 120ms delay between each bar for smooth stagger
+          }
+          return delay;
+        },
+        easing: 'easeInOutQuart',
+      },
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          padding: 12,
+          cornerRadius: 8,
+          titleFont: {
+            size: 14,
+            weight: 'bold',
+          },
+          bodyFont: {
+            size: 13,
+          },
+          callbacks: {
+            label: (context) => {
+              return `${context.parsed.y} ${context.parsed.y === 1 ? 'paper' : 'papers'}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false,
+          },
+          border: {
+            display: false,
+          },
+          ticks: {
+            font: {
+              size: 11,
+              weight: 'bold' as const,
+            },
+            color: '#1f2937',
+            maxRotation: 45,
+            minRotation: 45,
+          },
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)',
+          },
+          border: {
+            display: false,
+          },
+          ticks: {
+            stepSize: 1,
+            font: {
+              size: 11,
+            },
+            color: '#6b7280',
+          },
+          title: {
+            display: true,
+            text: 'Number of Papers',
+            font: {
+              size: 12,
+              weight: 'bold',
+            },
+            color: '#374151',
+          },
+        },
+      },
+    };
+
     return (
-      <div className="space-y-4">
-        {data.map((domain, index) => (
-          <div 
-            key={index} 
-            className="space-y-2 animate-in fade-in slide-in-from-left-4"
-            style={{ 
-              animationDelay: `${index * 80}ms`,
-              animationDuration: '600ms',
-              animationFillMode: 'both'
-            }}
-          >
-            {/* Domain name and count */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-900">{domain.name}</span>
-              <span className="text-sm font-medium text-gray-600">{domain.count} papers</span>
-            </div>
-            
-            {/* Progress bar */}
-            <div className="relative w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ease-out"
-                style={{ 
-                  width: `${(domain.count / Math.max(...data.map(d => d.count))) * 100}%`,
-                  backgroundColor: domain.color,
-                  transitionDelay: `${index * 80}ms`
-                }}
-              />
-            </div>
-          </div>
-        ))}
+      <div className="h-[400px]">
+        <Bar key={activeFilter} data={chartData} options={options} />
       </div>
     );
   };
@@ -153,20 +264,35 @@ export const TopResearchDomainsChart: React.FC = () => {
   return (
     <Tabs value={activeFilter} onValueChange={(value) => setActiveFilter(value as FilterType)}>
       <TabsList className="grid w-full grid-cols-3 mb-4">
-        <TabsTrigger value="domains">Domains</TabsTrigger>
-        <TabsTrigger value="technologies">Technologies</TabsTrigger>
-        <TabsTrigger value="methodologies">Methodologies</TabsTrigger>
+        <TabsTrigger value="domains" className="data-[state=active]:bg-green-100 data-[state=active]:text-green-800">
+          🎯 Domains
+        </TabsTrigger>
+        <TabsTrigger value="technologies" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800">
+          ⚙️ Technologies
+        </TabsTrigger>
+        <TabsTrigger value="methodologies" className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-800">
+          📊 Methodologies
+        </TabsTrigger>
       </TabsList>
       
       <TabsContent value="domains" className="mt-0">
+        <p className="text-xs text-gray-600 mb-4 italic">
+          Application areas and academic disciplines
+        </p>
         {renderContent()}
       </TabsContent>
       
       <TabsContent value="technologies" className="mt-0">
+        <p className="text-xs text-gray-600 mb-4 italic">
+          Tools, computing models, and software frameworks
+        </p>
         {renderContent()}
       </TabsContent>
       
       <TabsContent value="methodologies" className="mt-0">
+        <p className="text-xs text-gray-600 mb-4 italic">
+          Research and development approaches
+        </p>
         {renderContent()}
       </TabsContent>
     </Tabs>
