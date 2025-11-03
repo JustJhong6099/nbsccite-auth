@@ -170,10 +170,35 @@ export const MyAbstracts: React.FC = () => {
   };
 
   const createEntityVisualization = (abstract: any) => {
-    if (!svgRef.current || !abstract.entity_extraction) return;
+    console.log('🔍 [createEntityVisualization] Starting visualization');
+    console.log('📊 Abstract data:', abstract);
+    console.log('🎯 SVG Ref exists:', !!svgRef.current);
+    console.log('📦 Entity extraction data:', abstract.entity_extraction);
+    
+    if (!svgRef.current) {
+      console.error('❌ SVG ref is null - DOM not ready');
+      return;
+    }
+    
+    if (!abstract.entity_extraction) {
+      console.warn('⚠️ No entity_extraction data available');
+      // Show message in SVG
+      const svg = d3.select(svgRef.current);
+      svg.selectAll("*").remove();
+      svg.append("text")
+        .attr("x", "50%")
+        .attr("y", "50%")
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "middle")
+        .attr("fill", "#9ca3af")
+        .attr("font-size", "14px")
+        .text("No entity data available for this abstract");
+      return;
+    }
 
     // Clear previous visualization
     d3.select(svgRef.current).selectAll("*").remove();
+    console.log('✅ Cleared previous visualization');
 
     const width = 600;
     const height = 400;
@@ -193,6 +218,8 @@ export const MyAbstracts: React.FC = () => {
       ...(abstract.entity_extraction.domains || []),
       ...(abstract.entity_extraction.methodologies || [])
     ];
+    
+    console.log('📋 All entities collected:', allEntities.length, allEntities);
 
     // Remove duplicates (case-insensitive)
     const seenEntities = new Set<string>();
@@ -204,19 +231,25 @@ export const MyAbstracts: React.FC = () => {
       seenEntities.add(normalized);
       return true;
     });
+    
+    console.log('✨ Unique entities:', uniqueEntities.length, uniqueEntities);
 
     // Show top 15 or all if less
     const displayEntities = uniqueEntities.length < 18 
       ? uniqueEntities 
       : uniqueEntities.slice(0, 15);
+      
+    console.log('🎨 Display entities (max 15):', displayEntities.length, displayEntities);
 
     if (displayEntities.length === 0) {
+      console.warn('⚠️ No entities to display');
       // Show message if no entities
       svg.append("text")
         .attr("x", width / 2)
         .attr("y", height / 2)
         .attr("text-anchor", "middle")
         .attr("fill", "#9ca3af")
+        .attr("font-size", "14px")
         .text("No entities extracted yet");
       return;
     }
@@ -233,21 +266,25 @@ export const MyAbstracts: React.FC = () => {
         type: 'entity'
       });
     });
+    
+    console.log('🔷 Created nodes:', nodes.length);
 
     // Create links from center to all entities
     const links: Link[] = displayEntities.map((_: string, index: number) => ({
       source: 'center',
       target: `entity-${index}`
     }));
+    
+    console.log('🔗 Created links:', links.length);
 
-    // Create force simulation with optimized settings for faster rendering
+    // Create force simulation with same settings as AbstractsLibrary
     const simulation = d3.forceSimulation(nodes)
-      .force("link", d3.forceLink(links).id((d: any) => d.id).distance(80))
-      .force("charge", d3.forceManyBody().strength(-200))
+      .force("link", d3.forceLink(links).id((d: any) => d.id).distance(120))
+      .force("charge", d3.forceManyBody().strength(-400))
       .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(35))
-      .alphaDecay(0.05) // Faster convergence
-      .velocityDecay(0.6); // More friction for quicker settling
+      .force("collision", d3.forceCollide().radius(50));
+      
+    console.log('⚡ Force simulation created');
 
     // Create links
     const link = container.append("g")
@@ -263,12 +300,14 @@ export const MyAbstracts: React.FC = () => {
       .selectAll("g")
       .data(nodes)
       .join("g")
+      .attr("class", "node")
       .style("cursor", "grab")
       .call(d3.drag<any, Node>()
         .on("start", (event, d) => {
           if (!event.active) simulation.alphaTarget(0.3).restart();
           d.fx = d.x;
           d.fy = d.y;
+          d3.select(event.currentTarget).style("cursor", "grabbing");
         })
         .on("drag", (event, d) => {
           d.fx = event.x;
@@ -278,49 +317,59 @@ export const MyAbstracts: React.FC = () => {
           if (!event.active) simulation.alphaTarget(0);
           d.fx = null;
           d.fy = null;
+          d3.select(event.currentTarget).style("cursor", "grab");
         })
       );
 
-    // Add circles to nodes
+    // Add circles to nodes with enhanced hover effects matching AbstractsLibrary
     nodeGroup.append("circle")
-      .attr("r", (d) => d.type === 'center' ? 40 : 25)
+      .attr("r", (d) => d.type === 'center' ? 45 : 30)
       .attr("fill", (d) => d.type === 'center' ? "#3b82f6" : "#fb923c")
       .attr("stroke", "#fff")
-      .attr("stroke-width", 2)
-      .attr("stroke-opacity", 0.9);
-
-    // Add labels
-    nodeGroup.append("text")
-      .text((d) => d.label.length > 12 ? d.label.substring(0, 12) + '...' : d.label)
-      .attr("text-anchor", "middle")
-      .attr("dy", (d) => d.type === 'center' ? 50 : 35)
-      .attr("font-size", (d) => d.type === 'center' ? "11px" : "10px")
-      .attr("font-weight", (d) => d.type === 'center' ? "600" : "500")
-      .attr("fill", "#374151")
-      .style("pointer-events", "none");
-
-    // Add hover effects
-    nodeGroup
-      .on("mouseover", function() {
-        d3.select(this).select("circle")
+      .attr("stroke-width", 3)
+      .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))")
+      .on("mouseover", function(event, d) {
+        // Highlight node with smooth animation
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr("r", (d: any) => d.type === 'center' ? 50 : 35)
+          .style("filter", "drop-shadow(0 4px 8px rgba(0,0,0,0.2))");
+        
+        // Highlight connected links
+        link.style("stroke-opacity", (l: any) => 
+          (l.source.id === d.id || l.target.id === d.id) ? 1 : 0.2
+        )
+        .style("stroke-width", (l: any) => 
+          (l.source.id === d.id || l.target.id === d.id) ? 3 : 2
+        );
+      })
+      .on("mouseout", function() {
+        // Reset node with smooth animation
+        d3.select(this)
           .transition()
           .duration(200)
           .attr("r", (d: any) => d.type === 'center' ? 45 : 30)
-          .attr("stroke-width", 3);
-      })
-      .on("mouseout", function() {
-        d3.select(this).select("circle")
-          .transition()
-          .duration(200)
-          .attr("r", (d: any) => d.type === 'center' ? 40 : 25)
-          .attr("stroke-width", 2);
+          .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))");
+        
+        // Reset all links
+        link.style("stroke-opacity", 0.6)
+          .style("stroke-width", 2);
       });
 
-    // Update positions on tick with early stopping
-    let tickCount = 0;
+    // Add labels below nodes
+    nodeGroup.append("text")
+      .text((d) => d.label)
+      .attr("text-anchor", "middle")
+      .attr("dy", (d) => d.type === 'center' ? 60 : 45)
+      .attr("font-size", (d) => d.type === 'center' ? "13px" : "11px")
+      .attr("font-weight", (d) => d.type === 'center' ? "600" : "500")
+      .attr("fill", "#374151")
+      .style("pointer-events", "none")
+      .style("user-select", "none");
+
+    // Update positions on tick
     simulation.on("tick", () => {
-      tickCount++;
-      
       link
         .attr("x1", (d: any) => d.source.x)
         .attr("y1", (d: any) => d.source.y)
@@ -328,26 +377,37 @@ export const MyAbstracts: React.FC = () => {
         .attr("y2", (d: any) => d.target.y);
 
       nodeGroup.attr("transform", (d) => `translate(${d.x},${d.y})`);
-      
-      // Stop simulation after 100 ticks for faster rendering
-      if (tickCount > 100) {
-        simulation.stop();
-      }
     });
-
-    // Warm start - run a few iterations immediately
-    for (let i = 0; i < 50; i++) {
-      simulation.tick();
-    }
+    
+    console.log('✅ [createEntityVisualization] Visualization complete!');
   };
 
-  // Create visualization when dialog opens with shorter delay
+  // Create visualization when dialog opens
   React.useEffect(() => {
-    if (isViewDialogOpen && selectedAbstract && svgRef.current) {
+    console.log('🎬 [useEffect] Dialog state changed');
+    console.log('  - isViewDialogOpen:', isViewDialogOpen);
+    console.log('  - selectedAbstract:', selectedAbstract?.title);
+    console.log('  - svgRef.current:', !!svgRef.current);
+    
+    if (isViewDialogOpen && selectedAbstract) {
+      console.log('⏱️ Starting 150ms timer for visualization...');
       const timer = setTimeout(() => {
-        createEntityVisualization(selectedAbstract);
-      }, 50); // Reduced from 100ms to 50ms
-      return () => clearTimeout(timer);
+        console.log('⏰ Timer fired, checking svgRef...');
+        if (svgRef.current) {
+          console.log('✅ SVG ref available, creating visualization');
+          try {
+            createEntityVisualization(selectedAbstract);
+          } catch (error) {
+            console.error('❌ Error creating visualization:', error);
+          }
+        } else {
+          console.error('❌ SVG ref still not available after timeout!');
+        }
+      }, 150); // Match AbstractsLibrary delay
+      return () => {
+        console.log('🧹 Cleaning up timer');
+        clearTimeout(timer);
+      };
     }
   }, [isViewDialogOpen, selectedAbstract]);
 
@@ -653,45 +713,65 @@ export const MyAbstracts: React.FC = () => {
               </div>
 
               {/* Extracted Entities */}
-              <div>
-                <h4 className="font-semibold text-sm text-gray-900 mb-3">Extracted Entities</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Technologies</span>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {selectedAbstract.entity_extraction.technologies.map((tech: string, index: number) => (
-                        <Badge key={index} className="bg-blue-100 text-blue-800 hover:bg-blue-200 text-xs">
-                          {tech}
-                        </Badge>
-                      ))}
-                    </div>
+              {selectedAbstract.entity_extraction && (
+                <div>
+                  <h4 className="font-semibold text-sm text-gray-900 mb-3">Extracted Entities</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedAbstract.entity_extraction.technologies && selectedAbstract.entity_extraction.technologies.length > 0 && (
+                      <div>
+                        <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Technologies</span>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {selectedAbstract.entity_extraction.technologies.map((tech: string, index: number) => (
+                            <Badge key={index} className="bg-blue-100 text-blue-800 hover:bg-blue-200 text-xs">
+                              {tech}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {selectedAbstract.entity_extraction.domains && selectedAbstract.entity_extraction.domains.length > 0 && (
+                      <div>
+                        <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Research Domains</span>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {selectedAbstract.entity_extraction.domains.map((domain: string, index: number) => (
+                            <Badge key={index} className="bg-purple-100 text-purple-800 hover:bg-purple-200 text-xs">
+                              {domain}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Research Domains</span>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {selectedAbstract.entity_extraction.domains.map((domain: string, index: number) => (
-                        <Badge key={index} className="bg-purple-100 text-purple-800 hover:bg-purple-200 text-xs">
-                          {domain}
-                        </Badge>
-                      ))}
+                  {selectedAbstract.entity_extraction.methodologies && selectedAbstract.entity_extraction.methodologies.length > 0 && (
+                    <div className="mt-3">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Methodologies</span>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {selectedAbstract.entity_extraction.methodologies.map((method: string, index: number) => (
+                          <Badge key={index} className="bg-green-100 text-green-800 hover:bg-green-200 text-xs">
+                            {method}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
+                  {selectedAbstract.entity_extraction.confidence && (
+                    <div className="mt-3">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Extraction Confidence</span>
+                      <div className="flex items-center gap-3 mt-2">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2.5">
+                          <div 
+                            className="bg-gradient-to-r from-blue-500 to-purple-500 h-2.5 rounded-full transition-all duration-300"
+                            style={{ width: `${selectedAbstract.entity_extraction.confidence * 100}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-700 min-w-[45px]">
+                          {Math.round(selectedAbstract.entity_extraction.confidence * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="mt-3">
-                  <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Extraction Confidence</span>
-                  <div className="flex items-center gap-3 mt-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2.5">
-                      <div 
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-2.5 rounded-full transition-all duration-300"
-                        style={{ width: `${selectedAbstract.entity_extraction.confidence * 100}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-sm font-semibold text-gray-700 min-w-[45px]">
-                      {Math.round(selectedAbstract.entity_extraction.confidence * 100)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
+              )}
 
               {/* Submission Details */}
               <div className="bg-gray-50 p-4 rounded-lg">
