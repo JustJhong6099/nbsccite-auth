@@ -54,6 +54,7 @@ interface User {
   status: string;
   department?: string;
   position?: string;
+  abstracts_count?: number;
 }
 
 export const UserManagement: React.FC = () => {
@@ -72,6 +73,46 @@ export const UserManagement: React.FC = () => {
   // Fetch users from database
   useEffect(() => {
     fetchUsers();
+    
+    // Set up real-time subscription for profile changes
+    const profileChannel = supabase
+      .channel('user_management_profiles')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload) => {
+          console.log('Profile change detected:', payload);
+          fetchUsers();
+        }
+      )
+      .subscribe();
+
+    // Set up real-time subscription for abstract changes
+    const abstractChannel = supabase
+      .channel('user_management_abstracts')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'abstracts'
+        },
+        (payload) => {
+          console.log('Abstract change detected:', payload);
+          fetchUsers();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      supabase.removeChannel(profileChannel);
+      supabase.removeChannel(abstractChannel);
+    };
   }, []);
 
   const fetchUsers = async () => {
@@ -79,16 +120,36 @@ export const UserManagement: React.FC = () => {
       setLoading(true);
       
       // Fetch all profiles
-      const { data, error } = await supabase
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (profilesError) throw profilesError;
 
-      if (data) {
-        const studentUsers = data.filter(user => user.role === 'student');
-        const facultyUsers = data.filter(user => user.role === 'faculty');
+      if (profilesData) {
+        // Fetch abstract counts for each user
+        const usersWithCounts = await Promise.all(
+          profilesData.map(async (user) => {
+            // Get abstract count for this user
+            const { count, error: countError } = await supabase
+              .from('abstracts')
+              .select('*', { count: 'exact', head: true })
+              .eq('student_id', user.id);
+
+            if (countError) {
+              console.error(`Error fetching count for user ${user.id}:`, countError);
+            }
+
+            return {
+              ...user,
+              abstracts_count: count || 0
+            };
+          })
+        );
+
+        const studentUsers = usersWithCounts.filter(user => user.role === 'student');
+        const facultyUsers = usersWithCounts.filter(user => user.role === 'faculty');
         
         setStudents(studentUsers);
         setFaculty(facultyUsers);
@@ -171,9 +232,19 @@ export const UserManagement: React.FC = () => {
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <CardTitle>User Directory</CardTitle>
-              <CardDescription>View and manage all registered users</CardDescription>
+            <div className="flex items-center gap-3">
+              <div>
+                <CardTitle>User Directory</CardTitle>
+                <CardDescription>Real-time view and management of all registered users with abstract counts</CardDescription>
+              </div>
+              {/* Real-Time Indicator Badge */}
+              <Badge variant="outline" className="flex items-center gap-1 border-green-300 text-green-700 bg-green-50">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                Live
+              </Badge>
             </div>
             <div className="flex items-center gap-2">
               <div className="relative">
@@ -258,7 +329,7 @@ export const UserManagement: React.FC = () => {
                         </TableCell>
                         {activeTab === 'students' && (
                           <TableCell>
-                            <Badge variant="outline">{(user as any).abstracts_count || 0}</Badge>
+                            <Badge variant="outline">{user.abstracts_count || 0}</Badge>
                           </TableCell>
                         )}
                         {activeTab === 'faculty' && (
@@ -270,11 +341,11 @@ export const UserManagement: React.FC = () => {
                           <TableCell>
                             {user.role === 'student' ? (
                               <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                                {(user as any).abstracts_count || 0} abstracts
+                                {user.abstracts_count || 0} abstracts
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="bg-purple-50 text-purple-700">
-                                {(user as any).department || 'N/A'}
+                                {user.department || 'N/A'}
                               </Badge>
                             )}
                           </TableCell>
