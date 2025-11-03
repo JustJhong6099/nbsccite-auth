@@ -1631,59 +1631,30 @@ const FacultyDashboard: React.FC = () => {
               Manage research abstracts, review submissions, and analyze academic trends
             </p>
           </div>
-          <div className="flex items-center space-x-4">
-            <Badge variant="secondary" className="px-3 py-1">
-              <Users className="w-4 h-4 mr-1" />
-              Faculty Portal
-            </Badge>
-            <Badge variant="outline" className="px-3 py-1">
-              <Calendar className="w-4 h-4 mr-1" />
-              Academic Year 2024-2025
-            </Badge>
-            
-            {/* User Profile Dropdown */}
-            <div className="flex items-center space-x-3 border-l pl-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{profile?.full_name || "Faculty Member"}</p>
-                <p className="text-xs text-gray-600">{user?.email}</p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setActiveTab("profile")}
-                  className="flex items-center space-x-1"
-                >
-                  <UserCircle className="w-4 h-4" />
-                  <span className="hidden sm:inline">Profile</span>
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      await logout();
-                      toast({
-                        title: "Logged Out",
-                        description: "You have been successfully logged out.",
-                      });
-                      navigate("/login");
-                    } catch (error) {
-                      toast({
-                        title: "Logout Failed",
-                        description: "Failed to logout. Please try again.",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                  className="flex items-center space-x-1"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span className="hidden sm:inline">Logout</span>
-                </Button>
-              </div>
-            </div>
-          </div>
+          <Button 
+            variant="destructive" 
+            size="sm"
+            onClick={async () => {
+              try {
+                await logout();
+                toast({
+                  title: "Logged Out",
+                  description: "You have been successfully logged out.",
+                });
+                navigate("/login");
+              } catch (error) {
+                toast({
+                  title: "Logout Failed",
+                  description: "Failed to logout. Please try again.",
+                  variant: "destructive",
+                });
+              }
+            }}
+            className="flex items-center space-x-1"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Logout</span>
+          </Button>
         </div>
 
         {/* Main Tabs */}

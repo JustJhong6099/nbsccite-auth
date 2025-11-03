@@ -729,7 +729,7 @@ export const ResearchInsights: React.FC = () => {
           potential: Math.round(potential),
           timeframe,
           category: data.category,
-          description: `${maturity === 'experimental' ? 'Experimental' : maturity === 'emerging' ? 'Emerging' : 'Growing'} ${data.category.toLowerCase()} with ${paperCount} related research papers. First appeared in ${data.firstSeen}, showing ${growthRate > 0 ? 'positive' : 'stable'} growth trend.`,
+          description: `Active research area in ${data.category.toLowerCase()} with ${paperCount} recent ${paperCount === 1 ? 'paper' : 'papers'}. Estimated mainstream adoption timeframe: ${timeframe}.`,
           keyTechnologies,
           researchOpportunities: opportunities,
           challenges,

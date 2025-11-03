@@ -77,6 +77,108 @@ export const FALSE_POSITIVES = [
   'faculty'
 ];
 
+// Terms that should NOT appear in specific categories
+export const MISPLACED_TERMS = {
+  domains: [
+    // Technologies misclassified as domains
+    'web-based',
+    'web based',
+    'mobile',
+    'mobile app',
+    'mobile application',
+    'real-time',
+    'real time',
+    'virtual reality',
+    'vr',
+    'augmented reality',
+    'ar',
+    'cloud computing',
+    'cloud',
+    'internet of things',
+    'iot',
+    'artificial intelligence',
+    'ai',
+    'machine learning',
+    'ml',
+    'data management', // Should be technology/methodology
+    'technology', // Too generic
+    'web application',
+    'web app',
+    'software',
+    'application',
+    'system',
+    'prototype',
+    'algorithm',
+    'database',
+    'programming',
+  ],
+  technologies: [
+    // Domains misclassified as technologies
+    'education',
+    'educational',
+    'healthcare',
+    'health care',
+    'tourism',
+    'agriculture',
+    'business',
+    'finance',
+    'marketing',
+    'human resource',
+    'hr',
+    'library',
+    'medical',
+    'nursing',
+    'engineering',
+    'architecture',
+    'law',
+    'psychology',
+    'sociology',
+    'computer security', // This is a domain
+    'information systems', // This is a domain
+    'information system', // This is a domain
+    // Methodologies misclassified as technologies
+    'agile',
+    'waterfall',
+    'scrum',
+    'prototype',
+    'prototyping',
+    'data analysis',
+    'statistical analysis',
+    'survey',
+    'interview',
+    'case study',
+    // Generic terms
+    'technology', // Too generic when alone
+    'accuracy and precision', // This is a metric
+    'profiling', // This is a methodology/technique
+  ],
+  methodologies: [
+    // Technologies misclassified as methodologies
+    'web application',
+    'web app',
+    'mobile app',
+    'mobile application',
+    'database',
+    'software',
+    'system',
+    'java',
+    'python',
+    'javascript',
+    'php',
+    'mysql',
+    'react',
+    'angular',
+    'vue',
+    'node',
+    'nodejs',
+    // Domains misclassified as methodologies  
+    'education',
+    'healthcare',
+    'tourism',
+    'agriculture',
+  ]
+};
+
 // Replacement mappings for standardizing terminology
 export const TERM_REPLACEMENTS: { [key: string]: string } = {
   // IoT variations
@@ -286,6 +388,43 @@ export function countNormalizedTerms(terms: string[]): { [key: string]: number }
  */
 export function getTopTerms(counts: { [key: string]: number }, limit: number): [string, number][] {
   return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit);
+}
+
+/**
+ * Filters terms by category to remove misclassified items
+ * @param term - The term to check
+ * @param category - The category type ('domains' | 'technologies' | 'methodologies')
+ * @returns true if the term belongs in this category, false if misplaced
+ */
+export function isTermValidForCategory(term: string, category: 'domains' | 'technologies' | 'methodologies'): boolean {
+  if (!term) return false;
+  
+  const normalized = term.toLowerCase().trim();
+  
+  // Check if term is in the misplaced list for this category
+  const misplacedList = MISPLACED_TERMS[category] || [];
+  return !misplacedList.some(misplaced => 
+    normalized === misplaced.toLowerCase() || 
+    normalized.includes(misplaced.toLowerCase())
+  );
+}
+
+/**
+ * Gets top N terms by count, filtered by category
+ * @param counts - Term counts object
+ * @param limit - Number of top terms to return
+ * @param category - The category to filter for
+ * @returns Array of [term, count] tuples sorted by count descending, filtered for category
+ */
+export function getTopTermsByCategory(
+  counts: { [key: string]: number }, 
+  limit: number,
+  category: 'domains' | 'technologies' | 'methodologies'
+): [string, number][] {
+  return Object.entries(counts)
+    .filter(([term]) => isTermValidForCategory(term, category))
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit);
 }

@@ -156,10 +156,6 @@ export const StudentDashboard: React.FC = () => {
             <p className="text-gray-600">Welcome back, {user?.full_name || 'Student'}</p>
           </div>
           <div className="flex items-center gap-4">
-            <Button>
-              <Upload className="h-4 w-4 mr-2" />
-              Quick Submit
-            </Button>
             <Button onClick={handleLogout} variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50">
               <LogOut className="h-4 w-4 mr-2" />
               Logout
