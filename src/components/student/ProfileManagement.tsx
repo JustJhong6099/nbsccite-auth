@@ -115,7 +115,7 @@ export const ProfileManagement: React.FC = () => {
           enrollmentYear: profileData.enrollment_year || ''
         },
         academic: {
-          program: profileData.program || 'Bachelor of Science in Computer Science',
+          program: profileData.program || 'Bachelor of Science in Information Technology',
           major: profileData.major || '',
           minor: profileData.minor || '',
           gpa: profileData.gpa?.toString() || '',

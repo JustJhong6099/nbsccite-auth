@@ -83,7 +83,7 @@ COMMENT ON COLUMN profiles.bio IS 'Biography or personal statement';
 COMMENT ON COLUMN profiles.avatar_url IS 'URL to profile picture';
 COMMENT ON COLUMN profiles.student_id IS 'University student ID number';
 COMMENT ON COLUMN profiles.enrollment_year IS 'Year of enrollment';
-COMMENT ON COLUMN profiles.program IS 'Degree program (e.g., Bachelor of Science in Computer Science)';
+COMMENT ON COLUMN profiles.program IS 'Degree program (e.g., Bachelor of Science in Information Technology)';
 COMMENT ON COLUMN profiles.major IS 'Major field of study';
 COMMENT ON COLUMN profiles.minor IS 'Minor field of study';
 COMMENT ON COLUMN profiles.gpa IS 'Grade Point Average';
