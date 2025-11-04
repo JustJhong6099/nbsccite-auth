@@ -90,10 +90,15 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ entities, onSave, on
     editableEntities.forEach((entity1, idx1) => {
       editableEntities.forEach((entity2, idx2) => {
         if (idx1 !== idx2) {
-          const val1 = entity1.value.toLowerCase();
-          const val2 = entity2.value.toLowerCase();
+          const val1 = entity1.value.toLowerCase().trim();
+          const val2 = entity2.value.toLowerCase().trim();
           
-          // Check if one is substring of another
+          // Skip if they are exact duplicates (handled by getDuplicates)
+          if (val1 === val2) {
+            return;
+          }
+          
+          // Check if one is substring of another (overlapping but not duplicate)
           if (val1.includes(val2) || val2.includes(val1)) {
             overlaps.add(entity1.id);
             overlaps.add(entity2.id);
@@ -275,7 +280,7 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ entities, onSave, on
                   <li>• {duplicates.size} duplicate entities found (highlighted in yellow)</li>
                 )}
                 {overlaps.size > 0 && (
-                  <li>• {overlaps.size} overlapping entities found (highlighted in orange)</li>
+                  <li>• {overlaps.size} overlapping entities found (highlighted in red)</li>
                 )}
               </ul>
             </div>
@@ -358,7 +363,7 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ entities, onSave, on
               key={entity.id} 
               className={`
                 ${isDuplicate ? 'border-yellow-300 bg-yellow-50' : ''}
-                ${isOverlap && !isDuplicate ? 'border-orange-300 bg-orange-50' : ''}
+                ${isOverlap && !isDuplicate ? 'border-red-300 bg-red-50' : ''}
                 ${isSelected ? 'border-blue-400 bg-blue-50' : ''}
               `}
             >
