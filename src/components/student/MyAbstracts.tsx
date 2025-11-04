@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import * as d3 from 'd3';
@@ -36,6 +38,8 @@ import {
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import { type ExtractedEntities } from '@/lib/dandelion-api';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Type definitions
 interface Node extends d3.SimulationNodeDatum {
@@ -82,6 +86,11 @@ export const MyAbstracts: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedAbstract, setSelectedAbstract] = useState<any>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedAbstract, setEditedAbstract] = useState<any>(null);
+  const [isResubmitting, setIsResubmitting] = useState(false);
+  const [extractedEntities, setExtractedEntities] = useState<ExtractedEntities | null>(null);
+  const [tempEntityInput, setTempEntityInput] = useState({ tech: '', domain: '', methodology: '' });
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Fetch abstracts from database
@@ -166,7 +175,117 @@ export const MyAbstracts: React.FC = () => {
 
   const handleViewAbstract = (abstract: any) => {
     setSelectedAbstract(abstract);
+    setEditedAbstract({
+      title: abstract.title,
+      abstract: abstract.abstract,
+      authors: abstract.authors.join(', '),
+      keywords: abstract.keywords.join(', ')
+    });
+    setIsEditMode(false);
     setIsViewDialogOpen(true);
+  };
+
+  const handleEditAbstract = () => {
+    setIsEditMode(true);
+    // Initialize extracted entities from existing data if available
+    if (selectedAbstract.entity_extraction) {
+      setExtractedEntities({
+        technologies: selectedAbstract.entity_extraction.technologies || [],
+        domains: selectedAbstract.entity_extraction.domains || [],
+        methodologies: selectedAbstract.entity_extraction.methodologies || [],
+        confidence: selectedAbstract.entity_extraction.confidence || 0
+      });
+    } else {
+      // Initialize empty entity structure for manual entry
+      setExtractedEntities({
+        technologies: [],
+        domains: [],
+        methodologies: [],
+        confidence: 0.8
+      });
+    }
+  };
+
+  const handleAddEntity = (type: 'technologies' | 'domains' | 'methodologies') => {
+    const inputKey = type === 'technologies' ? 'tech' : type === 'domains' ? 'domain' : 'methodology';
+    const value = tempEntityInput[inputKey].trim();
+    
+    if (!value) return;
+    
+    if (!extractedEntities) {
+      setExtractedEntities({
+        technologies: type === 'technologies' ? [value] : [],
+        domains: type === 'domains' ? [value] : [],
+        methodologies: type === 'methodologies' ? [value] : [],
+        confidence: 0.8
+      });
+    } else {
+      setExtractedEntities({
+        ...extractedEntities,
+        [type]: [...extractedEntities[type], value]
+      });
+    }
+    
+    setTempEntityInput({ ...tempEntityInput, [inputKey]: '' });
+  };
+
+  const handleRemoveEntity = (type: 'technologies' | 'domains' | 'methodologies', index: number) => {
+    if (!extractedEntities) return;
+    
+    setExtractedEntities({
+      ...extractedEntities,
+      [type]: extractedEntities[type].filter((_, i) => i !== index)
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditedAbstract({
+      title: selectedAbstract.title,
+      abstract: selectedAbstract.abstract,
+      authors: selectedAbstract.authors.join(', '),
+      keywords: selectedAbstract.keywords.join(', ')
+    });
+  };
+
+  const handleResubmit = async () => {
+    if (!editedAbstract.title || !editedAbstract.abstract) {
+      toast.error('Please fill in title and abstract');
+      return;
+    }
+
+    setIsResubmitting(true);
+    try {
+      // Update the abstract in the database
+      const { error } = await supabase
+        .from('abstracts')
+        .update({
+          title: editedAbstract.title,
+          abstract_text: editedAbstract.abstract,
+          authors: editedAbstract.authors.split(',').map((a: string) => a.trim()).filter((a: string) => a),
+          keywords: editedAbstract.keywords.split(',').map((k: string) => k.trim()).filter((k: string) => k),
+          extracted_entities: extractedEntities, // Include updated entities
+          entity_extraction_confidence: extractedEntities?.confidence || 0,
+          status: 'pending', // Change status back to pending for review
+          submitted_date: new Date().toISOString(),
+          reviewed_date: null,
+          review_comments: null
+        })
+        .eq('id', selectedAbstract.id);
+
+      if (error) throw error;
+
+      toast.success('Abstract resubmitted successfully!');
+      setIsViewDialogOpen(false);
+      setIsEditMode(false);
+      setExtractedEntities(null);
+      fetchAbstracts(); // Refresh the list
+    } catch (error: any) {
+      console.error('Error resubmitting abstract:', error);
+      toast.error('Failed to resubmit abstract');
+    } finally {
+      setIsResubmitting(false);
+    }
   };
 
   const createEntityVisualization = (abstract: any) => {
@@ -497,7 +616,6 @@ export const MyAbstracts: React.FC = () => {
                   <TabsTrigger value="approved">Approved ({abstractsByStatus.approved.length})</TabsTrigger>
                   <TabsTrigger value="pending">Pending ({abstractsByStatus.pending.length})</TabsTrigger>
                   <TabsTrigger value="rejected">Rejected ({abstractsByStatus.rejected.length})</TabsTrigger>
-                  <TabsTrigger value="needs-revision">Needs Revision ({abstractsByStatus.needs_revision.length})</TabsTrigger>
                 </TabsList>
 
                 <div className="space-y-4">{filteredAbstracts.length === 0 ? (
@@ -551,13 +669,6 @@ export const MyAbstracts: React.FC = () => {
                                 <DropdownMenuItem>
                                   <Download className="h-4 w-4 mr-2" />
                                   Download File
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
-                              {(abstract.status === 'rejected' || abstract.status === 'draft') && (
-                                <DropdownMenuItem>
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  Resubmit
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
@@ -637,52 +748,246 @@ export const MyAbstracts: React.FC = () => {
           
           {selectedAbstract && (
             <div className="space-y-6">
-              {/* Authors Section */}
+              {/* Show edit notice for rejected abstracts in edit mode */}
+              {isEditMode && selectedAbstract.status === 'rejected' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-sm text-blue-900 mb-1">Editing Mode</h4>
+                      <p className="text-sm text-blue-800">
+                        Make your changes below and click "Resubmit" to send the revised abstract for review.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Title - Editable if in edit mode */}
+              {isEditMode ? (
+                <div>
+                  <Label htmlFor="edit-title" className="text-sm font-semibold text-gray-900 mb-2">Title</Label>
+                  <Input
+                    id="edit-title"
+                    value={editedAbstract.title}
+                    onChange={(e) => setEditedAbstract({ ...editedAbstract, title: e.target.value })}
+                    className="mt-2"
+                  />
+                </div>
+              ) : null}
+
+              {/* Authors Section - Editable if in edit mode */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <User className="h-4 w-4 text-gray-600" />
                   <h4 className="font-semibold text-sm text-gray-900">Authors</h4>
                 </div>
-                <p className="text-sm text-gray-600">
-                  {selectedAbstract.authors.join(', ')}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">{selectedAbstract.department}</p>
+                {isEditMode ? (
+                  <Input
+                    value={editedAbstract.authors}
+                    onChange={(e) => setEditedAbstract({ ...editedAbstract, authors: e.target.value })}
+                    placeholder="Separate authors with commas"
+                  />
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-600">
+                      {selectedAbstract.authors.join(', ')}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">{selectedAbstract.department}</p>
+                  </>
+                )}
               </div>
 
-              {/* Abstract Text */}
+              {/* Abstract Text - Editable if in edit mode */}
               <div>
                 <h4 className="font-semibold text-sm text-gray-900 mb-2">Abstract</h4>
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-700 leading-relaxed">
-                    {selectedAbstract.abstract}
-                  </p>
-                </div>
+                {isEditMode ? (
+                  <Textarea
+                    value={editedAbstract.abstract}
+                    onChange={(e) => setEditedAbstract({ ...editedAbstract, abstract: e.target.value })}
+                    rows={8}
+                    className="w-full"
+                  />
+                ) : (
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-700 leading-relaxed">
+                      {selectedAbstract.abstract}
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {/* Keywords Section */}
+              {/* Keywords Section - Editable if in edit mode */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Tag className="h-4 w-4 text-gray-600" />
                   <h4 className="font-semibold text-sm text-gray-900">Keywords</h4>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {selectedAbstract.keywords.map((keyword: string, index: number) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {keyword}
-                    </Badge>
-                  ))}
-                </div>
+                {isEditMode ? (
+                  <Input
+                    value={editedAbstract.keywords}
+                    onChange={(e) => setEditedAbstract({ ...editedAbstract, keywords: e.target.value })}
+                    placeholder="Separate keywords with commas"
+                  />
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedAbstract.keywords.map((keyword: string, index: number) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {keyword}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Interactive Entity Graph */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Network className="h-4 w-4 text-gray-600" />
-                  <h4 className="font-semibold text-sm text-gray-900">Interactive Entity Graph</h4>
+              {/* Entity Extraction Section - Only in Edit Mode */}
+              {isEditMode && (
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-sm text-gray-900">Extracted Entities</h4>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Manually classify and manage research entities
+                    </p>
+                  </div>
+
+                  {extractedEntities && (
+                    <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <Badge variant="outline" className="bg-green-100 text-green-800">
+                          {Math.round(extractedEntities.confidence * 100)}% Confidence
+                        </Badge>
+                        <p className="text-xs text-gray-600">
+                          {extractedEntities.technologies.length + extractedEntities.domains.length + extractedEntities.methodologies.length} entities detected
+                        </p>
+                      </div>
+
+                      {/* Technologies */}
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                          <span className="h-3 w-3 rounded-full bg-blue-500"></span>
+                          Technologies
+                        </Label>
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {extractedEntities.technologies.map((tech, idx) => (
+                            <Badge key={idx} variant="outline" className="bg-blue-50 text-blue-700">
+                              {tech}
+                              <button
+                                onClick={() => handleRemoveEntity('technologies', idx)}
+                                className="ml-1 hover:text-red-600"
+                              >
+                                <XCircle className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Add technology..."
+                            value={tempEntityInput.tech}
+                            onChange={(e) => setTempEntityInput({ ...tempEntityInput, tech: e.target.value })}
+                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddEntity('technologies'))}
+                            className="text-sm"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleAddEntity('technologies')}
+                            disabled={!tempEntityInput.tech.trim()}
+                          >
+                            Add
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Research Domains */}
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                          <span className="h-3 w-3 rounded-full bg-purple-500"></span>
+                          Research Domains
+                        </Label>
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {extractedEntities.domains.map((domain, idx) => (
+                            <Badge key={idx} variant="outline" className="bg-purple-50 text-purple-700">
+                              {domain}
+                              <button
+                                onClick={() => handleRemoveEntity('domains', idx)}
+                                className="ml-1 hover:text-red-600"
+                              >
+                                <XCircle className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Add research domain..."
+                            value={tempEntityInput.domain}
+                            onChange={(e) => setTempEntityInput({ ...tempEntityInput, domain: e.target.value })}
+                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddEntity('domains'))}
+                            className="text-sm"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleAddEntity('domains')}
+                            disabled={!tempEntityInput.domain.trim()}
+                          >
+                            Add
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Methodologies */}
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                          <span className="h-3 w-3 rounded-full bg-green-500"></span>
+                          Methodologies
+                        </Label>
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {extractedEntities.methodologies.map((method, idx) => (
+                            <Badge key={idx} variant="outline" className="bg-green-50 text-green-700">
+                              {method}
+                              <button
+                                onClick={() => handleRemoveEntity('methodologies', idx)}
+                                className="ml-1 hover:text-red-600"
+                              >
+                                <XCircle className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Add methodology..."
+                            value={tempEntityInput.methodology}
+                            onChange={(e) => setTempEntityInput({ ...tempEntityInput, methodology: e.target.value })}
+                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddEntity('methodologies'))}
+                            className="text-sm"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleAddEntity('methodologies')}
+                            disabled={!tempEntityInput.methodology.trim()}
+                          >
+                            Add
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-gray-600 mb-3">
-                  Visual representation of research entities and their relationships based on extracted keywords
-                </p>
+              )}
+
+              {/* Show entity graph and metadata only when not in edit mode */}
+              {!isEditMode && (
+                <>
+                  {/* Interactive Entity Graph */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Network className="h-4 w-4 text-gray-600" />
+                      <h4 className="font-semibold text-sm text-gray-900">Interactive Entity Graph</h4>
+                    </div>
+                    <p className="text-xs text-gray-600 mb-3">
+                      Visual representation of research entities and their relationships based on extracted keywords
+                    </p>
                 
                 <div className="relative border rounded-lg p-4 bg-gradient-to-br from-blue-50 to-purple-50">
                   {/* Instructions Card Overlay */}
@@ -855,18 +1160,59 @@ export const MyAbstracts: React.FC = () => {
                   </div>
                 </div>
               )}
+                </>
+              )}
             </div>
           )}
           
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
-              Close
-            </Button>
-            {selectedAbstract?.file_name && (
-              <Button>
-                <Download className="h-4 w-4 mr-2" />
-                Download File
-              </Button>
+            {isEditMode ? (
+              <>
+                <Button variant="outline" onClick={handleCancelEdit}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleResubmit}
+                  disabled={isResubmitting}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isResubmitting ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Resubmitting...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Resubmit for Review
+                    </>
+                  )}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => {
+                  setIsViewDialogOpen(false);
+                  setIsEditMode(false);
+                }}>
+                  Close
+                </Button>
+                {selectedAbstract?.status === 'rejected' && (
+                  <Button 
+                    onClick={handleEditAbstract}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit & Resubmit
+                  </Button>
+                )}
+                {selectedAbstract?.file_name && (
+                  <Button>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download File
+                  </Button>
+                )}
+              </>
             )}
           </DialogFooter>
         </DialogContent>

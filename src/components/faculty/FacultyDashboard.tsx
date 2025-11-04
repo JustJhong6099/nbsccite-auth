@@ -1559,6 +1559,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ overviewStats }) 
 const FacultyDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [isExporting, setIsExporting] = useState(false);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const { user, profile, logout } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -1573,30 +1574,124 @@ const FacultyDashboard: React.FC = () => {
     avgReviewTime: "2.3 days"
   };
 
-  const recentActivities = [
-    {
-      id: 1,
-      type: "review",
-      description: "Reviewed abstract: 'Machine Learning Applications in Agriculture'",
-      student: "John Doe",
-      time: "2 hours ago",
-      status: "approved"
-    },
-    {
-      id: 2,
-      type: "upload",
-      description: "Uploaded research abstract: 'IoT in Smart Cities'",
-      time: "1 day ago",
-      status: "published"
-    },
-    {
-      id: 3,
-      type: "validation",
-      description: "Validated 15 entities for Computer Science domain",
-      time: "2 days ago",
-      status: "completed"
+  // Fetch recent activities from database
+  useEffect(() => {
+    fetchRecentActivities();
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('recent_activities_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'abstracts'
+        },
+        (payload) => {
+          console.log('Recent activities change detected:', payload);
+          fetchRecentActivities();
+        }
+      )
+      .subscribe();
+
+    // Cleanup
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchRecentActivities = async () => {
+    try {
+      // Fetch recent abstracts with their updates
+      const { data: abstracts, error: abstractsError } = await supabase
+        .from('abstracts')
+        .select(`
+          id,
+          title,
+          status,
+          created_at,
+          updated_at,
+          submitted_date,
+          reviewed_date,
+          student_id,
+          submitted_by
+        `)
+        .order('updated_at', { ascending: false })
+        .limit(10);
+
+      if (abstractsError) throw abstractsError;
+
+      // Fetch user profiles for student names
+      const studentIds = abstracts?.map(a => a.student_id).filter(Boolean) || [];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', studentIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+      // Transform abstracts into activity format
+      const activities = abstracts?.map((abstract) => {
+        const profile = profileMap.get(abstract.student_id);
+        const studentName = profile?.full_name || abstract.submitted_by || 'Unknown User';
+        
+        // Determine activity type and description based on most recent action
+        let type = 'upload';
+        let description = '';
+        let time = '';
+        let status = abstract.status;
+
+        if (abstract.reviewed_date && abstract.status === 'approved') {
+          type = 'review';
+          description = `Reviewed abstract: '${abstract.title}'`;
+          time = getTimeAgo(abstract.reviewed_date);
+          status = 'approved';
+        } else if (abstract.reviewed_date && abstract.status === 'rejected') {
+          type = 'review';
+          description = `Reviewed abstract: '${abstract.title}'`;
+          time = getTimeAgo(abstract.reviewed_date);
+          status = 'rejected';
+        } else if (abstract.status === 'approved') {
+          type = 'upload';
+          description = `Uploaded research abstract: '${abstract.title}'`;
+          time = getTimeAgo(abstract.created_at);
+          status = 'published';
+        } else {
+          type = 'upload';
+          description = `Submitted abstract: '${abstract.title}'`;
+          time = getTimeAgo(abstract.created_at);
+          status = abstract.status;
+        }
+
+        return {
+          id: abstract.id,
+          type,
+          description,
+          student: studentName,
+          time,
+          status
+        };
+      }).slice(0, 5) || []; // Limit to 5 most recent
+
+      setRecentActivities(activities);
+    } catch (error) {
+      console.error('Error fetching recent activities:', error);
     }
-  ];
+  };
+
+  // Helper function to calculate time ago
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`;
+    return date.toLocaleDateString();
+  };
 
   const handleExportPDF = async () => {
     try {
@@ -1783,46 +1878,65 @@ const FacultyDashboard: React.FC = () => {
             {/* Recent Activities */}
             <Card data-pdf-section="recent-activities">
               <CardHeader>
-                <CardTitle>Recent Activities</CardTitle>
-                <CardDescription>
-                  Latest system-wide actions and updates
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Recent Activities</CardTitle>
+                    <CardDescription>
+                      Real-time system-wide actions and updates
+                    </CardDescription>
+                  </div>
+                  <Badge variant="outline" className="flex items-center gap-1 border-green-300 text-green-700 bg-green-50">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    Live
+                  </Badge>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentActivities.map((activity) => (
-                    <div key={activity.id} className="flex items-start space-x-4 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="flex-shrink-0">
-                        {activity.type === "review" && <Eye className="w-5 h-5 text-blue-500 mt-1" />}
-                        {activity.type === "upload" && <Upload className="w-5 h-5 text-green-500 mt-1" />}
-                        {activity.type === "validation" && <CheckCircle className="w-5 h-5 text-purple-500 mt-1" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">
-                          {activity.description}
-                        </p>
-                        {activity.student && (
-                          <p className="text-sm text-gray-500">
-                            Student: {activity.student}
-                          </p>
-                        )}
-                        <p className="text-xs text-gray-400 mt-1">
-                          {activity.time}
-                        </p>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <Badge 
-                          variant={
-                            activity.status === "approved" ? "default" :
-                            activity.status === "published" ? "secondary" : "outline"
-                          }
-                          className="text-xs"
-                        >
-                          {activity.status}
-                        </Badge>
-                      </div>
+                  {recentActivities.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <Activity className="w-12 h-12 text-gray-300 mb-3" />
+                      <p className="text-sm text-gray-500">No recent activities</p>
+                      <p className="text-xs text-gray-400 mt-1">Activities will appear here as they happen</p>
                     </div>
-                  ))}
+                  ) : (
+                    recentActivities.map((activity) => (
+                      <div key={activity.id} className="flex items-start space-x-4 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="flex-shrink-0">
+                          {activity.type === "review" && <Eye className="w-5 h-5 text-blue-500 mt-1" />}
+                          {activity.type === "upload" && <Upload className="w-5 h-5 text-green-500 mt-1" />}
+                          {activity.type === "validation" && <CheckCircle className="w-5 h-5 text-purple-500 mt-1" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900">
+                            {activity.description}
+                          </p>
+                          {activity.student && (
+                            <p className="text-sm text-gray-500">
+                              Student: {activity.student}
+                            </p>
+                          )}
+                          <p className="text-xs text-gray-400 mt-1">
+                            {activity.time}
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <Badge 
+                            variant={
+                              activity.status === "approved" ? "default" :
+                              activity.status === "published" ? "secondary" : "outline"
+                            }
+                            className="text-xs"
+                          >
+                            {activity.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

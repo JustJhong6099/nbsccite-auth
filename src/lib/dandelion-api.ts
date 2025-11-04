@@ -4,9 +4,6 @@
  * https://dandelion.eu/docs/api/datatxt/nex/
  */
 
-// Import improved entity extraction logic
-import { performEntityExtraction as performLocalExtraction } from './entity-extraction';
-
 export interface DandelionEntity {
   id: string;
   title: string;
@@ -288,37 +285,26 @@ function filterRelevantEntities(entities: DandelionEntity[], text: string): Dand
  * Fallback extraction using keyword matching (when Dandelion API is not available)
  */
 /**
- * Fallback to improved local entity extraction when API is unavailable
- */
-function fallbackExtraction(text: string, keywords: string[]): ExtractedEntities {
-  console.log('=== Using Improved Local Extraction (Fallback) ===');
-  
-  // Use the improved entity extraction logic from entity-extraction.ts
-  return performLocalExtraction(text, keywords);
-}
-
-/**
- * Main entity extraction function using Dandelion API
- * Falls back to keyword matching if API is unavailable
+ * Main entity extraction function using Dandelion API ONLY
+ * No fallback - requires Dandelion API to be available
  */
 export async function performEntityExtraction(
   abstractText: string,
   keywordsArray: string[]
 ): Promise<ExtractedEntities> {
-  console.log('=== Starting Entity Extraction ===');
+  console.log('=== Starting Entity Extraction (Dandelion API Only) ===');
   console.log('Abstract length:', abstractText.length);
   console.log('Keywords provided:', keywordsArray);
   
   // Combine abstract text and keywords
   const fullText = `${abstractText} ${keywordsArray.join(' ')}`;
   
-  // Try Dandelion API first
+  // Call Dandelion API - NO FALLBACK
   const dandelionResponse = await callDandelionAPI(fullText);
   
-  // Fallback if API not available or fails
+  // Throw error if API not available
   if (!dandelionResponse || !dandelionResponse.annotations) {
-    console.log('Using fallback entity extraction (API not available)');
-    return fallbackExtraction(abstractText, keywordsArray);
+    throw new Error('Dandelion API is not available. Please check your API token and try again.');
   }
   
   console.log(`Dandelion API found ${dandelionResponse.annotations.length} raw entities`);
@@ -327,10 +313,16 @@ export async function performEntityExtraction(
   const relevantEntities = filterRelevantEntities(dandelionResponse.annotations, fullText);
   console.log(`Filtered to ${relevantEntities.length} relevant entities`);
   
-  // If no entities after filtering, use fallback
+  // If no entities after filtering, return empty result (not fallback)
   if (relevantEntities.length === 0) {
-    console.log('No entities after filtering, using fallback extraction');
-    return fallbackExtraction(abstractText, keywordsArray);
+    console.log('⚠️ No relevant entities found by Dandelion API');
+    return {
+      technologies: [],
+      domains: [],
+      methodologies: [],
+      confidence: 0,
+      rawEntities: []
+    };
   }
   
   // Classify entities
@@ -357,18 +349,13 @@ export async function performEntityExtraction(
   
   console.log('Final counts - Technologies:', technologies.size, 'Domains:', domains.size, 'Methodologies:', methodologies.size);
   
-  // If no entities classified, use fallback
-  if (technologies.size === 0 && domains.size === 0 && methodologies.size === 0) {
-    console.log('No entities classified, using fallback extraction');
-    return fallbackExtraction(abstractText, keywordsArray);
-  }
-  
   // Calculate confidence based on Dandelion's entity confidence scores
   const avgConfidence = relevantEntities.length > 0
     ? relevantEntities.reduce((sum, e) => sum + e.confidence, 0) / relevantEntities.length
     : 0.5;
   
   console.log('Average confidence:', avgConfidence);
+  console.log('✅ Entity extraction completed using Dandelion API');
   
   return {
     technologies: Array.from(technologies).slice(0, 8),
