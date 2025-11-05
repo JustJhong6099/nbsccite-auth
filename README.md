@@ -4,7 +4,7 @@
 ![shadcn/ui](https://img.shields.io/badge/shadcn--ui-Components-6E40C9)
 ![Supabase](https://img.shields.io/badge/Supabase-Backend-green?logo=supabase&logoColor=white)
 ![Dandelion](https://img.shields.io/badge/Dandelion-API-yellow)
-![License](https://img.shields.io/badge/License-Academic-lightgrey)
+![License](https://img.shields.io/badge/License-Restricted%20Academic%20Use-red)
 ![Status](https://img.shields.io/badge/Status-In%20Development-orange)
 
 ## 🌐 Live Demo
@@ -158,14 +158,82 @@ Make sure you have your own Supabase project and environment variables set up to
 
 ---
 
+##  About
+
+### Capstone Project Team
+
+**A Capstone Project**  
+Presented to the  
+Faculty of the College of Computer Studies  
+Northern Bukidnon State College  
+
+**In Partial Fulfillment**  
+of the Requirements for the Degree  
+**Bachelor of Science in Information Technology**
+
+### 🎓 Project Proponents
+
+| Role | Name |
+|------|------|
+| **Project Leader** | Christian Cholo Llenas |
+| **Documenter** | Catherene T. Labinisia |
+| **Data Analyst** | Roger Dimatao Jr. |
+| **Programmer (Backend - Frontend)** | Aljhon G. Emata |
+
+---
+
 ## 🙏 Acknowledgments
-Special thanks to our faculty mentors and project adviser at NBSC–ICS for their valuable guidance and support.
 
+We would like to express our deepest gratitude to the following individuals who made this project possible:
 
+### Special Thanks To:
 
+**CRISTINE JOY G. SAGAOSAO**  
+*Project Adviser*  
+For the invaluable guidance, continuous support, and expert insights throughout the development of this capstone project.
+
+**SHIELA MAE M. OROZCO, MIT**  
+*Program Head*  
+For the leadership, encouragement, and for providing us with the opportunity to pursue this research.
+
+We also extend our heartfelt thanks to the faculty members and staff of the College of Computer Studies at Northern Bukidnon State College for their support and assistance during the completion of this project.
+
+---
+
+##  License
+
+### Custom Capstone License (Restricted Academic Use)
+
+```
+Copyright (c) 2025 Northern Bukidnon State College
+and the Capstone Project Proponents
+
+All rights reserved.
+
+This project, including its source code, documentation, and related files,
+is the intellectual property of the project proponents and
+Northern Bukidnon State College (NBSC).
+
+No part of this project may be copied, modified, distributed,
+or used for any commercial or academic purpose
+without prior written permission from the authors and the institution.
+
+This project is submitted as partial fulfillment of the requirements
+for the degree of Bachelor of Science in Information Technology
+at Northern Bukidnon State College.
+
+Unauthorized use, reproduction, or distribution of this material
+is strictly prohibited.
+```
+
+For inquiries regarding usage permissions, please contact:
+- **Northern Bukidnon State College - College of Computer Studies**
+- **Project Proponents** (via the institution)
+
+---
 
 ## 📚 Project Info
-This project is part of our academic journey to apply semantic analysis in academic research management, leveraging Ionic React, Supabase, and Dandelion API.
+This project is part of our academic journey to apply semantic analysis in academic research management, leveraging React, Supabase, and Dandelion API.
 Built with 💻 code, ☕ coffee, and 📚 research.
 
 
