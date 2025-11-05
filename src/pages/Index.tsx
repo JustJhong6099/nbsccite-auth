@@ -73,7 +73,7 @@ const Index = () => {
             Entity Extraction System
           </h2>
           <p className="text-xl text-white mb-8 max-w-2xl mx-auto">
-            Advanced research analytics platform for Northern Bukidnon State College
+            A Research analytics platform for Northern Bukidnon State College - Institute for Computer Studies
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/login">
