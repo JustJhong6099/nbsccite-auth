@@ -552,12 +552,6 @@ export const AbstractSubmission: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">Submit Research Abstract</h2>
           <p className="text-gray-600">Share your research work with the NBSC-ICS community</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setPreviewMode(true)}>
-            <Eye className="h-4 w-4 mr-2" />
-            Preview
-          </Button>
-        </div>
       </div>
 
       {/* Submission Guidelines */}
@@ -689,19 +683,6 @@ export const AbstractSubmission: React.FC = () => {
                     <>
                       <Network className="h-4 w-4 mr-2" />
                       Extract & Preview
-                    </>
-                  )}
-                </Button>
-                <Button variant="outline" onClick={handleSaveDraft} disabled={isDraft}>
-                  {isDraft ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Save as Draft
                     </>
                   )}
                 </Button>

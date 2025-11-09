@@ -679,108 +679,39 @@ export const ResearchInsights: React.FC = () => {
     return trends;
   };
 
+  // NEW: Process emerging technologies from validated emerging_technologies field
   const processEmergingTechnologies = (abstracts: any[]): EmergingTech[] => {
     const currentYear = new Date().getFullYear();
-    const emergenceThreshold = currentYear - 2; // Technologies from last 2 years
     
-    // Entity tracking with metadata
-    const entityMetadata = new Map<string, {
+    // Technology tracking with metadata
+    const techMetadata = new Map<string, {
       papers: Set<string>;
       paperDetails: Array<any>;
       years: Map<number, number>;
       firstSeen: number;
       lastSeen: number;
       totalMentions: number;
-      category: string;
     }>();
 
-    // Collect all entities with temporal data
+    // Collect technologies from validated emerging_technologies field
     abstracts.forEach(abstract => {
-      const entities = abstract.extracted_entities;
-      if (!entities) return;
+      const technologies = abstract.emerging_technologies || [];
+      if (technologies.length === 0) return;
 
       const year = abstract.year || new Date(abstract.created_at).getFullYear();
 
-      // Process technologies
-      (entities.technologies || []).forEach((tech: string) => {
-        if (isFalsePositive(tech)) return; // Skip false positives
-        
-        if (!entityMetadata.has(tech)) {
-          entityMetadata.set(tech, {
+      technologies.forEach((tech: string) => {
+        if (!techMetadata.has(tech)) {
+          techMetadata.set(tech, {
             papers: new Set(),
             paperDetails: [],
             years: new Map(),
             firstSeen: year,
             lastSeen: year,
-            totalMentions: 0,
-            category: 'Technology'
+            totalMentions: 0
           });
         }
-        const data = entityMetadata.get(tech)!;
-        if (!data.papers.has(abstract.id)) {
-          data.papers.add(abstract.id);
-          data.paperDetails.push({
-            id: abstract.id,
-            title: abstract.title,
-            authors: abstract.student_name || abstract.authors || 'Unknown',
-            year: year,
-            abstract: abstract.abstract_text
-          });
-        }
-        data.years.set(year, (data.years.get(year) || 0) + 1);
-        data.firstSeen = Math.min(data.firstSeen, year);
-        data.lastSeen = Math.max(data.lastSeen, year);
-        data.totalMentions++;
-      });
-
-      // Process domains
-      (entities.domains || []).forEach((domain: string) => {
-        if (isFalsePositive(domain)) return; // Skip false positives
-        
-        if (!entityMetadata.has(domain)) {
-          entityMetadata.set(domain, {
-            papers: new Set(),
-            paperDetails: [],
-            years: new Map(),
-            firstSeen: year,
-            lastSeen: year,
-            totalMentions: 0,
-            category: 'Research Domain'
-          });
-        }
-        const data = entityMetadata.get(domain)!;
-        if (!data.papers.has(abstract.id)) {
-          data.papers.add(abstract.id);
-          data.paperDetails.push({
-            id: abstract.id,
-            title: abstract.title,
-            authors: abstract.student_name || abstract.authors || 'Unknown',
-            year: year,
-            abstract: abstract.abstract_text
-          });
-        }
-        data.years.set(year, (data.years.get(year) || 0) + 1);
-        data.firstSeen = Math.min(data.firstSeen, year);
-        data.lastSeen = Math.max(data.lastSeen, year);
-        data.totalMentions++;
-      });
-
-      // Process methodologies
-      (entities.methodologies || []).forEach((method: string) => {
-        if (isFalsePositive(method)) return; // Skip false positives
-        
-        if (!entityMetadata.has(method)) {
-          entityMetadata.set(method, {
-            papers: new Set(),
-            paperDetails: [],
-            years: new Map(),
-            firstSeen: year,
-            lastSeen: year,
-            totalMentions: 0,
-            category: 'Methodology'
-          });
-        }
-        const data = entityMetadata.get(method)!;
+        const data = techMetadata.get(tech)!;
         if (!data.papers.has(abstract.id)) {
           data.papers.add(abstract.id);
           data.paperDetails.push({
@@ -798,18 +729,12 @@ export const ResearchInsights: React.FC = () => {
       });
     });
 
-    // Identify emerging technologies based on criteria
+    // Build emerging technologies list
     const emergingTechs: EmergingTech[] = [];
 
-    entityMetadata.forEach((data, entityName) => {
-      // Emergence criteria:
-      // 1. First appeared recently (within last 2 years) OR
-      // 2. Showing rapid growth (50%+ increase in recent years) OR
-      // 3. Has 3-20 papers (not too rare, not mainstream yet)
-      
-      const isRecent = data.firstSeen >= emergenceThreshold;
+    techMetadata.forEach((data, techName) => {
       const paperCount = data.papers.size;
-      const isModerateAdoption = paperCount >= 3 && paperCount <= 20;
+      const isActive = data.lastSeen >= currentYear - 1; // Active in last year
       
       // Calculate growth rate
       const currentYearCount = data.years.get(currentYear) || 0;
@@ -817,99 +742,73 @@ export const ResearchInsights: React.FC = () => {
       const growthRate = lastYearCount > 0 
         ? ((currentYearCount - lastYearCount) / lastYearCount) * 100 
         : (currentYearCount > 0 ? 100 : 0);
-      
-      const isGrowing = growthRate > 50;
-      const isActive = data.lastSeen >= currentYear - 1; // Active in last year
 
-      // Only include if meets emergence criteria
-      if ((isRecent || isGrowing || isModerateAdoption) && isActive) {
-        // Determine maturity level
-        let maturity: 'experimental' | 'emerging' | 'growing';
-        if (paperCount <= 5) {
-          maturity = 'experimental';
-        } else if (paperCount <= 12) {
-          maturity = 'emerging';
-        } else {
-          maturity = 'growing';
-        }
-
-        // Calculate adoption and potential
-        const adoption = Math.min((paperCount / 20) * 100, 100);
-        const potential = Math.min(
-          80 + (isRecent ? 10 : 0) + (isGrowing ? 10 : 0),
-          100
-        );
-
-        // Estimate timeframe based on maturity
-        const timeframe = 
-          maturity === 'experimental' ? '3-5 years' :
-          maturity === 'emerging' ? '1-3 years' :
-          '1-2 years';
-
-        // Generate research opportunities based on entity type
-        const opportunities = generateResearchOpportunities(entityName, data.category);
-        const challenges = generateChallenges(maturity);
-        const keyTechnologies = generateKeyTechnologies(entityName, data.category);
-
-        emergingTechs.push({
-          id: entityName.toLowerCase().replace(/\s+/g, '-'),
-          name: entityName,
-          maturity,
-          adoption: Math.round(adoption),
-          potential: Math.round(potential),
-          timeframe,
-          category: data.category,
-          description: `Active research area in ${data.category.toLowerCase()} with ${paperCount} recent ${paperCount === 1 ? 'paper' : 'papers'}. Estimated mainstream adoption timeframe: ${timeframe}.`,
-          keyTechnologies,
-          researchOpportunities: opportunities,
-          challenges,
-          relatedPapers: paperCount,
-          papers: data.paperDetails
-        });
+      // Determine maturity level based on paper count
+      let maturity: 'experimental' | 'emerging' | 'growing';
+      if (paperCount <= 5) {
+        maturity = 'experimental';
+      } else if (paperCount <= 12) {
+        maturity = 'emerging';
+      } else {
+        maturity = 'growing';
       }
+
+      // Calculate adoption percentage (max 20 papers = 100%)
+      const adoption = Math.min((paperCount / 20) * 100, 100);
+      
+      // Calculate potential based on recent activity and growth
+      const isRecent = data.firstSeen >= currentYear - 2;
+      const isGrowing = growthRate > 50;
+      const potential = Math.min(
+        80 + (isRecent ? 10 : 0) + (isGrowing ? 10 : 0),
+        100
+      );
+
+      // Estimate mainstream adoption timeframe
+      const timeframe = 
+        maturity === 'experimental' ? '3-5 years' :
+        maturity === 'emerging' ? '1-3 years' :
+        '1-2 years';
+
+      // Generate metadata for this technology
+      const opportunities = generateResearchOpportunities(techName);
+      const challenges = generateChallenges(maturity);
+      const keyTechnologies = generateKeyTechnologies(techName);
+
+      emergingTechs.push({
+        id: techName.toLowerCase().replace(/\s+/g, '-'),
+        name: techName,
+        maturity,
+        adoption: Math.round(adoption),
+        potential: Math.round(potential),
+        timeframe,
+        category: techName,
+        description: `Active research area in technology with ${paperCount} recent ${paperCount === 1 ? 'paper' : 'papers'}. Estimated mainstream adoption timeframe: ${timeframe}.`,
+        keyTechnologies,
+        researchOpportunities: opportunities,
+        challenges,
+        relatedPapers: paperCount,
+        papers: data.paperDetails
+      });
     });
 
     // Sort by potential (high potential first) and then by paper count
-    const sortedTechs = emergingTechs.sort((a, b) => {
+    return emergingTechs.sort((a, b) => {
       if (b.potential !== a.potential) {
         return b.potential - a.potential;
       }
       return b.relatedPapers - a.relatedPapers;
     });
-
-    // Return top 10 emerging technologies or fallback to mock data
-    const result = sortedTechs.slice(0, 10);
-    
-    // If no emerging technologies detected, use mock data with real counts
-    if (result.length === 0) {
-      return mockEmergingTechnologies.map(tech => ({
-        ...tech,
-        relatedPapers: 0,
-        description: tech.description + ' (No related papers found in current research database)'
-      }));
-    }
-
-    return result;
   };
 
   // Helper function to generate research opportunities
-  const generateResearchOpportunities = (entityName: string, category: string): string[] => {
-    const opportunities = [
-      `${entityName} integration in educational systems`,
-      `Performance optimization for ${entityName}`,
-      `Real-world applications of ${entityName}`,
-      `Comparative analysis with alternative approaches`
+  const generateResearchOpportunities = (techName: string): string[] => {
+    return [
+      `${techName} integration in educational systems`,
+      `Performance optimization for ${techName} applications`,
+      `Real-world implementation of ${techName}`,
+      `Comparative analysis with alternative technologies`
     ];
-
-    if (category === 'Technology') {
-      opportunities.push(`${entityName} security and privacy considerations`);
-    } else if (category === 'Research Domain') {
-      opportunities.push(`Cross-disciplinary applications in ${entityName}`);
-    } else {
-      opportunities.push(`${entityName} best practices and frameworks`);
-    }
-
-    return opportunities.slice(0, 4);
   };
 
   // Helper function to generate challenges
@@ -925,17 +824,24 @@ export const ResearchInsights: React.FC = () => {
     }
   };
 
-  // Helper function to generate key technologies
-  const generateKeyTechnologies = (entityName: string, category: string): string[] => {
-    const baseTech = [entityName];
+  // Helper function to generate key technologies based on tech category
+  const generateKeyTechnologies = (techName: string): string[] => {
+    // Return specific technologies based on category name
+    const techMap: Record<string, string[]> = {
+      'Web Technologies': ['React', 'Node.js', 'PHP', 'JavaScript', 'HTML/CSS'],
+      'IoT & Hardware': ['Arduino', 'Raspberry Pi', 'Sensors', 'Microcontrollers', 'ESP32'],
+      'Data & Analytics': ['MySQL', 'Data Visualization', 'Business Intelligence', 'Dashboards', 'Reports'],
+      'Security & Authentication': ['Encryption', 'Biometrics', 'Access Control', 'Authentication', 'Security Protocols'],
+      'Identification & Tracking': ['QR Code', 'RFID', 'Facial Recognition', 'GPS', 'Barcode'],
+      'Mobile Technologies': ['Android', 'iOS', 'React Native', 'Mobile Development', 'Cross-platform'],
+      'Frameworks & Programming': ['Agile', 'Java', 'Python', 'Software Development', 'Best Practices'],
+      'Immersive Technologies': ['VR', 'AR', 'Virtual Reality', 'Augmented Reality', '3D Simulation'],
+      'Cloud & Backend Services': ['Firebase', 'Cloud Storage', 'APIs', 'Backend Development', 'Server Management'],
+      'Machine Learning & AI': ['Neural Networks', 'Computer Vision', 'NLP', 'Prediction Models', 'AI Algorithms'],
+      'Geographic Information Systems': ['GIS', 'Mapping', 'Geospatial Analysis', 'Location Services', 'Satellite Data']
+    };
     
-    if (category === 'Technology') {
-      return [...baseTech, 'Development Tools', 'Frameworks', 'Libraries', 'Best Practices'];
-    } else if (category === 'Research Domain') {
-      return [...baseTech, 'Research Methods', 'Analysis Tools', 'Data Sources', 'Validation Techniques'];
-    } else {
-      return [...baseTech, 'Implementation Strategies', 'Assessment Methods', 'Documentation', 'Case Studies'];
-    }
+    return techMap[techName] || [techName, 'Development Tools', 'Frameworks', 'Libraries', 'Best Practices'];
   };
 
   const getTrendIcon = (trend: string) => {
@@ -955,21 +861,17 @@ export const ResearchInsights: React.FC = () => {
     }
   };
 
-  // Filter emerging technologies based on search and filters
+  // Filter emerging technologies based on search and category
   const filteredTechnologies = emergingTechnologies.filter(tech => {
-    // Search filter
     const matchesSearch = techSearchTerm === '' || 
       tech.name.toLowerCase().includes(techSearchTerm.toLowerCase()) ||
-      tech.description.toLowerCase().includes(techSearchTerm.toLowerCase()) ||
-      tech.keyTechnologies.some(kt => kt.toLowerCase().includes(techSearchTerm.toLowerCase()));
+      tech.description.toLowerCase().includes(techSearchTerm.toLowerCase());
     
-    // Category filter
     const matchesCategory = techCategoryFilter === 'all' || tech.category === techCategoryFilter;
     
     return matchesSearch && matchesCategory;
   });
 
-  // Get unique categories for filter options
   const categories = Array.from(new Set(emergingTechnologies.map(t => t.category)));
 
   return (
@@ -1225,7 +1127,6 @@ export const ResearchInsights: React.FC = () => {
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold text-blue-600">{theme.frequency}</div>
-                          <div className="text-sm text-gray-600">mentions</div>
                         </div>
                       </div>
 
@@ -1233,28 +1134,33 @@ export const ResearchInsights: React.FC = () => {
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div>
-                          <h4 className="font-medium text-sm text-gray-700 mb-2">Growth Rate</h4>
+                          <h4 className="font-medium text-sm text-gray-700 mb-2">Total Abstracts</h4>
                           <div className="flex items-center gap-2">
-                            <span className={`font-semibold ${
-                              theme.growth.startsWith('+') ? 'text-green-600' : 
-                              theme.growth.startsWith('-') ? 'text-red-600' : 'text-gray-600'
-                            }`}>
-                              {theme.growth}
+                            <span className="text-2xl font-bold text-blue-600">
+                              {theme.frequency}
                             </span>
-                            <span className="text-sm text-gray-500">vs last year</span>
+                            <span className="text-sm text-gray-500">approved</span>
                           </div>
                         </div>
 
                         <div>
-                          <h4 className="font-medium text-sm text-gray-700 mb-2">Related Papers</h4>
-                          <div className="text-sm text-gray-600">
-                            {theme.papers.length} publications
+                          <h4 className="font-medium text-sm text-gray-700 mb-2">Unique Papers</h4>
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl font-bold text-purple-600">
+                              {theme.papers.length}
+                            </span>
+                            <span className="text-sm text-gray-500">publications</span>
                           </div>
                         </div>
 
                         <div>
-                          <h4 className="font-medium text-sm text-gray-700 mb-2">Frequency</h4>
-                          <Progress value={(theme.frequency / 50) * 100} className="h-2" />
+                          <h4 className="font-medium text-sm text-gray-700 mb-2">Percentage</h4>
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl font-bold text-green-600">
+                              {((theme.frequency / researchThemes.reduce((sum, t) => sum + t.frequency, 0)) * 100).toFixed(1)}%
+                            </span>
+                            <span className="text-sm text-gray-500">of total</span>
+                          </div>
                         </div>
                       </div>
 
