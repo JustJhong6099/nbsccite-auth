@@ -311,10 +311,10 @@ export const ResearchInsights: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // State for real-time data
-  const [researchThemes, setResearchThemes] = useState<ResearchTheme[]>(mockResearchThemes);
-  const [trendAnalysis, setTrendAnalysis] = useState<TrendPeriod[]>(mockTrendAnalysis);
-  const [emergingTechnologies, setEmergingTechnologies] = useState<EmergingTech[]>(mockEmergingTechnologies);
+  // State for real-time data - NO MOCK DATA
+  const [researchThemes, setResearchThemes] = useState<ResearchTheme[]>([]);
+  const [trendAnalysis, setTrendAnalysis] = useState<TrendPeriod[]>([]);
+  const [emergingTechnologies, setEmergingTechnologies] = useState<EmergingTech[]>([]);
   
   // State for modal
   const [selectedTech, setSelectedTech] = useState<EmergingTech | null>(null);
@@ -360,43 +360,70 @@ export const ResearchInsights: React.FC = () => {
     try {
       setIsLoading(true);
 
-      // Fetch all approved abstracts with their entities
-      const { data: abstracts, error } = await supabase
+      // Fetch all approved abstracts (with manual research_theme field)
+      console.log('🔍 Fetching approved abstracts...');
+      const { data: abstracts, error: abstractsError } = await supabase
         .from('abstracts')
         .select('*')
         .eq('status', 'approved')
-        .not('extracted_entities', 'is', null)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      console.log('� Abstracts result:', { 
+        count: abstracts?.length || 0, 
+        error: abstractsError
+      });
 
-      if (abstracts && abstracts.length > 0) {
-        // Process Research Themes
-        const themes = processResearchThemes(abstracts);
+      if (abstractsError) {
+        console.error('❌ Error fetching abstracts:', abstractsError);
+        toast({
+          title: "Database Error",
+          description: `Could not load abstracts: ${abstractsError.message}`,
+          variant: "destructive",
+        });
+        setResearchThemes([]);
+        setTrendAnalysis([]);
+        setEmergingTechnologies([]);
+      } else if (abstracts && abstracts.length > 0) {
+        console.log(`✅ Found ${abstracts.length} approved abstracts`);
+        
+        // Process Research Themes from manual research_theme field
+        const themes = processResearchThemesFromManualField(abstracts);
+        console.log('✅ Processed themes:', themes);
         setResearchThemes(themes);
 
         // Process Trend Analysis
-        const trends = processTrendAnalysis(abstracts);
+        const trends = processTrendAnalysisFromManualThemes(abstracts);
+        console.log('📈 Processed trends:', trends);
         setTrendAnalysis(trends);
 
         // Process Emerging Technologies
         const emerging = processEmergingTechnologies(abstracts);
+        console.log('⚡ Processed emerging tech:', emerging);
         setEmergingTechnologies(emerging);
+      } else {
+        console.warn('⚠️ No approved abstracts found');
+        setResearchThemes([]);
+        setTrendAnalysis([]);
+        setEmergingTechnologies([]);
       }
     } catch (error: any) {
       console.error('Error fetching research insights:', error);
       toast({
         title: "Error Loading Insights",
-        description: "Failed to load research insights. Using sample data.",
+        description: "Failed to load research insights from database.",
         variant: "destructive",
       });
-      // Keep using mock data on error
+      setResearchThemes([]);
+      setTrendAnalysis([]);
+      setEmergingTechnologies([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const processResearchThemes = (abstracts: any[]): ResearchTheme[] => {
+  // NEW: Process research themes from manual research_theme field
+  const processResearchThemesFromManualField = (abstracts: any[]): ResearchTheme[] => {
+    const currentYear = new Date().getFullYear();
     const themeMap = new Map<string, {
       papers: Set<string>;
       domains: Set<string>;
@@ -404,21 +431,17 @@ export const ResearchInsights: React.FC = () => {
       yearlyCount: Map<number, number>;
     }>();
 
-    // Count entity occurrences and track papers
+    // Group abstracts by their manual research_themes (can be multiple per abstract)
     abstracts.forEach(abstract => {
-      const entities = abstract.extracted_entities;
-      if (!entities) return;
-
+      const themes = abstract.research_themes || [abstract.research_theme || 'Uncategorized'];
       const year = abstract.year || new Date(abstract.created_at).getFullYear();
-      const allEntities = [
-        ...(entities.technologies || []),
-        ...(entities.domains || []),
-        ...(entities.methodologies || [])
-      ].filter(entity => !isFalsePositive(entity)); // Filter out false positives
 
-      allEntities.forEach((entity: string) => {
-        if (!themeMap.has(entity)) {
-          themeMap.set(entity, {
+      // Count this abstract for each theme it belongs to
+      themes.forEach((themeName: string) => {
+        if (!themeName) return;
+
+        if (!themeMap.has(themeName)) {
+          themeMap.set(themeName, {
             papers: new Set(),
             domains: new Set(),
             frequency: 0,
@@ -426,20 +449,17 @@ export const ResearchInsights: React.FC = () => {
           });
         }
 
-        const themeData = themeMap.get(entity)!;
+        const themeData = themeMap.get(themeName)!;
         themeData.papers.add(abstract.title);
         themeData.frequency++;
         
-        // Track yearly count for trend calculation
         const currentCount = themeData.yearlyCount.get(year) || 0;
         themeData.yearlyCount.set(year, currentCount + 1);
 
-        // Add related domains
-        if (entities.domains) {
-          entities.domains.forEach((domain: string) => {
-            if (!isFalsePositive(domain)) {
-              themeData.domains.add(domain);
-            }
+        // Add domains from extracted entities
+        if (abstract.extracted_entities?.domains) {
+          abstract.extracted_entities.domains.forEach((domain: string) => {
+            themeData.domains.add(domain);
           });
         }
       });
@@ -447,7 +467,6 @@ export const ResearchInsights: React.FC = () => {
 
     // Convert to ResearchTheme array
     const themes: ResearchTheme[] = [];
-    const currentYear = new Date().getFullYear();
 
     themeMap.forEach((data, themeName) => {
       const currentYearCount = data.yearlyCount.get(currentYear) || 0;
@@ -480,18 +499,133 @@ export const ResearchInsights: React.FC = () => {
         relatedDomains: Array.from(data.domains).slice(0, 5),
         growth,
         significance,
-        description: `Research theme appearing in ${data.papers.size} papers with ${data.frequency} total mentions.`
+        description: `Research theme with ${data.papers.size} approved ${data.papers.size === 1 ? 'abstract' : 'abstracts'}`
       });
     });
 
-    // Sort by frequency and return top themes
-    return themes.sort((a, b) => b.frequency - a.frequency).slice(0, 15);
+    return themes.sort((a, b) => b.frequency - a.frequency);
   };
 
-  const processTrendAnalysis = (abstracts: any[]): TrendPeriod[] => {
+  // NEW: Process trend analysis from manual themes
+  const processTrendAnalysisFromManualThemes = (abstracts: any[]): TrendPeriod[] => {
     const yearlyData = new Map<number, {
       papers: Set<string>;
-      topics: Map<string, number>;
+      themes: Map<string, number>;
+    }>();
+
+    abstracts.forEach(abstract => {
+      const year = abstract.year || new Date(abstract.created_at).getFullYear();
+      const themes = abstract.research_themes || [abstract.research_theme || 'Uncategorized'];
+      
+      if (!yearlyData.has(year)) {
+        yearlyData.set(year, {
+          papers: new Set(),
+          themes: new Map()
+        });
+      }
+
+      const data = yearlyData.get(year)!;
+      data.papers.add(abstract.id);
+
+      // Count each theme
+      themes.forEach((theme: string) => {
+        if (theme) {
+          const count = data.themes.get(theme) || 0;
+          data.themes.set(theme, count + 1);
+        }
+      });
+    });
+
+    const trends: TrendPeriod[] = [];
+    const sortedYears = Array.from(yearlyData.keys()).sort();
+
+    sortedYears.forEach(year => {
+      const data = yearlyData.get(year)!;
+      
+      const topThemes = Array.from(data.themes.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([theme]) => theme);
+
+      const dominantTheme = topThemes.length > 0 
+        ? topThemes[0]
+        : 'General Research';
+
+      trends.push({
+        period: year.toString(),
+        topics: topThemes,
+        totalPapers: data.papers.size,
+        dominantTheme
+      });
+    });
+
+    return trends;
+  };
+
+  const processResearchThemesFromDB = (themeStats: any[]): ResearchTheme[] => {
+    const currentYear = new Date().getFullYear();
+    console.log('🔧 Processing theme stats. Raw data:', themeStats);
+
+    return themeStats.map(theme => {
+      console.log(`📊 Theme: "${theme.name}" - total_abstracts: ${theme.total_abstracts}, primary: ${theme.primary_abstracts}`);
+
+      // Calculate growth trend based on active years
+      const activeYears = theme.active_years || [];
+      const hasCurrentYear = activeYears.includes(currentYear);
+      const hasLastYear = activeYears.includes(currentYear - 1);
+      
+      let trend: 'up' | 'down' | 'stable' = 'stable';
+      let growth = '0%';
+      
+      if (hasCurrentYear && !hasLastYear) {
+        trend = 'up';
+        growth = '+100%';
+      } else if (!hasCurrentYear && hasLastYear) {
+        trend = 'down';
+        growth = '-100%';
+      } else if (hasCurrentYear && hasLastYear) {
+        // Stable trend if present in both years
+        trend = 'stable';
+        growth = '0%';
+      }
+
+      const significance: 'high' | 'medium' | 'low' = 
+        theme.total_abstracts >= 10 ? 'high' :
+        theme.total_abstracts >= 5 ? 'medium' : 'low';
+
+      return {
+        id: theme.name.toLowerCase().replace(/\s+/g, '-'),
+        theme: theme.name,
+        frequency: theme.total_abstracts || 0,
+        trend,
+        papers: [], // Will be populated on demand
+        relatedDomains: [],
+        growth,
+        significance,
+        description: `Research theme with ${theme.total_abstracts || 0} approved abstracts (${theme.primary_abstracts || 0} as primary theme). Average confidence: ${Math.round((theme.avg_confidence || 0) * 100)}%`
+      };
+    }).filter(theme => theme.frequency > 0); // Only show themes with abstracts
+  };
+
+  const processTrendAnalysisFromThemes = async (abstracts: any[]): Promise<TrendPeriod[]> => {
+    // Fetch abstract themes for all approved abstracts
+    const { data: abstractThemes, error } = await supabase
+      .from('abstract_themes')
+      .select(`
+        abstract_id,
+        is_primary,
+        research_themes!inner(name)
+      `)
+      .in('abstract_id', abstracts.map(a => a.id));
+
+    if (error) {
+      console.error('Error fetching abstract themes:', error);
+      return [];
+    }
+
+    const yearlyData = new Map<number, {
+      papers: Set<string>;
+      themes: Map<string, number>;
     }>();
 
     abstracts.forEach(abstract => {
@@ -500,27 +634,20 @@ export const ResearchInsights: React.FC = () => {
       if (!yearlyData.has(year)) {
         yearlyData.set(year, {
           papers: new Set(),
-          topics: new Map()
+          themes: new Map()
         });
       }
 
       const data = yearlyData.get(year)!;
       data.papers.add(abstract.id);
 
-      // Count topics (entities)
-      const entities = abstract.extracted_entities;
-      if (entities) {
-        const allEntities = [
-          ...(entities.technologies || []),
-          ...(entities.domains || []),
-          ...(entities.methodologies || [])
-        ].filter(entity => !isFalsePositive(entity)); // Filter out false positives
-
-        allEntities.forEach((entity: string) => {
-          const count = data.topics.get(entity) || 0;
-          data.topics.set(entity, count + 1);
-        });
-      }
+      // Get themes for this abstract
+      const themes = abstractThemes?.filter(at => at.abstract_id === abstract.id) || [];
+      themes.forEach(themeAssoc => {
+        const themeName = (themeAssoc.research_themes as any).name;
+        const count = data.themes.get(themeName) || 0;
+        data.themes.set(themeName, count + 1);
+      });
     });
 
     // Convert to TrendPeriod array
@@ -530,20 +657,20 @@ export const ResearchInsights: React.FC = () => {
     sortedYears.forEach(year => {
       const data = yearlyData.get(year)!;
       
-      // Get top 5 topics for the year
-      const topTopics = Array.from(data.topics.entries())
+      // Get top 5 themes for the year
+      const topThemes = Array.from(data.themes.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
-        .map(([topic]) => topic);
+        .map(([theme]) => theme);
 
       // Determine dominant theme
-      const dominantTheme = topTopics.length > 0 
-        ? `Focus on ${topTopics[0]}` 
+      const dominantTheme = topThemes.length > 0 
+        ? topThemes[0]
         : 'General Research';
 
       trends.push({
         period: year.toString(),
-        topics: topTopics,
+        topics: topThemes,
         totalPapers: data.papers.size,
         dominantTheme
       });
