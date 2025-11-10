@@ -2,6 +2,7 @@
 -- AUTO-ASSIGN EMERGING TECHNOLOGIES TRIGGER
 -- Automatically assigns validated technologies when abstract is approved
 -- Based on 10 validated technology categories
+--for fix merge issue
 -- ================================================================
 
 -- Function to auto-assign emerging technologies based on title keywords
