@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   Chart as ChartJS,
@@ -11,8 +11,7 @@ import {
   ChartOptions
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
-import { Button } from '@/components/ui/button';
-import { Calendar, TrendingUp } from 'lucide-react';
+import { format, eachMonthOfInterval } from 'date-fns';
 
 // Register Chart.js components
 ChartJS.register(
@@ -26,121 +25,83 @@ ChartJS.register(
 
 interface ChartData {
   period: string;
+  displayLabel: string;
+  date: Date;
   submissions: number;
   approved: number;
   pending: number;
   rejected: number;
 }
 
-type TimeFilter = 'week' | 'month';
-
 export const SubmissionTrendsChart: React.FC = () => {
   const [data, setData] = useState<ChartData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('month');
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
   useEffect(() => {
     fetchSubmissionTrends();
-  }, [timeFilter]);
-
-  const getWeekNumber = (date: Date): string => {
-    const onejan = new Date(date.getFullYear(), 0, 1);
-    const week = Math.ceil((((date.getTime() - onejan.getTime()) / 86400000) + onejan.getDay() + 1) / 7);
-    return `W${week} '${date.getFullYear().toString().slice(-2)}`;
-  };
+  }, []);
 
   const fetchSubmissionTrends = async () => {
     try {
       setIsLoading(true);
 
-      // Fetch all abstracts with status
+      // Fixed date range: Aug 1, 2025 - Dec 31, 2025
+      const dateFrom = new Date(2025, 7, 1); // Aug 1, 2025
+      const dateTo = new Date(2025, 11, 31); // Dec 31, 2025
+
+      // Fetch all abstracts within date range
       const { data: abstracts, error } = await supabase
         .from('abstracts')
         .select('submitted_date, status')
+        .gte('submitted_date', format(dateFrom, 'yyyy-MM-dd'))
+        .lte('submitted_date', format(dateTo, 'yyyy-MM-dd'))
         .order('submitted_date', { ascending: true });
 
       if (error) throw error;
 
-      // Group by selected time period
-      const groupedData: { [key: string]: { total: number; approved: number; pending: number; rejected: number } } = {};
+      // For monthly view, group by months (Aug, Sep, Oct, Nov, Dec)
+      const periods = eachMonthOfInterval({ start: dateFrom, end: dateTo });
 
+      // Initialize data structure
+      const groupedData: Map<string, ChartData> = new Map();
+
+      periods.forEach(period => {
+        const key = format(period, 'yyyy-MM'); // Monthly key
+
+        groupedData.set(key, {
+          period: key,
+          displayLabel: format(period, 'MMM yyyy'), // Show month name (Aug 2025)
+          date: period,
+          submissions: 0,
+          approved: 0,
+          pending: 0,
+          rejected: 0
+        });
+      });
+
+      // Populate with actual data
       abstracts?.forEach((abstract) => {
         const date = new Date(abstract.submitted_date);
-        let periodKey: string;
+        const key = format(date, 'yyyy-MM'); // Monthly grouping
 
-        if (timeFilter === 'week') {
-          periodKey = getWeekNumber(date);
-        } else {
-          // Format as "Feb 2025" for better readability
-          periodKey = date.toLocaleString('default', { month: 'short', year: 'numeric' });
-        }
-
-        if (!groupedData[periodKey]) {
-          groupedData[periodKey] = { total: 0, approved: 0, pending: 0, rejected: 0 };
-        }
-        
-        groupedData[periodKey].total++;
-        
-        if (abstract.status === 'approved') {
-          groupedData[periodKey].approved++;
-        } else if (abstract.status === 'pending') {
-          groupedData[periodKey].pending++;
-        } else if (abstract.status === 'rejected') {
-          groupedData[periodKey].rejected++;
+        const entry = groupedData.get(key);
+        if (entry) {
+          entry.submissions++;
+          
+          if (abstract.status === 'approved') {
+            entry.approved++;
+          } else if (abstract.status === 'pending') {
+            entry.pending++;
+          } else if (abstract.status === 'rejected') {
+            entry.rejected++;
+          }
         }
       });
 
-      // Convert to array format for chart
-      let chartData: ChartData[] = Object.entries(groupedData).map(([period, counts]) => ({
-        period,
-        submissions: counts.total,
-        approved: counts.approved,
-        pending: counts.pending,
-        rejected: counts.rejected
-      }));
-
-      // For monthly view, ensure Aug-Dec are displayed
-      if (timeFilter === 'month') {
-        const allMonths: ChartData[] = [];
-        const currentYear = new Date().getFullYear();
-        
-        // Generate Aug, Sep, Oct, Nov, Dec for current year
-        const monthsToShow = [7, 8, 9, 10, 11]; // August (7) to December (11)
-        
-        for (const monthIndex of monthsToShow) {
-          const date = new Date(currentYear, monthIndex, 1);
-          const monthKey = date.toLocaleString('default', { month: 'short', year: 'numeric' });
-          
-          // Find existing data for this month or create empty entry
-          const existingData = chartData.find(d => d.period === monthKey);
-          
-          if (existingData) {
-            allMonths.push(existingData);
-          } else {
-            allMonths.push({
-              period: monthKey,
-              submissions: 0,
-              approved: 0,
-              pending: 0,
-              rejected: 0
-            });
-          }
-        }
-        
-        chartData = allMonths;
-      } else {
-        // For weekly view, keep last 12 weeks
-        chartData = chartData.slice(-12);
-      }
-
-      // Set date range
-      if (chartData.length > 0) {
-        setDateRange({
-          start: chartData[0].period,
-          end: chartData[chartData.length - 1].period
-        });
-      }
+      // Convert to array and sort by date
+      const chartData = Array.from(groupedData.values()).sort((a, b) => 
+        a.date.getTime() - b.date.getTime()
+      );
 
       setData(chartData);
     } catch (error) {
@@ -150,15 +111,17 @@ export const SubmissionTrendsChart: React.FC = () => {
     }
   };
 
+  // Calculate summary statistics
+  const summary = data.reduce((acc, item) => ({
+    total: acc.total + item.submissions,
+    approved: acc.approved + item.approved,
+    pending: acc.pending + item.pending,
+    rejected: acc.rejected + item.rejected
+  }), { total: 0, approved: 0, pending: 0, rejected: 0 });
+
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-gray-400" />
-            <span className="text-sm text-gray-500">Loading...</span>
-          </div>
-        </div>
         <div className="h-[280px] flex items-center justify-center">
           <p className="text-gray-500">Loading chart...</p>
         </div>
@@ -169,37 +132,17 @@ export const SubmissionTrendsChart: React.FC = () => {
   if (data.length === 0) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-gray-400" />
-            <span className="text-sm text-gray-500">No date range</span>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant={timeFilter === 'week' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTimeFilter('week')}
-            >
-              Weekly
-            </Button>
-            <Button
-              variant={timeFilter === 'month' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTimeFilter('month')}
-            >
-              Monthly
-            </Button>
-          </div>
-        </div>
         <div className="h-[280px] flex items-center justify-center">
-          <p className="text-gray-500">No submission data available</p>
+          <p className="text-gray-500">
+            No submission data available for Aug - Dec 2025
+          </p>
         </div>
       </div>
     );
   }
 
   const chartData = {
-    labels: data.map(d => d.period),
+    labels: data.map(d => d.displayLabel),
     datasets: [
       {
         label: 'Total Submissions',
@@ -245,19 +188,36 @@ export const SubmissionTrendsChart: React.FC = () => {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        display: false // We'll create a custom legend below
+        display: false
       },
       tooltip: {
         backgroundColor: '#ffffff',
         titleColor: '#1f2937',
-        bodyColor: '#6b7280',
+        bodyColor: '#4b5563',
         borderColor: '#e5e7eb',
         borderWidth: 1,
         padding: 12,
         displayColors: true,
+        titleFont: {
+          size: 13,
+          weight: 'bold'
+        },
+        bodyFont: {
+          size: 12
+        },
         callbacks: {
+          title: function(tooltipItems) {
+            const index = tooltipItems[0].dataIndex;
+            const item = data[index];
+            return format(item.date, 'MMMM yyyy'); // Show month for monthly view
+          },
           label: function(context) {
             return `${context.dataset.label}: ${context.parsed.y}`;
+          },
+          footer: function(tooltipItems) {
+            const index = tooltipItems[0].dataIndex;
+            const item = data[index];
+            return `Total: ${item.submissions} submissions`;
           }
         }
       }
@@ -271,25 +231,27 @@ export const SubmissionTrendsChart: React.FC = () => {
         ticks: {
           color: '#6b7280',
           font: {
-            size: 12
+            size: 11
           },
-          maxRotation: 0,
+          maxRotation: 45,
           minRotation: 0,
-          autoSkip: false
+          autoSkip: false,
+          autoSkipPadding: 10
         }
       },
       y: {
         stacked: false,
         beginAtZero: true,
         grid: {
-          color: '#e5e7eb'
+          color: '#f3f4f6'
         },
         ticks: {
           color: '#6b7280',
           font: {
-            size: 12
+            size: 11
           },
           precision: 0,
+          stepSize: 1,
           callback: function(value) {
             if (Number.isInteger(value)) {
               return value;
@@ -300,11 +262,11 @@ export const SubmissionTrendsChart: React.FC = () => {
       }
     },
     animation: {
-      duration: 1500,
+      duration: 1200,
       delay: (context) => {
         let delay = 0;
         if (context.type === 'data' && context.mode === 'default') {
-          delay = context.dataIndex * 80 + context.datasetIndex * 50; // Stagger by data point and dataset
+          delay = context.dataIndex * 50 + context.datasetIndex * 30;
         }
         return delay;
       },
@@ -314,43 +276,28 @@ export const SubmissionTrendsChart: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header with date range and filter buttons */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-blue-600" />
-          <span className="text-sm font-medium text-gray-700">
-            {dateRange.start} - {dateRange.end}
-          </span>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant={timeFilter === 'week' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTimeFilter('week')}
-            className="h-8"
-          >
-            <TrendingUp className="w-3 h-3 mr-1" />
-            Weekly
-          </Button>
-          <Button
-            variant={timeFilter === 'month' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTimeFilter('month')}
-            className="h-8"
-          >
-            <Calendar className="w-3 h-3 mr-1" />
-            Monthly
-          </Button>
-        </div>
-      </div>
-
       {/* Chart */}
       <div className="h-[240px]">
         <Bar data={chartData} options={options} />
       </div>
 
-      {/* Custom Legend at the bottom */}
-      <div className="flex flex-wrap items-center justify-center gap-4 pt-2 border-t">
+      {/* Summary Text */}
+      <div className="pt-3 border-t bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3">
+        <p className="text-sm text-gray-700">
+          <span className="font-semibold text-gray-900">
+            Aug - Dec 2025 Summary:
+          </span>
+          {' '}
+          <span className="font-bold text-blue-600">{summary.total}</span> total submissions
+          {' '}
+          (<span className="text-green-600 font-medium">{summary.approved} approved</span>,
+          {' '}<span className="text-red-600 font-medium">{summary.rejected} rejected</span>,
+          {' '}<span className="text-orange-600 font-medium">{summary.pending} pending</span>)
+        </p>
+      </div>
+
+      {/* Custom Legend */}
+      <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
           <span className="text-xs font-medium text-gray-700">Total Submissions</span>

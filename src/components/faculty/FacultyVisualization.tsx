@@ -24,7 +24,7 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 interface Abstract {
   id: string;
   title: string;
-  abstract: string;
+  abstract_text: string;
   authors: string[];
   keywords: string[];
   year: number;
@@ -756,7 +756,7 @@ export const FacultyVisualization: React.FC = () => {
                   <div>
                     <h4 className="font-medium text-sm text-gray-700 mb-2">Abstract Content</h4>
                     <p className="text-sm text-gray-600 leading-relaxed">
-                      {selectedNode.abstract.abstract}
+                      {selectedNode.abstract.abstract_text}
                     </p>
                   </div>
 

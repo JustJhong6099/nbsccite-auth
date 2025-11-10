@@ -18,6 +18,44 @@ export const FALSE_POSITIVES = [
   'world wide web', // Too generic/ubiquitous
   'www', // Too generic/ubiquitous
   'web', // Too generic without context
+  'internet', // Too generic/ubiquitous infrastructure
+  'technology', // Too generic when alone
+  
+  // Institution names - NOT research domains
+  'northern bukidnon state college',
+  'bukidnon state college',
+  'nbsc',
+  'nbsc-ics',
+  'state college',
+  'college',
+  'university',
+  'institution',
+  'school',
+  
+  // Too generic/vague concepts
+  'concept',
+  'time',
+  'process',
+  'method',
+  'approach',
+  'technique',
+  'strategy',
+  'model',
+  'framework',
+  'principle',
+  'theory',
+  
+  // Performance metrics - NOT technologies
+  'usability',
+  'accuracy',
+  'precision',
+  'accuracy and precision',
+  'performance',
+  'efficiency',
+  'effectiveness',
+  'reliability',
+  'validity',
+  
   // Geographic places (should not be research entities)
   'philippines',
   'manila',
@@ -30,6 +68,10 @@ export const FALSE_POSITIVES = [
   'makati',
   'pasig',
   'taguig',
+  'manolo fortich',
+  'bukidnon',
+  'valencia',
+  'malaybalay',
   'united states',
   'usa',
   'america',
@@ -53,11 +95,13 @@ export const FALSE_POSITIVES = [
   'country',
   'municipality',
   'barangay',
+  
   // Old institution name (for backward compatibility)
-  // Old institution name (for backward compatibility with existing data)
   'northern beaches secondary college',
   'beaches',
   'secondary college',
+  
+  // Common words
   'the',
   'and',
   'or',
@@ -74,7 +118,11 @@ export const FALSE_POSITIVES = [
   'student',
   'teacher',
   'professor',
-  'faculty'
+  'faculty',
+  'development', // Too generic alone
+  'management', // Too generic alone
+  'analysis', // Too generic alone
+  'monitoring', // Too generic alone
 ];
 
 // Terms that should NOT appear in specific categories
@@ -100,7 +148,6 @@ export const MISPLACED_TERMS = {
     'ai',
     'machine learning',
     'ml',
-    'data management', // Should be technology/methodology
     'technology', // Too generic
     'web application',
     'web app',
@@ -111,6 +158,34 @@ export const MISPLACED_TERMS = {
     'algorithm',
     'database',
     'programming',
+    'internet', // Infrastructure, not domain
+    'php',
+    'javascript',
+    'python',
+    'java',
+    
+    // Methodologies misclassified as domains
+    'agile software development',
+    'prototype',
+    'data analysis',
+    'evaluation',
+    'profiling',
+    
+    // Metrics/principles - NOT domains
+    'usability',
+    'accuracy and precision',
+    'efficiency',
+    
+    // Too generic/vague
+    'concept',
+    'time',
+    'data management', // Too broad - needs specific context
+    'reforestation', // Better as environmental science subdomain
+    
+    // Institution names - NOT domains
+    'northern bukidnon state college',
+    'bukidnon state college',
+    'nbsc',
   ],
   technologies: [
     // Domains misclassified as technologies
@@ -136,6 +211,8 @@ export const MISPLACED_TERMS = {
     'computer security', // This is a domain
     'information systems', // This is a domain
     'information system', // This is a domain
+    'data management', // Better as methodology or domain
+    
     // Methodologies misclassified as technologies
     'agile',
     'waterfall',
@@ -147,10 +224,30 @@ export const MISPLACED_TERMS = {
     'survey',
     'interview',
     'case study',
-    // Generic terms
+    'evaluation',
+    'assessment',
+    'testing',
+    'monitoring',
+    'surveillance',
+    'environmental monitoring', // This is a process/application
+    'reforestation', // This is a topic/goal, not a technology
+    'sustainable development', // This is a principle/goal
+    'conservation development', // This is a principle/goal
+    
+    // Performance metrics - NOT technologies
+    'usability',
+    'accuracy',
+    'precision',
+    'accuracy and precision',
+    'performance',
+    'efficiency',
+    
+    // Generic/vague terms
     'technology', // Too generic when alone
-    'accuracy and precision', // This is a metric
-    'profiling', // This is a methodology/technique
+    'internet', // Infrastructure, not specific tech
+    'web', // Too generic
+    'concept',
+    'time',
   ],
   methodologies: [
     // Technologies misclassified as methodologies
@@ -171,11 +268,41 @@ export const MISPLACED_TERMS = {
     'vue',
     'node',
     'nodejs',
+    'internet',
+    'technology',
+    'real-time computing',
+    'cross-platform software',
+    'algorithmic efficiency',
+    'computer accessibility',
+    'web mapping',
+    'application software',
+    
     // Domains misclassified as methodologies  
     'education',
     'healthcare',
     'tourism',
     'agriculture',
+    'information science',
+    'computer security',
+    'internet of things',
+    'data management',
+    'business operations',
+    'business process',
+    'environmental science', // This is a research domain, not a methodology
+    'natural environment',
+    
+    // Principles/goals - NOT methodologies
+    'sustainable development',
+    'conservation development',
+    'environmental monitoring', // Process, not a method
+    'reforestation', // Topic/application
+    
+    // Too generic
+    'concept',
+    'time',
+    'analysis', // Need specific type
+    'monitoring', // Need specific method
+    'development', // Need specific method
   ]
 };
 
@@ -186,95 +313,121 @@ export const TERM_REPLACEMENTS: { [key: string]: string } = {
   'i.o.t': 'Internet of Things',
   'i.o.t.': 'Internet of Things',
   
-  // Map generic/partial terms to specific correct forms
-  'information management': 'Information Management System',
-  'document management': 'Document Management System',
-  'electronic health record': 'Electronic Health Record System',
+  // Web-related terms - normalize to consistent naming
+  'web-based': 'Web-Based System',
+  'web based': 'Web-Based System',
   'web application': 'Web Application',
-  'agile': 'Agile Software Development',
-  'agile software': 'Agile Software Development',
-  'software development': 'Agile Software Development',
-  'operations': 'Operations Research',
+  'web app': 'Web Application',
+  'website': 'Web-Based System',
+  'online platform': 'Web-Based System',
+  'internet': 'Web-Based System', // Only when it appears alone
+  
+  // Mobile variations
+  'mobile': 'Mobile Application',
+  'mobile app': 'Mobile Application',
+  'mobile application': 'Mobile Application',
+  
+  // Data-related terms
+  'data analysis': 'Data Analysis',
+  'data analytics': 'Data Analytics',
+  'data management': 'Data Management',
   'data collection': 'Data Collection',
   'data collection method': 'Data Collection',
-  'implementation': 'Implementation',
-  'implementation process': 'Implementation',
-  'irrigation': 'Agriculture', // Map generic irrigation to agriculture domain
-  'irrigation system': 'Irrigation Management System',
-  // Misclassified terms
-  'software': 'Software',
+  'database': 'Database Management',
+  
+  // Software development methodologies
+  'agile': 'Agile Software Development',
+  'agile software': 'Agile Software Development',
+  'agile software development': 'Agile Software Development',
+  'software development': 'Software Development',
+  'software development process': 'Software Development',
+  'prototype': 'Prototyping',
+  'prototyping': 'Prototyping',
+  
+  // Information systems
+  'information management': 'Information Management System',
+  'document management': 'Document Management System',
   'geographic information system': 'Geographic Information System',
   'gis': 'Geographic Information System',
-  'agile software development': 'Agile Software Development',
-  'software development process': 'Agile Software Development',
-  'information': 'Information Science',
-  'information science': 'Information Science',
+  'information system': 'Information System',
+  'information systems': 'Information System',
+  
+  // Education domain
+  'education': 'Education',
+  'educational': 'Education',
   'educational technology': 'Educational Technology',
-  'learning disability': 'Learning Disability',
+  'e-learning': 'E-Learning',
+  'elearning': 'E-Learning',
   'distance education': 'Distance Education',
-  'mobile app': 'Mobile App',
-  'application software': 'Application Software',
-  'ebook': 'Ebook',
-  'e-book': 'Ebook',
+  'learning disability': 'Special Education',
+  
+  // Healthcare domain
+  'healthcare': 'Healthcare',
+  'health care': 'Healthcare',
+  'medical': 'Healthcare',
+  'electronic health record': 'Electronic Health Record System',
+  'patient management': 'Patient Management System',
+  
+  // Environmental/Conservation
+  'environmental monitoring': 'Environmental Science',
+  'reforestation': 'Environmental Science',
+  'sustainable development': 'Environmental Science',
+  'conservation development': 'Environmental Science',
+  'natural environment': 'Environmental Science',
+  
+  // Technology terms
   'java': 'Java',
+  'javascript': 'JavaScript',
+  'php': 'PHP',
+  'python': 'Python',
   'android': 'Android',
-  'automated planning and scheduling': 'Automated Planning and Scheduling',
-  'user': 'User',
-  'user computing': 'User',
-  'usability': 'Usability',
+  'real-time computing': 'Real-Time System',
+  'real-time': 'Real-Time System',
+  'cross-platform software': 'Cross-Platform Development',
+  
+  // Correct capitalizations
+  'ebook': 'E-Book',
+  'e-book': 'E-Book',
+  'user': 'User Interface',
+  'user computing': 'User Interface',
+  
+  // Map overly specific to general domain
+  'irrigation': 'Agriculture',
+  'irrigation system': 'Agriculture',
+  'operations': 'Operations Research',
+  'business operations': 'Business Operations',
+  'business process': 'Business Process Management',
+  
+  // Remove metrics/evaluations that slipped through
+  'usability': '', // Empty string will be filtered out
+  'accuracy': '',
+  'precision': '',
+  'accuracy and precision': '',
+  'efficiency': '',
+  'performance': '',
+  
+  // System types
   'system integration': 'System Integration',
+  'automated planning and scheduling': 'Automated Scheduling',
+  'application software': 'Software Application',
+  
+  // Additional normalizations
   'technology': 'Technology',
   'mental health': 'Mental Health',
-  'health care': 'Health Care',
-  'healthcare': 'Health Care',
   'reliability engineering': 'Reliability Engineering',
-  'management': 'Management',
-  'international organization for standardization': 'International Organization for Standardization',
-  'iso': 'ISO',
+  'management': 'Management System',
+  'international organization for standardization': 'ISO Standard',
+  'iso': 'ISO Standard',
   'scientific method': 'Scientific Method',
+  
   // Security and management research areas
   'information security': 'Information Security',
-  'data management': 'Data Management',
   'records management': 'Records Management',
   'computer security': 'Computer Security',
-  'security': 'Security',
-  'computer': 'Computer',
-  'file manager': 'File Manager',
-  'information sensitivity': 'Information Sensitivity',
-  'computer accessibility': 'Computer Accessibility',
-  // Local geographic focus areas (normalize variations)
-  'manolo fortich': 'Manolo Fortich',
-  'municipality of manolo fortich': 'Manolo Fortich',
-  'northern mindanao': 'Northern Mindanao',
-  'bukidnon': 'Bukidnon',
-  'alae': 'Alae',
-  'barangay alae': 'Alae',
-  'alae barangay health center': 'Alae Barangay Health Center',
-  'barangay lingi-on': 'Barangay Lingi-on',
-  'lingion': 'Barangay Lingi-on',
-  'barangay maluko': 'Barangay Maluko',
-  'brgy. maluko': 'Barangay Maluko',
-  'brgy maluko': 'Barangay Maluko',
-  'barangay puntian': 'Barangay Puntian',
-  'communal ranch and tree park': 'Communal Ranch and Tree Park',
-  'dahilayan forest park resort': 'Dahilayan Forest Park Resort',
-  'district i': 'District I',
-  'district ii': 'District II',
-  'district iii': 'District III',
-  'district iv': 'District IV',
-  'impasug-ong': 'Impasug-ong',
-  'kampo juan': 'Kampo Juan',
-  'kampo juan bukidnon': 'Kampo Juan',
-  'libona': 'Libona',
-  'manolo fortich national high school': 'Manolo Fortich National High School',
-  'manolo fortich mswd office': 'Manolo Fortich MSWD Office',
-  'st. jude thaddeus high school': 'St. Jude Thaddeus High School',
-  'st jude thaddeus high school': 'St. Jude Thaddeus High School',
-  'northern bukidnon state college': 'Northern Bukidnon State College',
-  'nbsc': 'NBSC',
-  'nbsc campus': 'NBSC Campus',
-  'sumilao': 'Sumilao',
-  'tankulan': 'Tankulan',
+  'security': 'Security System',
+  'computer': 'Computer Science',
+  'file manager': 'File Management',
+  'information sensitivity': 'Information Security',
   
   // Specific Management Systems (keep these as valid system types)
   'information management system': 'Information Management System',
