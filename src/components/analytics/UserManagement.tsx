@@ -222,6 +222,63 @@ export const UserManagement: React.FC = () => {
     setIsDeleteDialogOpen(true);
   };
 
+  const handleSaveEdit = async () => {
+    if (!selectedUser) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: (document.getElementById('name') as HTMLInputElement)?.value,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedUser.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "User updated successfully",
+      });
+
+      setIsEditDialogOpen(false);
+      fetchUsers(); // Refresh the list
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedUser) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', selectedUser.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+
+      setIsDeleteDialogOpen(false);
+      fetchUsers(); // Refresh the list
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete user",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -359,34 +416,27 @@ export const UserManagement: React.FC = () => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit User
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Mail className="h-4 w-4 mr-2" />
-                                Send Message
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              {user.status === 'active' ? (
-                                <DropdownMenuItem>
-                                  <UserX className="h-4 w-4 mr-2" />
-                                  Suspend User
-                                </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem>
-                                  <UserCheck className="h-4 w-4 mr-2" />
-                                  Activate User
+                              {user.role === 'student' && (
+                                <>
+                                  <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit User
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    onClick={() => handleDeleteUser(user)}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete User
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {user.role === 'faculty' && (
+                                <DropdownMenuItem disabled className="text-gray-400">
+                                  No actions available
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                onClick={() => handleDeleteUser(user)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete User
-                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -429,38 +479,18 @@ export const UserManagement: React.FC = () => {
                 <Input
                   id="email"
                   defaultValue={selectedUser.email}
-                  className="col-span-3"
+                  className="col-span-3 bg-gray-50"
+                  disabled
+                  readOnly
                 />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="department" className="text-right">
-                  Department
-                </Label>
-                <Input
-                  id="department"
-                  defaultValue={selectedUser.department || ''}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="status" className="text-right">
-                  Status
-                </Label>
-                <Select defaultValue={selectedUser.status}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="suspended">Suspended</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button type="submit">Save changes</Button>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit}>Save changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -488,7 +518,7 @@ export const UserManagement: React.FC = () => {
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive">Delete User</Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>Delete User</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

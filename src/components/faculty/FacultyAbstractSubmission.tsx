@@ -387,6 +387,30 @@ export const FacultyAbstractSubmission: React.FC<FacultyAbstractSubmissionProps>
       return;
     }
 
+    // Check for duplicate approved abstracts with the same title
+    try {
+      const { data: duplicates, error: duplicateError } = await supabase
+        .from('abstracts')
+        .select('id, title, authors, submitted_date')
+        .eq('status', 'approved')
+        .ilike('title', formData.title.trim());
+
+      if (duplicateError) throw duplicateError;
+
+      if (duplicates && duplicates.length > 0) {
+        const duplicate = duplicates[0];
+        toast.error(
+          `This abstract title already exists in approved abstracts!\n\nTitle: "${duplicate.title}"\nSubmitted: ${new Date(duplicate.submitted_date).toLocaleDateString()}`,
+          { duration: 6000 }
+        );
+        return;
+      }
+    } catch (error: any) {
+      console.error('Duplicate check error:', error);
+      toast.error("Error checking for duplicates. Please try again.");
+      return;
+    }
+
     if (!extractedEntities) {
       await handleExtractEntities();
     }

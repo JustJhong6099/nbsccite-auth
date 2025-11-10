@@ -433,7 +433,12 @@ export const ResearchInsights: React.FC = () => {
 
     // Group abstracts by their manual research_themes (can be multiple per abstract)
     abstracts.forEach(abstract => {
-      const themes = abstract.research_themes || [abstract.research_theme || 'Uncategorized'];
+      // Use research_themes array, or fallback to research_theme, or skip if neither exists
+      const themes = abstract.research_themes || (abstract.research_theme ? [abstract.research_theme] : []);
+      
+      // Skip abstracts without any themes assigned
+      if (themes.length === 0) return;
+      
       const year = abstract.year || new Date(abstract.created_at).getFullYear();
 
       // Count this abstract for each theme it belongs to
@@ -515,7 +520,11 @@ export const ResearchInsights: React.FC = () => {
 
     abstracts.forEach(abstract => {
       const year = abstract.year || new Date(abstract.created_at).getFullYear();
-      const themes = abstract.research_themes || [abstract.research_theme || 'Uncategorized'];
+      // Use research_themes array, or fallback to research_theme, or skip if neither exists
+      const themes = abstract.research_themes || (abstract.research_theme ? [abstract.research_theme] : []);
+      
+      // Skip abstracts without any themes assigned
+      if (themes.length === 0) return;
       
       if (!yearlyData.has(year)) {
         yearlyData.set(year, {

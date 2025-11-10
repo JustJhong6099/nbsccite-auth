@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { countNormalizedTerms, getTopTermsByCategory } from '@/lib/data-normalization';
+import { normalizeTerm, getTopTermsByCategory } from '@/lib/data-normalization';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bar } from 'react-chartjs-2';
 import {
@@ -76,40 +76,58 @@ export const TopResearchDomainsChart: React.FC = () => {
     try {
       setIsLoading(true);
 
-      // Fetch all abstracts with keywords and entities
+      // Fetch only approved abstracts with keywords and entities
       const { data: abstracts, error } = await supabase
         .from('abstracts')
-        .select('keywords, extracted_entities');
+        .select('id, keywords, extracted_entities')
+        .eq('status', 'approved');
 
       if (error) throw error;
 
-      console.log('Fetched abstracts for domains:', abstracts);
+      console.log('Fetched approved abstracts for domains:', abstracts);
 
-      // Collect terms based on active filter
-      const allTerms: string[] = [];
+      // Count unique papers per term instead of term occurrences
+      const termToPapers = new Map<string, Set<string>>();
 
       abstracts?.forEach((abstract) => {
-        if (activeFilter === 'domains') {
-          // Add keywords
-          const keywords = abstract.keywords || [];
-          allTerms.push(...keywords);
+        const abstractId = abstract.id || JSON.stringify(abstract); // Use ID or fallback to stringified object
+        const termsToCollect: string[] = [];
 
-          // Add extracted domains
+        if (activeFilter === 'domains') {
+          // Collect keywords
+          const keywords = abstract.keywords || [];
+          termsToCollect.push(...keywords);
+
+          // Collect extracted domains
           const domains = abstract.extracted_entities?.domains || [];
-          allTerms.push(...domains);
+          termsToCollect.push(...domains);
         } else if (activeFilter === 'technologies') {
-          // Add extracted technologies
+          // Collect extracted technologies
           const technologies = abstract.extracted_entities?.technologies || [];
-          allTerms.push(...technologies);
+          termsToCollect.push(...technologies);
         } else if (activeFilter === 'methodologies') {
-          // Add extracted methodologies
+          // Collect extracted methodologies
           const methodologies = abstract.extracted_entities?.methodologies || [];
-          allTerms.push(...methodologies);
+          termsToCollect.push(...methodologies);
         }
+
+        // For each term, add this abstract's ID to the set
+        termsToCollect.forEach(term => {
+          const normalized = normalizeTerm(term, true);
+          if (normalized) {
+            if (!termToPapers.has(normalized)) {
+              termToPapers.set(normalized, new Set());
+            }
+            termToPapers.get(normalized)!.add(abstractId);
+          }
+        });
       });
 
-      // Use centralized normalization to count terms
-      const domainCounts = countNormalizedTerms(allTerms);
+      // Convert to counts (number of unique papers per term)
+      const domainCounts: { [key: string]: number } = {};
+      termToPapers.forEach((papers, term) => {
+        domainCounts[term] = papers.size; // Count unique papers
+      });
 
       console.log(`${activeFilter} counts:`, domainCounts);
 
