@@ -11,7 +11,6 @@ import {
   Search, 
   Filter,
   Edit,
-  Trash2,
   UserPlus,
   Mail,
   Phone,
@@ -64,7 +63,6 @@ export const UserManagement: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState<User[]>([]);
@@ -217,11 +215,6 @@ export const UserManagement: React.FC = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleDeleteUser = (user: User) => {
-    setSelectedUser(user);
-    setIsDeleteDialogOpen(true);
-  };
-
   const handleSaveEdit = async () => {
     if (!selectedUser) return;
 
@@ -252,28 +245,27 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  const handleConfirmDelete = async () => {
-    if (!selectedUser) return;
-
+  const handleToggleStatus = async (user: User) => {
     try {
+      const newStatus = user.status === 'active' ? 'inactive' : 'active';
+      
       const { error } = await supabase
         .from('profiles')
-        .delete()
-        .eq('id', selectedUser.id);
+        .update({ status: newStatus })
+        .eq('id', user.id);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "User deleted successfully",
+        description: `User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`,
       });
 
-      setIsDeleteDialogOpen(false);
       fetchUsers(); // Refresh the list
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete user",
+        description: error.message || "Failed to update user status",
         variant: "destructive",
       });
     }
@@ -424,11 +416,20 @@ export const UserManagement: React.FC = () => {
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem 
-                                    onClick={() => handleDeleteUser(user)}
-                                    className="text-red-600"
+                                    onClick={() => handleToggleStatus(user)}
+                                    className={user.status === 'active' ? 'text-orange-600' : 'text-green-600'}
                                   >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete User
+                                    {user.status === 'active' ? (
+                                      <>
+                                        <UserX className="h-4 w-4 mr-2" />
+                                        Deactivate User
+                                      </>
+                                    ) : (
+                                      <>
+                                        <UserCheck className="h-4 w-4 mr-2" />
+                                        Activate User
+                                      </>
+                                    )}
                                   </DropdownMenuItem>
                                 </>
                               )}
@@ -491,34 +492,6 @@ export const UserManagement: React.FC = () => {
               Cancel
             </Button>
             <Button onClick={handleSaveEdit}>Save changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete User Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this user? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedUser && (
-            <div className="py-4">
-              <p className="text-sm text-gray-600">
-                User: <span className="font-medium">{selectedUser.full_name}</span>
-              </p>
-              <p className="text-sm text-gray-600">
-                Email: <span className="font-medium">{selectedUser.email}</span>
-              </p>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleConfirmDelete}>Delete User</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

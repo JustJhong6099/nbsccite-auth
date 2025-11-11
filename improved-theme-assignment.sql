@@ -28,7 +28,7 @@ UPDATE abstracts
 SET research_themes = array_append(COALESCE(research_themes, ARRAY[]::TEXT[]), 'Geographic Information Systems')
 WHERE status = 'approved' 
   AND (
-    LOWER(title) ~* '\y(gis|geographic|geospatial|mapping|map|location tracking|coordinate|spatial|satellite|gps|terrain|route|boundary|navigation|cluster mapping|geolocation)\y'
+    LOWER(title) ~* '\y(gis|geographic|geospatial|mapping|map|location tracking|coordinate|spatial|satellite|gps|terrain|route|boundary|navigation|cluster mapping|geolocation|kalasan)\y'
   );
 
 -- Agriculture & Smart Farming
@@ -100,7 +100,7 @@ UPDATE abstracts
 SET research_themes = array_append(COALESCE(research_themes, ARRAY[]::TEXT[]), 'Education & E-Learning')
 WHERE status = 'approved' 
   AND (
-    LOWER(title) ~* '\y(education|e-learning|learning tool|tutorial|quiz|educational|learning system|academic performance|school learning|course|training|kalasan)\y'
+    LOWER(title) ~* '\y(education|e-learning|learning tool|tutorial|quiz|educational|learning system|academic performance|school learning|course|training)\y'
   );
 
 -- Tourism & Entertainment (VERY SPECIFIC - avoid false positives!)

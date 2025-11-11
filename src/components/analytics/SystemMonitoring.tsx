@@ -28,7 +28,8 @@ import {
   Eye,
   Search,
   Filter,
-  Download
+  Download,
+  X
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -74,6 +75,23 @@ interface DataAccuracyMetric {
   target: number;
 }
 
+interface ActivityLog {
+  id: string;
+  user_name: string;
+  user_email: string;
+  user_role: string;
+  action: string;
+  target_title: string;
+  details: {
+    old_status?: string;
+    new_status?: string;
+    title?: string;
+    [key: string]: any;
+  };
+  created_at: string;
+  ip_address?: string;
+}
+
 // Mock data for system monitoring - will be replaced with real data
 const mockSystemMetrics: SystemMetrics = {
   uptime: '15 days, 8 hours',
@@ -103,6 +121,9 @@ export const SystemMonitoring: React.FC = () => {
   const [apiUsageData, setApiUsageData] = useState<ApiUsage[]>([]);
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
   const [dataAccuracy, setDataAccuracy] = useState<DataAccuracyMetric[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [activitySearchTerm, setActivitySearchTerm] = useState('');
+  const [activityActionFilter, setActivityActionFilter] = useState('all');
 
   // Fetch real-time system metrics
   useEffect(() => {
@@ -110,6 +131,7 @@ export const SystemMonitoring: React.FC = () => {
     fetchApiUsageData();
     fetchUsageLogs();
     fetchDataAccuracy();
+    fetchActivityLogs();
     
     // Set up real-time subscriptions
     const abstractsChannel = supabase
@@ -349,7 +371,16 @@ export const SystemMonitoring: React.FC = () => {
       // Transform abstracts into usage logs
       const logs: UsageLog[] = abstracts?.map((abstract, index) => {
         const profile = profileMap.get(abstract.student_id);
-        const isError = abstract.status === 'rejected';
+        
+        // Map abstract status to log status
+        let logStatus = 'success';
+        if (abstract.status === 'rejected') {
+          logStatus = 'rejected';
+        } else if (abstract.status === 'pending') {
+          logStatus = 'pending';
+        } else if (abstract.status === 'approved') {
+          logStatus = 'success';
+        }
         
         return {
           id: abstract.id,
@@ -359,10 +390,9 @@ export const SystemMonitoring: React.FC = () => {
                   abstract.status === 'approved' ? 'Abstract Approved' : 
                   abstract.status === 'rejected' ? 'Abstract Rejected' : 'Abstract Updated',
           endpoint: '/api/abstracts/submit',
-          status: isError ? 'error' : 'success',
+          status: logStatus,
           responseTime: Math.floor(Math.random() * 500) + 100, // Simulated response time
-          ip: `192.168.1.${Math.floor(Math.random() * 200) + 1}`,
-          ...(isError && { error: 'Submission rejected after review' })
+          ip: `192.168.1.${Math.floor(Math.random() * 200) + 1}`
         };
       }) || [];
 
@@ -447,6 +477,28 @@ export const SystemMonitoring: React.FC = () => {
     }
   };
 
+  const fetchActivityLogs = async () => {
+    try {
+      const { data: logs, error } = await supabase
+        .from('activity_logs')
+        .select('*')
+        .eq('action_type', 'abstract_management')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      setActivityLogs(logs || []);
+    } catch (error) {
+      console.error('Error fetching activity logs:', error);
+      toast({
+        title: "Error fetching activity logs",
+        description: "Failed to fetch activity logs",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredLogs = usageLogs.filter(log => {
     const matchesSearch = log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -455,10 +507,23 @@ export const SystemMonitoring: React.FC = () => {
     return matchesSearch && matchesFilter;
   });
 
+  const filteredActivityLogs = activityLogs.filter(log => {
+    const matchesSearch = log.user_name.toLowerCase().includes(activitySearchTerm.toLowerCase()) ||
+                         log.user_email.toLowerCase().includes(activitySearchTerm.toLowerCase()) ||
+                         log.action.toLowerCase().includes(activitySearchTerm.toLowerCase()) ||
+                         (log.target_title && log.target_title.toLowerCase().includes(activitySearchTerm.toLowerCase()));
+    const matchesFilter = activityActionFilter === 'all' || log.action === activityActionFilter;
+    return matchesSearch && matchesFilter;
+  });
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'success':
         return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Success</Badge>;
+      case 'rejected':
+        return <Badge className="bg-red-100 text-red-800"><X className="h-3 w-3 mr-1" />Rejected</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
       case 'error':
         return <Badge className="bg-red-100 text-red-800"><AlertTriangle className="h-3 w-3 mr-1" />Error</Badge>;
       case 'warning':
@@ -532,132 +597,13 @@ export const SystemMonitoring: React.FC = () => {
         </div>
       </div>
 
-      {/* System Health Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">System Uptime</p>
-                <p className="text-xl font-bold text-green-600">{systemMetrics.uptime}</p>
-              </div>
-              <Activity className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Active Users</p>
-                <p className="text-2xl font-bold">{systemMetrics.activeUsers}</p>
-              </div>
-              <Monitor className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Avg Response</p>
-                <p className="text-2xl font-bold">{systemMetrics.avgResponseTime}ms</p>
-              </div>
-              <Clock className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">API Calls Today</p>
-                <p className="text-2xl font-bold">{systemMetrics.apiCallsToday}</p>
-              </div>
-              <Zap className="h-8 w-8 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Resource Usage */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Cpu className="h-5 w-5" />
-              CPU Usage
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-2xl font-bold">{systemMetrics.cpuUsage}%</span>
-              <Badge className={systemMetrics.cpuUsage < 70 ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
-                {systemMetrics.cpuUsage < 70 ? 'Normal' : 'High'}
-              </Badge>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div 
-                className={`h-3 rounded-full transition-all duration-300 ${systemMetrics.cpuUsage < 70 ? 'bg-green-500' : 'bg-yellow-500'}`}
-                style={{ width: `${systemMetrics.cpuUsage}%` }}
-              ></div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MemoryStick className="h-5 w-5" />
-              Memory Usage
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-2xl font-bold">{systemMetrics.memoryUsage}%</span>
-              <Badge className={systemMetrics.memoryUsage < 80 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                {systemMetrics.memoryUsage < 80 ? 'Normal' : 'Critical'}
-              </Badge>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div 
-                className={`h-3 rounded-full transition-all duration-300 ${systemMetrics.memoryUsage < 80 ? 'bg-green-500' : 'bg-red-500'}`}
-                style={{ width: `${systemMetrics.memoryUsage}%` }}
-              ></div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <HardDrive className="h-5 w-5" />
-              Storage Usage
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-2xl font-bold">{systemMetrics.storageUsed}%</span>
-              <Badge className={systemMetrics.storageUsed < 80 ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
-                {systemMetrics.storageUsed < 80 ? 'Normal' : 'Warning'}
-              </Badge>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div 
-                className={`h-3 rounded-full transition-all duration-300 ${systemMetrics.storageUsed < 80 ? 'bg-green-500' : 'bg-yellow-500'}`}
-                style={{ width: `${systemMetrics.storageUsed}%` }}
-              ></div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Main Content Tabs */}
       <Tabs defaultValue="api" className="space-y-6">
         <TabsList>
           <TabsTrigger value="api">API Usage</TabsTrigger>
           <TabsTrigger value="logs">Usage Logs</TabsTrigger>
           <TabsTrigger value="accuracy">Data Accuracy</TabsTrigger>
+          <TabsTrigger value="activity">Activity Log</TabsTrigger>
         </TabsList>
 
         <TabsContent value="api" className="space-y-6">
@@ -729,19 +675,17 @@ export const SystemMonitoring: React.FC = () => {
                     />
                   </div>
                   <Select value={selectedLogFilter} onValueChange={setSelectedLogFilter}>
-                    <SelectTrigger className="w-32">
+                    <SelectTrigger className="w-40">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
                       <SelectItem value="success">Success</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="error">Errors</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -841,6 +785,148 @@ export const SystemMonitoring: React.FC = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Activity Log Tab */}
+        <TabsContent value="activity" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Faculty Activity Log</CardTitle>
+                  <CardDescription>Track all faculty actions on abstracts for audit and accountability</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50">
+                    {filteredActivityLogs.length} Records
+                  </Badge>
+                  <Button variant="outline" size="sm" onClick={fetchActivityLogs}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Filters */}
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search by faculty name, email, paper title, or action..."
+                      value={activitySearchTerm}
+                      onChange={(e) => setActivitySearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <Select value={activityActionFilter} onValueChange={setActivityActionFilter}>
+                  <SelectTrigger className="w-48">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Actions</SelectItem>
+                    <SelectItem value="approve">Approved</SelectItem>
+                    <SelectItem value="reject">Rejected</SelectItem>
+                    <SelectItem value="edit">Edited</SelectItem>
+                    <SelectItem value="delete">Deleted</SelectItem>
+                    <SelectItem value="publish">Published</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Activity Log Table */}
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Faculty Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Action</TableHead>
+                      <TableHead>Paper Title</TableHead>
+                      <TableHead>Timestamp</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredActivityLogs.length > 0 ? (
+                      filteredActivityLogs.map((log) => (
+                        <TableRow key={log.id}>
+                          <TableCell className="font-medium">{log.user_name}</TableCell>
+                          <TableCell className="text-sm text-gray-600">{log.user_email}</TableCell>
+                          <TableCell>
+                            {log.action === 'approve' && (
+                              <Badge className="bg-green-100 text-green-800">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Approved
+                              </Badge>
+                            )}
+                            {log.action === 'reject' && (
+                              <Badge className="bg-red-100 text-red-800">
+                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                Rejected
+                              </Badge>
+                            )}
+                            {log.action === 'edit' && (
+                              <Badge className="bg-blue-100 text-blue-800">
+                                <Eye className="h-3 w-3 mr-1" />
+                                Edited
+                              </Badge>
+                            )}
+                            {log.action === 'delete' && (
+                              <Badge className="bg-gray-100 text-gray-800">
+                                Deleted
+                              </Badge>
+                            )}
+                            {log.action === 'publish' && (
+                              <Badge className="bg-purple-100 text-purple-800">
+                                Published
+                              </Badge>
+                            )}
+                            {!['approve', 'reject', 'edit', 'delete', 'publish'].includes(log.action) && (
+                              <Badge variant="outline">
+                                {log.action.charAt(0).toUpperCase() + log.action.slice(1)}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="max-w-md truncate" title={log.target_title}>
+                            {log.target_title}
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-600">
+                            {new Date(log.created_at).toLocaleString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                          {activitySearchTerm || activityActionFilter !== 'all' ? (
+                            <>
+                              <Search className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                              <p>No activity logs match your search criteria</p>
+                            </>
+                          ) : (
+                            <>
+                              <Activity className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                              <p>No activity logs available</p>
+                              <p className="text-sm mt-1">Faculty actions will appear here</p>
+                            </>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>

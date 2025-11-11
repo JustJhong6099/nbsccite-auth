@@ -810,7 +810,7 @@ export const MyAbstracts: React.FC = () => {
                   />
                 ) : (
                   <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-700 leading-relaxed">
+                    <p className="text-sm text-gray-700 leading-relaxed text-justify">
                       {selectedAbstract.abstract}
                     </p>
                   </div>

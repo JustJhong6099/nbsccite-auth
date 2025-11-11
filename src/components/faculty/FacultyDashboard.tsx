@@ -748,7 +748,7 @@ const StudentAbstractReview: React.FC = () => {
                     </div>
                     <div>
                       <Label className="text-sm font-medium">Abstract:</Label>
-                      <div className="mt-2 p-4 bg-gray-50 rounded-lg text-sm">
+                      <div className="mt-2 p-4 bg-gray-50 rounded-lg text-sm text-justify">
                         {selectedSubmission.abstract}
                       </div>
                     </div>
@@ -1292,69 +1292,6 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ overviewStats }) 
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Profile Management</h2>
           <p className="text-gray-600">Manage your account settings and personal information</p>
-        </div>
-      </div>
-
-      {/* My Statistics Section */}
-      <div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-4">My Statistics</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="border-l-4 border-l-orange-500">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                Pending Reviews
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-gray-900">
-                  {overviewStats.pendingReviews}
-                </span>
-                <MessageCircle className="w-8 h-8 text-orange-500" />
-              </div>
-              <p className="text-sm text-gray-500 mt-1">
-                Avg: {overviewStats.avgReviewTime}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-purple-500">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                Students Supervised
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-gray-900">
-                  {overviewStats.studentsSupervised}
-                </span>
-                <Users className="w-8 h-8 text-purple-500" />
-              </div>
-              <p className="text-sm text-gray-500 mt-1">
-                Active supervision
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-green-500">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                Validated Entities
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-gray-900">
-                  {overviewStats.validatedEntities}
-                </span>
-                <CheckCircle className="w-8 h-8 text-green-500" />
-              </div>
-              <p className="text-sm text-gray-500 mt-1">
-                Research entities validated
-              </p>
-            </CardContent>
-          </Card>
         </div>
       </div>
 

@@ -19,7 +19,7 @@ BEGIN
     END IF;
     
     -- Geographic Information Systems
-    IF LOWER(NEW.title) ~* '\y(gis|geographic|geospatial|mapping|map|location tracking|coordinate|spatial|satellite|gps|terrain|route|boundary|navigation|cluster mapping|geolocation)\y' THEN
+    IF LOWER(NEW.title) ~* '\y(gis|geographic|geospatial|mapping|map|location tracking|coordinate|spatial|satellite|gps|terrain|route|boundary|navigation|cluster mapping|geolocation|kalasan)\y' THEN
       themes_array := array_append(themes_array, 'Geographic Information Systems');
     END IF;
     
@@ -64,7 +64,7 @@ BEGIN
     END IF;
     
     -- Education & E-Learning
-    IF LOWER(NEW.title) ~* '\y(education|e-learning|learning tool|tutorial|quiz|educational|learning system|academic performance|school learning|course|training|kalasan)\y' THEN
+    IF LOWER(NEW.title) ~* '\y(education|e-learning|learning tool|tutorial|quiz|educational|learning system|academic performance|school learning|course|training)\y' THEN
       themes_array := array_append(themes_array, 'Education & E-Learning');
     END IF;
     

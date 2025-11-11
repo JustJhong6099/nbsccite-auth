@@ -433,17 +433,24 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
       let yPosition = margin;
 
       // Helper function to add text with word wrap
-      const addText = (text: string, fontSize: number, isBold: boolean = false) => {
+      const addText = (text: string, fontSize: number, isBold: boolean = false, align: 'left' | 'justify' = 'left') => {
         pdf.setFontSize(fontSize);
         pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
         const lines = pdf.splitTextToSize(text, maxWidth);
         
-        lines.forEach((line: string) => {
+        lines.forEach((line: string, index: number) => {
           if (yPosition > pageHeight - margin) {
             pdf.addPage();
             yPosition = margin;
           }
-          pdf.text(line, margin, yPosition);
+          
+          // Apply justified alignment for multi-line text (except last line)
+          if (align === 'justify' && lines.length > 1 && index < lines.length - 1) {
+            pdf.text(line, margin, yPosition, { align: 'justify', maxWidth: maxWidth });
+          } else {
+            pdf.text(line, margin, yPosition);
+          }
+          
           yPosition += fontSize * 0.5;
         });
         yPosition += 3;
@@ -467,7 +474,7 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
 
       // Abstract
       addText('Abstract:', 12, true);
-      addText(selectedAbstract.abstract, 10);
+      addText(selectedAbstract.abstract, 10, false, 'justify');
       yPosition += 3;
 
       // Keywords
@@ -1115,7 +1122,7 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
               {/* Abstract */}
               <div>
                 <h4 className="font-semibold text-gray-900 mb-2">Abstract</h4>
-                <p className="text-gray-700 leading-relaxed">{selectedAbstract.abstract}</p>
+                <p className="text-gray-700 leading-relaxed text-justify">{selectedAbstract.abstract}</p>
               </div>
 
               {/* Keywords */}
