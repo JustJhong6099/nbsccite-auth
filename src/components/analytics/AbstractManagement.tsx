@@ -468,7 +468,7 @@ export const AbstractManagement: React.FC = () => {
               <div>
                 <Label className="text-sm font-medium text-gray-700">Abstract</Label>
                 <div className="mt-1 p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm">{selectedAbstract.abstract_text}</p>
+                  <p className="text-sm text-justify">{selectedAbstract.abstract_text}</p>
                 </div>
               </div>
 

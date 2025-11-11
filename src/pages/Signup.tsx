@@ -8,17 +8,20 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordInput } from "@/components/PasswordInput";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useAuth } from "@/context/AuthContext";
 import { signupSchema, SignupFormData } from "@/lib/auth-schemas";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, GraduationCap, CheckCircle, Mail, Users, BookOpen } from "lucide-react";
+import { Loader2, GraduationCap, CheckCircle, Mail, Users, BookOpen, FileText } from "lucide-react";
 
 const Signup: React.FC = () => {
   const { signup, isLoading } = useAuth();
   const { toast } = useToast();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [registeredRole, setRegisteredRole] = useState<"student" | "faculty">("student");
   const [pageLoading, setPageLoading] = useState(true);
@@ -45,6 +48,15 @@ const Signup: React.FC = () => {
   }, []);
 
   const onSubmit = async (data: SignupFormData) => {
+    if (!termsAccepted) {
+      toast({
+        title: "Terms and Conditions Required",
+        description: "Please accept the Terms and Conditions to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await signup({
         full_name: data.full_name,
@@ -92,7 +104,10 @@ const Signup: React.FC = () => {
             NORTHERN BUKIDNON<br />
             STATE COLLEGE
           </h1>
-          <p className="text-xl lg:text-2xl text-white mb-6">Entity Extraction System</p>
+          <p className="text-xl lg:text-2xl text-white font-semibold mb-2">Empowering Academic Excellence</p>
+          <p className="text-lg text-white/90 mb-6">
+            Excellence • Innovation • Inclusivity
+          </p>
           <p className="text-lg text-white/90 max-w-md mx-auto">
             Join our academic community and access advanced research analytics tools designed for Northern Bukidnon State College.
           </p>
@@ -202,10 +217,36 @@ const Signup: React.FC = () => {
                 )}
               </div>
 
+              {/* Terms and Conditions */}
+              <div className="flex items-start space-x-2 pt-2">
+                <Checkbox
+                  id="terms"
+                  checked={termsAccepted}
+                  onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <Label
+                    htmlFor="terms"
+                    className="text-sm font-normal leading-tight cursor-pointer"
+                  >
+                    I agree to the{" "}
+                    <button
+                      type="button"
+                      onClick={() => setShowTermsModal(true)}
+                      className="text-primary hover:text-primary-hover font-medium underline underline-offset-2"
+                    >
+                      Terms and Conditions
+                    </button>
+                    {" "}and understand how my personal information will be collected and used.
+                  </Label>
+                </div>
+              </div>
+
               <Button
                 type="submit"
                 className="w-full bg-gradient-primary hover:bg-primary-hover transition-smooth shadow-elegant"
-                disabled={isLoading}
+                disabled={isLoading || !termsAccepted}
               >
                 {isLoading ? (
                   <>
@@ -267,6 +308,151 @@ const Signup: React.FC = () => {
                 Go to Sign In
               </Button>
             </Link>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Terms and Conditions Modal */}
+      <Dialog open={showTermsModal} onOpenChange={setShowTermsModal}>
+        <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="h-6 w-6 text-primary" />
+              <DialogTitle className="text-2xl">Terms and Conditions</DialogTitle>
+            </div>
+            <DialogDescription className="text-sm text-muted-foreground">
+              Northern Bukidnon State College Research Analytics Platform
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 text-sm">
+            <section>
+              <h3 className="font-semibold text-base mb-2">1. Acceptance of Terms</h3>
+              <p className="text-gray-700">
+                By creating an account and using the Northern Bukidnon State College (NBSC) Research Analytics Platform, 
+                you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions and 
+                our Data Privacy Policy.
+              </p>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-base mb-2">2. Data Collection and Usage</h3>
+              <p className="text-gray-700 mb-2">
+                The NBSC Research Analytics Platform collects and processes the following personal information:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-gray-700 ml-4">
+                <li><strong>Full Name:</strong> Used for identification and communication purposes</li>
+                <li><strong>Email Address:</strong> Used for account verification, notifications, and official communications</li>
+                <li><strong>Contact Information:</strong> Used to facilitate collaboration and research coordination</li>
+                <li><strong>Role Information:</strong> To determine access levels (Student or Faculty)</li>
+                <li><strong>Research Data:</strong> Including submitted abstracts, research themes, and academic contributions</li>
+              </ul>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-base mb-2">3. Purpose of Data Collection</h3>
+              <p className="text-gray-700 mb-2">Your personal information is collected for the following purposes:</p>
+              <ul className="list-disc list-inside space-y-1 text-gray-700 ml-4">
+                <li>To create and manage your user account</li>
+                <li>To provide access to research analytics tools and resources</li>
+                <li>To facilitate academic research collaboration within NBSC</li>
+                <li>To generate institutional research insights and analytics</li>
+                <li>To communicate important updates regarding the platform and your submissions</li>
+                <li>To maintain system security and prevent unauthorized access</li>
+              </ul>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-base mb-2">4. Data Protection and Security</h3>
+              <p className="text-gray-700">
+                We are committed to protecting your personal information. All data is stored securely using industry-standard 
+                encryption and security measures. Access to personal information is restricted to authorized personnel only and 
+                is used strictly for the purposes outlined in these terms.
+              </p>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-base mb-2">5. User Responsibilities</h3>
+              <p className="text-gray-700 mb-2">As a user of this platform, you agree to:</p>
+              <ul className="list-disc list-inside space-y-1 text-gray-700 ml-4">
+                <li>Provide accurate and truthful information during registration</li>
+                <li>Use your official NBSC email address for account creation</li>
+                <li>Maintain the confidentiality of your account credentials</li>
+                <li>Use the platform solely for legitimate academic and research purposes</li>
+                <li>Respect intellectual property rights and academic integrity standards</li>
+                <li>Comply with all applicable NBSC policies and guidelines</li>
+              </ul>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-base mb-2">6. Data Retention and Deletion</h3>
+              <p className="text-gray-700">
+                Your personal data will be retained for as long as your account remains active or as necessary to provide 
+                platform services. You may request account deactivation or data deletion by contacting the system administrator. 
+                However, certain data may be retained for legitimate institutional purposes, legal compliance, or archival requirements.
+              </p>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-base mb-2">7. Research Data and Publications</h3>
+              <p className="text-gray-700">
+                Research abstracts and materials submitted through this platform may be used for institutional analytics, 
+                reporting, and publication purposes. Proper attribution will be maintained, and academic authorship rights 
+                will be respected in accordance with NBSC research policies.
+              </p>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-base mb-2">8. Compliance with Data Privacy Act</h3>
+              <p className="text-gray-700">
+                This platform complies with Republic Act No. 10173, also known as the Data Privacy Act of 2012, and its 
+                implementing rules and regulations. Your rights as a data subject, including rights to access, correction, 
+                and deletion of personal data, are hereby recognized and protected.
+              </p>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-base mb-2">9. Updates to Terms and Conditions</h3>
+              <p className="text-gray-700">
+                NBSC reserves the right to modify these Terms and Conditions at any time. Users will be notified of 
+                significant changes via email. Continued use of the platform after modifications constitutes acceptance 
+                of the updated terms.
+              </p>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-base mb-2">10. Contact Information</h3>
+              <p className="text-gray-700">
+                For questions, concerns, or requests regarding these Terms and Conditions or your personal data, 
+                please contact the NBSC Research Analytics Platform administrator through your official NBSC email.
+              </p>
+            </section>
+
+            <section className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <p className="text-sm text-gray-800 italic">
+                <strong>Last Updated:</strong> November 11, 2025<br />
+                <strong>Effective Date:</strong> November 11, 2025<br />
+                <strong>Platform:</strong> NBSC Research Analytics & Citation Tracking System
+              </p>
+            </section>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setShowTermsModal(false)}
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                setTermsAccepted(true);
+                setShowTermsModal(false);
+              }}
+              className="bg-gradient-primary"
+            >
+              Accept Terms
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

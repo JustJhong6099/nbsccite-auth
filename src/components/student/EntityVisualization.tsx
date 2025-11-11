@@ -755,7 +755,7 @@ export const EntityVisualization: React.FC = () => {
 
                   <div>
                     <h4 className="font-medium text-sm text-gray-700 mb-2">Abstract Content</h4>
-                    <p className="text-sm text-gray-600 leading-relaxed">
+                    <p className="text-sm text-gray-600 leading-relaxed text-justify">
                       {selectedNode.abstract.abstract_text}
                     </p>
                   </div>

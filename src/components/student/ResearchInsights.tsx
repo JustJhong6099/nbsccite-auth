@@ -500,7 +500,7 @@ export const ResearchInsights: React.FC = () => {
         theme: themeName,
         frequency: data.frequency,
         trend,
-        papers: Array.from(data.papers).slice(0, 5),
+        papers: Array.from(data.papers),
         relatedDomains: Array.from(data.domains).slice(0, 5),
         growth,
         significance,
@@ -1141,7 +1141,7 @@ export const ResearchInsights: React.FC = () => {
 
                       <p className="text-gray-600 mb-4">{theme.description}</p>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
                           <h4 className="font-medium text-sm text-gray-700 mb-2">Total Abstracts</h4>
                           <div className="flex items-center gap-2">
@@ -1149,16 +1149,6 @@ export const ResearchInsights: React.FC = () => {
                               {theme.frequency}
                             </span>
                             <span className="text-sm text-gray-500">approved</span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-medium text-sm text-gray-700 mb-2">Unique Papers</h4>
-                          <div className="flex items-center gap-2">
-                            <span className="text-2xl font-bold text-purple-600">
-                              {theme.papers.length}
-                            </span>
-                            <span className="text-sm text-gray-500">publications</span>
                           </div>
                         </div>
 

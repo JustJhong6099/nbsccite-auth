@@ -96,7 +96,7 @@ const Login: React.FC = () => {
             Empowering Academic Excellence
           </h2>
           <p className="text-xl text-white/90 mb-6">
-            Research • Innovation • Discovery
+            Excellence • Innovation • Inclusivity
           </p>
           <p className="text-lg text-white/90 max-w-md mx-auto">
             Access advanced research analytics and entity extraction tools designed to enhance academic research and data analysis at NBSC.

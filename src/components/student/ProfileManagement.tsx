@@ -400,48 +400,6 @@ export const ProfileManagement: React.FC = () => {
                     )
                   )}
                 </div>
-
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Address</Label>
-                  {isEditing ? (
-                    <div className="flex items-center space-x-2 mt-1">
-                      <MapPin className="w-4 h-4 text-gray-400" />
-                      <Input
-                        value={profile.personal.address}
-                        onChange={(e) => updatePersonalField('address', e.target.value)}
-                        placeholder="Enter address"
-                        className="flex-1"
-                      />
-                    </div>
-                  ) : (
-                    profile.personal.address && (
-                      <div className="flex items-center space-x-2 text-sm mt-1">
-                        <MapPin className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-600">{profile.personal.address}</span>
-                      </div>
-                    )
-                  )}
-                </div>
-
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Class</Label>
-                  {isEditing ? (
-                    <div className="flex items-center space-x-2 mt-1">
-                      <GraduationCap className="w-4 h-4 text-gray-400" />
-                      <Input
-                        value={profile.personal.enrollmentYear}
-                        onChange={(e) => updatePersonalField('enrollmentYear', e.target.value)}
-                        placeholder="Enter enrollment year"
-                        className="flex-1"
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex items-center space-x-2 text-sm mt-1">
-                      <GraduationCap className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">Class of {profile.personal.enrollmentYear}</span>
-                    </div>
-                  )}
-                </div>
               </div>
             </CardContent>
           </Card>

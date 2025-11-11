@@ -515,7 +515,7 @@ export const AbstractSubmission: React.FC = () => {
             <div>
               <Label className="text-sm font-medium text-gray-700">Abstract</Label>
               <div className="mt-2 p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                <p className="text-sm text-gray-700 whitespace-pre-wrap text-justify">
                   {formData.abstract || "No abstract content provided."}
                 </p>
               </div>
@@ -845,7 +845,7 @@ export const AbstractSubmission: React.FC = () => {
               <div>
                 <Label className="text-sm font-medium text-gray-700">Abstract</Label>
                 <div className="mt-2 p-4 bg-gray-50 rounded-lg border">
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap text-justify">
                     {formData.abstract}
                   </p>
                 </div>

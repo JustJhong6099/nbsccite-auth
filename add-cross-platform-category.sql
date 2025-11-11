@@ -1,51 +1,9 @@
 -- ================================================================
--- FIX NUMERIC OVERFLOW ERROR
--- Removes problematic columns/constraints from troubleshooting
--- Then applies the correct AFTER trigger
+-- ADD CROSS-PLATFORM APPLICATION CATEGORY
+-- Adds new research theme for cross-platform development
 -- ================================================================
 
--- Step 1: Drop any existing trigger first
-DROP TRIGGER IF EXISTS trigger_auto_assign_themes ON abstracts;
-DROP TRIGGER IF EXISTS auto_assign_research_themes_trigger ON abstracts;
-DROP TRIGGER IF EXISTS trigger_classify_theme ON abstracts;
-
--- Step 2: Drop any problematic functions
-DROP FUNCTION IF EXISTS auto_assign_research_themes() CASCADE;
-DROP FUNCTION IF EXISTS classify_research_theme() CASCADE;
-DROP FUNCTION IF EXISTS auto_classify_theme() CASCADE;
-
--- Step 3: Check for any NUMERIC columns that might be problematic
--- (We'll keep this as a query to see what's there)
-SELECT 
-  column_name, 
-  data_type, 
-  numeric_precision, 
-  numeric_scale
-FROM information_schema.columns 
-WHERE table_name = 'abstracts' 
-  AND data_type IN ('numeric', 'decimal');
-
--- Step 4: Ensure research_theme columns exist and are correct type
-DO $$ 
-BEGIN
-  -- Add research_theme if it doesn't exist
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'abstracts' AND column_name = 'research_theme'
-  ) THEN
-    ALTER TABLE abstracts ADD COLUMN research_theme TEXT;
-  END IF;
-
-  -- Add research_themes array if it doesn't exist
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'abstracts' AND column_name = 'research_themes'
-  ) THEN
-    ALTER TABLE abstracts ADD COLUMN research_themes TEXT[];
-  END IF;
-END $$;
-
--- Step 5: Create the CORRECT function (using AFTER trigger approach)
+-- Update auto-assign trigger function to include Cross-Platform Application
 CREATE OR REPLACE FUNCTION auto_assign_research_themes()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -114,6 +72,11 @@ BEGIN
       themes_array := array_append(themes_array, 'Tourism & Entertainment');
     END IF;
     
+    -- Cross-Platform Application (NEW)
+    IF LOWER(NEW.title) ~* '\y(cross-platform|cross platform|web|android|ios|react native|flutter|xamarin|ionic|cordova|phonegap|nativescript|react|vue\.?js|angular|node\.?js|responsive design|responsive web|mobile-first|mobile first|progressive web app|pwa)\y' THEN
+      themes_array := array_append(themes_array, 'Cross-Platform Application');
+    END IF;
+    
     -- Web-Based Information Systems
     IF LOWER(NEW.title) ~* '\y(web-based|website|online platform|responsive web|information system|portal|management system|web application|kanban|counseling|e-giyata|probe)\y' THEN
       themes_array := array_append(themes_array, 'Web-Based Information Systems');
@@ -141,13 +104,28 @@ BEGIN
   -- Return NULL for AFTER trigger (return value is ignored)
   RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Step 6: Create AFTER trigger (not BEFORE)
-CREATE TRIGGER trigger_auto_assign_themes
-  AFTER INSERT OR UPDATE ON abstracts
+-- Recreate the trigger
+DROP TRIGGER IF EXISTS auto_assign_themes_trigger ON abstracts;
+CREATE TRIGGER auto_assign_themes_trigger
+  AFTER INSERT OR UPDATE OF status ON abstracts
   FOR EACH ROW
   EXECUTE FUNCTION auto_assign_research_themes();
 
+-- Manually assign Cross-Platform Application theme to existing abstracts that match the pattern
+UPDATE abstracts
+SET 
+  research_themes = array_append(COALESCE(research_themes, ARRAY[]::TEXT[]), 'Cross-Platform Application'),
+  research_theme = COALESCE(research_theme, 'Cross-Platform Application')
+WHERE 
+  status = 'approved'
+  AND LOWER(title) ~* '\y(cross-platform|cross platform|web|android|ios|react native|flutter|xamarin|ionic|cordova|phonegap|nativescript|react|vue\.?js|angular|node\.?js|responsive design|responsive web|mobile-first|mobile first|progressive web app|pwa)\y'
+  AND NOT ('Cross-Platform Application' = ANY(research_themes));
+
 -- Success message
-SELECT 'All cleanup complete! Trigger recreated successfully!' as status;
+SELECT 
+  'Cross-Platform Application category added successfully!' as status,
+  COUNT(*) as abstracts_updated
+FROM abstracts
+WHERE 'Cross-Platform Application' = ANY(research_themes);
