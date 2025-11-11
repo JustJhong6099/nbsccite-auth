@@ -5,7 +5,7 @@
 
 import jsPDF from 'jspdf';
 import { supabase } from './supabase';
-import { countNormalizedTerms, getTopTerms } from './data-normalization';
+import { normalizeTerm, getTopTermsByCategory } from './data-normalization';
 
 interface PDFExportOptions {
   filename?: string;
@@ -80,13 +80,13 @@ async function fetchDashboardData(): Promise<DashboardData> {
     // Calculate approved count
     const approvedAbstracts = abstracts?.filter(a => a.status === 'approved').length || 0;
 
-    // Calculate entity counts
+    // Calculate entity counts (approved abstracts only)
     let techCount = 0;
     let domainCount = 0;
     let methodCount = 0;
 
     abstracts?.forEach(abstract => {
-      if (abstract.extracted_entities) {
+      if (abstract.status === 'approved' && abstract.extracted_entities) {
         techCount += abstract.extracted_entities.technologies?.length || 0;
         domainCount += abstract.extracted_entities.domains?.length || 0;
         methodCount += abstract.extracted_entities.methodologies?.length || 0;
@@ -115,36 +115,86 @@ async function fetchDashboardData(): Promise<DashboardData> {
       ...counts
     }));
 
-    // Calculate top research trends
-    const allDomains: string[] = [];
-    const allTechnologies: string[] = [];
-    const allMethodologies: string[] = [];
-
-    abstracts?.forEach(abstract => {
-      if (abstract.keywords) {
-        allDomains.push(...abstract.keywords);
-      }
-      if (abstract.extracted_entities) {
-        if (abstract.extracted_entities.domains) {
-          allDomains.push(...abstract.extracted_entities.domains);
+    // Calculate top research trends - count unique papers per term (approved only)
+    const approvedAbstractsData = abstracts?.filter(a => a.status === 'approved') || [];
+    
+    // Count unique papers for domains
+    const domainToPapers = new Map<string, Set<string>>();
+    approvedAbstractsData.forEach(abstract => {
+      const abstractId = abstract.id || JSON.stringify(abstract);
+      const termsToCollect: string[] = [];
+      
+      // Collect keywords and domains
+      const keywords = abstract.keywords || [];
+      termsToCollect.push(...keywords);
+      const domains = abstract.extracted_entities?.domains || [];
+      termsToCollect.push(...domains);
+      
+      termsToCollect.forEach(term => {
+        const normalized = normalizeTerm(term, true);
+        if (normalized) {
+          if (!domainToPapers.has(normalized)) {
+            domainToPapers.set(normalized, new Set());
+          }
+          domainToPapers.get(normalized)!.add(abstractId);
         }
-        if (abstract.extracted_entities.technologies) {
-          allTechnologies.push(...abstract.extracted_entities.technologies);
-        }
-        if (abstract.extracted_entities.methodologies) {
-          allMethodologies.push(...abstract.extracted_entities.methodologies);
-        }
-      }
+      });
     });
-
-    // Use centralized normalization
-    const domainCounts = countNormalizedTerms(allDomains);
-    const technologyCounts = countNormalizedTerms(allTechnologies);
-    const methodologyCounts = countNormalizedTerms(allMethodologies);
-
-    const topDomains = getTopTerms(domainCounts, 15);
-    const topTechnologies = getTopTerms(technologyCounts, 15);
-    const topMethodologies = getTopTerms(methodologyCounts, 15);
+    
+    // Count unique papers for technologies
+    const techToPapers = new Map<string, Set<string>>();
+    approvedAbstractsData.forEach(abstract => {
+      const abstractId = abstract.id || JSON.stringify(abstract);
+      const technologies = abstract.extracted_entities?.technologies || [];
+      
+      technologies.forEach(term => {
+        const normalized = normalizeTerm(term, true);
+        if (normalized) {
+          if (!techToPapers.has(normalized)) {
+            techToPapers.set(normalized, new Set());
+          }
+          techToPapers.get(normalized)!.add(abstractId);
+        }
+      });
+    });
+    
+    // Count unique papers for methodologies
+    const methodToPapers = new Map<string, Set<string>>();
+    approvedAbstractsData.forEach(abstract => {
+      const abstractId = abstract.id || JSON.stringify(abstract);
+      const methodologies = abstract.extracted_entities?.methodologies || [];
+      
+      methodologies.forEach(term => {
+        const normalized = normalizeTerm(term, true);
+        if (normalized) {
+          if (!methodToPapers.has(normalized)) {
+            methodToPapers.set(normalized, new Set());
+          }
+          methodToPapers.get(normalized)!.add(abstractId);
+        }
+      });
+    });
+    
+    // Convert to counts
+    const domainCounts: { [key: string]: number } = {};
+    domainToPapers.forEach((papers, term) => {
+      domainCounts[term] = papers.size;
+    });
+    
+    const technologyCounts: { [key: string]: number } = {};
+    techToPapers.forEach((papers, term) => {
+      technologyCounts[term] = papers.size;
+    });
+    
+    const methodologyCounts: { [key: string]: number } = {};
+    methodToPapers.forEach((papers, term) => {
+      methodologyCounts[term] = papers.size;
+    });
+    
+    // Get top terms with category-specific filtering
+    const topDomains = getTopTermsByCategory(domainCounts, 15, 'domains');
+    const topTechnologies = getTopTermsByCategory(technologyCounts, 15, 'technologies');
+    const topMethodologies = getTopTermsByCategory(methodologyCounts, 15, 'methodologies');
 
     const domainTotal = topDomains.reduce((sum, [, count]) => sum + count, 0);
     const techTotal = topTechnologies.reduce((sum, [, count]) => sum + count, 0);
