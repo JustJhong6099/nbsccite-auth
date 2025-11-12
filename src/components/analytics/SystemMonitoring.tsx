@@ -29,7 +29,11 @@ import {
   Search,
   Filter,
   Download,
-  X
+  X,
+  Edit2,
+  Trash2,
+  Send,
+  Plus
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -841,7 +845,7 @@ export const SystemMonitoring: React.FC = () => {
               </div>
 
               {/* Activity Log Table */}
-              <div className="border rounded-lg">
+              <div className="border rounded-lg overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -849,6 +853,7 @@ export const SystemMonitoring: React.FC = () => {
                       <TableHead>Email</TableHead>
                       <TableHead>Action</TableHead>
                       <TableHead>Paper Title</TableHead>
+                      <TableHead>Feedback/Reason</TableHead>
                       <TableHead>Timestamp</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -873,30 +878,47 @@ export const SystemMonitoring: React.FC = () => {
                             )}
                             {log.action === 'edit' && (
                               <Badge className="bg-blue-100 text-blue-800">
-                                <Eye className="h-3 w-3 mr-1" />
+                                <Edit2 className="h-3 w-3 mr-1" />
                                 Edited
                               </Badge>
                             )}
                             {log.action === 'delete' && (
                               <Badge className="bg-gray-100 text-gray-800">
+                                <Trash2 className="h-3 w-3 mr-1" />
                                 Deleted
                               </Badge>
                             )}
                             {log.action === 'publish' && (
                               <Badge className="bg-purple-100 text-purple-800">
+                                <Send className="h-3 w-3 mr-1" />
                                 Published
                               </Badge>
                             )}
-                            {!['approve', 'reject', 'edit', 'delete', 'publish'].includes(log.action) && (
+                            {log.action === 'create' && (
+                              <Badge className="bg-indigo-100 text-indigo-800">
+                                <Plus className="h-3 w-3 mr-1" />
+                                Created
+                              </Badge>
+                            )}
+                            {!['approve', 'reject', 'edit', 'delete', 'publish', 'create'].includes(log.action) && (
                               <Badge variant="outline">
                                 {log.action.charAt(0).toUpperCase() + log.action.slice(1)}
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="max-w-md truncate" title={log.target_title}>
+                          <TableCell className="max-w-xs truncate" title={log.target_title}>
                             {log.target_title}
                           </TableCell>
-                          <TableCell className="text-sm text-gray-600">
+                          <TableCell className="max-w-md">
+                            {log.details?.reason || log.details?.feedback ? (
+                              <div className="text-sm text-gray-700 italic">
+                                "{log.details.reason || log.details.feedback}"
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400">No feedback provided</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-600 whitespace-nowrap">
                             {new Date(log.created_at).toLocaleString('en-US', {
                               month: 'short',
                               day: 'numeric',

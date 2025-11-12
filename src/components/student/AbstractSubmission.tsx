@@ -80,12 +80,20 @@ export const AbstractSubmission: React.FC = () => {
   const zoomBehaviorRef = React.useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
   const handleKeywordAdd = () => {
-    if (keywordInput.trim() && !formData.keywords.includes(keywordInput.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        keywords: [...prev.keywords, keywordInput.trim()]
-      }));
-      setKeywordInput('');
+    if (keywordInput.trim()) {
+      // Split by comma and trim each keyword
+      const newKeywords = keywordInput
+        .split(',')
+        .map(k => k.trim())
+        .filter(k => k.length > 0 && !formData.keywords.includes(k));
+      
+      if (newKeywords.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          keywords: [...prev.keywords, ...newKeywords]
+        }));
+        setKeywordInput('');
+      }
     }
   };
 
@@ -667,7 +675,7 @@ export const AbstractSubmission: React.FC = () => {
                 <div className="mt-1 space-y-2">
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Add a keyword..."
+                      placeholder="Add keywords (comma-separated)..."
                       value={keywordInput}
                       onChange={(e) => setKeywordInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleKeywordAdd())}
@@ -676,6 +684,9 @@ export const AbstractSubmission: React.FC = () => {
                       Add
                     </Button>
                   </div>
+                  <p className="text-xs text-gray-500">
+                    Separate multiple keywords with commas (e.g., machine learning, AI, deep learning)
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {formData.keywords.map((keyword, index) => (
                       <Badge 

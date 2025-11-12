@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import * as d3 from "d3";
+import { logAbstractApproval, logAbstractRejection } from "@/lib/activity-logger";
 import { FacultyVisualization } from "./FacultyVisualization";
 import { ResearchInsights } from "@/components/student/ResearchInsights";
 import { exportDashboardToPDF } from "@/lib/pdf-export";
@@ -482,6 +483,9 @@ const StudentAbstractReview: React.FC = () => {
 
       if (error) throw error;
 
+      // Log the approval activity with feedback
+      await logAbstractApproval(selectedSubmission.id, selectedSubmission.title, reviewForm.feedback);
+
       // Update local state
       const updatedSubmissions = submissions.map(submission =>
         submission.id === selectedSubmission.id
@@ -528,6 +532,9 @@ const StudentAbstractReview: React.FC = () => {
         .eq('id', selectedSubmission.id);
 
       if (error) throw error;
+
+      // Log the rejection activity
+      await logAbstractRejection(selectedSubmission.id, selectedSubmission.title, reviewForm.feedback);
 
       // Update local state
       const updatedSubmissions = submissions.map(submission =>
@@ -1501,6 +1508,14 @@ const FacultyDashboard: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // User statistics state
+  const [userStats, setUserStats] = useState({
+    totalUsers: 0,
+    students: 0,
+    faculty: 0,
+    activeUsers: 0
+  });
+
   // Mock data for overview cards
   const overviewStats = {
     totalAbstracts: 24,
@@ -1514,9 +1529,10 @@ const FacultyDashboard: React.FC = () => {
   // Fetch recent activities from database
   useEffect(() => {
     fetchRecentActivities();
+    fetchUserStatistics();
 
-    // Set up real-time subscription
-    const channel = supabase
+    // Set up real-time subscription for abstracts
+    const abstractsChannel = supabase
       .channel('recent_activities_updates')
       .on(
         'postgres_changes',
@@ -1532,9 +1548,27 @@ const FacultyDashboard: React.FC = () => {
       )
       .subscribe();
 
+    // Set up real-time subscription for user profiles
+    const profilesChannel = supabase
+      .channel('user_statistics_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload) => {
+          console.log('User statistics change detected:', payload);
+          fetchUserStatistics();
+        }
+      )
+      .subscribe();
+
     // Cleanup
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(abstractsChannel);
+      supabase.removeChannel(profilesChannel);
     };
   }, []);
 
@@ -1614,6 +1648,36 @@ const FacultyDashboard: React.FC = () => {
       setRecentActivities(activities);
     } catch (error) {
       console.error('Error fetching recent activities:', error);
+    }
+  };
+
+  const fetchUserStatistics = async () => {
+    try {
+      const { count: studentCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'student');
+
+      const { count: facultyCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'faculty');
+
+      const { count: activeCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active');
+
+      const totalUsers = (studentCount || 0) + (facultyCount || 0);
+
+      setUserStats({
+        totalUsers,
+        students: studentCount || 0,
+        faculty: facultyCount || 0,
+        activeUsers: activeCount || 0
+      });
+    } catch (error) {
+      console.error('Error fetching user statistics:', error);
     }
   };
 
@@ -1959,22 +2023,22 @@ const FacultyDashboard: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center p-4 bg-blue-50 rounded-lg">
                       <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                      <p className="text-2xl font-bold text-gray-900">9</p>
+                      <p className="text-2xl font-bold text-gray-900">{userStats.totalUsers}</p>
                       <p className="text-xs text-gray-600">Total Users</p>
                     </div>
                     <div className="text-center p-4 bg-green-50 rounded-lg">
                       <UserCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                      <p className="text-2xl font-bold text-gray-900">5</p>
+                      <p className="text-2xl font-bold text-gray-900">{userStats.students}</p>
                       <p className="text-xs text-gray-600">Students</p>
                     </div>
                     <div className="text-center p-4 bg-purple-50 rounded-lg">
                       <User className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-                      <p className="text-2xl font-bold text-gray-900">4</p>
+                      <p className="text-2xl font-bold text-gray-900">{userStats.faculty}</p>
                       <p className="text-xs text-gray-600">Faculty</p>
                     </div>
                     <div className="text-center p-4 bg-green-50 rounded-lg">
                       <Activity className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                      <p className="text-2xl font-bold text-gray-900">9</p>
+                      <p className="text-2xl font-bold text-gray-900">{userStats.activeUsers}</p>
                       <p className="text-xs text-gray-600">Active Users</p>
                     </div>
                   </div>

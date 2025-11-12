@@ -76,7 +76,7 @@ export async function logActivity(params: LogActivityParams): Promise<void> {
 /**
  * Log abstract approval
  */
-export async function logAbstractApproval(abstractId: string, title: string): Promise<void> {
+export async function logAbstractApproval(abstractId: string, title: string, feedback?: string): Promise<void> {
   return logActivity({
     action: 'approve',
     targetType: 'abstract',
@@ -84,7 +84,8 @@ export async function logAbstractApproval(abstractId: string, title: string): Pr
     targetTitle: title,
     details: {
       old_status: 'pending',
-      new_status: 'approved'
+      new_status: 'approved',
+      feedback
     }
   });
 }
