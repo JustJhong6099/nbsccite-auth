@@ -176,7 +176,7 @@ const Signup: React.FC = () => {
                 <Input
                   {...register("email")}
                   type="email"
-                  placeholder={selectedRole === "faculty" ? "yourname@nbsc.edu.ph" : "20211199@nbsc.edu.ph"}
+                  placeholder="your.email@nbsc.edu.ph"
                   className={errors.email ? "border-destructive focus:ring-destructive" : ""}
                 />
                 {errors.email && (
