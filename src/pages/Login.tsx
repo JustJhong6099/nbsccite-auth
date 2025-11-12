@@ -6,18 +6,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { PasswordInput } from "@/components/PasswordInput";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useAuth } from "@/context/AuthContext";
 import { loginSchema, LoginFormData } from "@/lib/auth-schemas";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, GraduationCap } from "lucide-react";
+import { Loader2, GraduationCap, Mail } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 const Login: React.FC = () => {
   const { login, isAuthenticated, user, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [pageLoading, setPageLoading] = useState(true);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   const {
     register,
@@ -28,6 +40,16 @@ const Login: React.FC = () => {
   });
 
   useEffect(() => {
+    // Don't redirect if user is trying to access reset password
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get('type');
+    
+    if (type === 'recovery') {
+      console.log('🔒 Recovery token detected - redirecting to reset-password page');
+      navigate('/reset-password');
+      return;
+    }
+    
     if (isAuthenticated && user) {
       // v2.0: Redirect based on user role (admin role removed)
       if (user.role === 'student') {
@@ -64,6 +86,65 @@ const Login: React.FC = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!resetEmail) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(resetEmail)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+
+      setResetSent(true);
+      
+      // Log for development - check Supabase dashboard logs for actual reset link
+      console.log('Password reset requested for:', resetEmail);
+      console.log('Redirect URL:', `${window.location.origin}/reset-password`);
+      console.log('⚠️ IMPORTANT: Make sure this URL is added to Supabase Dashboard → Authentication → URL Configuration → Redirect URLs');
+      
+      toast({
+        title: "Password Reset Email Sent!",
+        description: "Please check your email for the password reset link. (Development: Check Supabase logs if email doesn't arrive)",
+        variant: "default",
+      });
+    } catch (error: any) {
+      console.error('Reset error:', error);
+      toast({
+        title: "Reset Failed",
+        description: error.message || "Failed to send reset email. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleCloseForgotPasswordModal = () => {
+    setShowForgotPasswordModal(false);
+    setResetEmail("");
+    setResetSent(false);
   };
 
   // Show loading spinner while page is loading
@@ -138,7 +219,16 @@ const Login: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="password">Password</Label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPasswordModal(true)}
+                    className="text-xs text-primary hover:text-primary-hover font-medium transition-colors"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
                 <PasswordInput
                   {...register("password")}
                   placeholder="Enter your password"
@@ -189,6 +279,93 @@ const Login: React.FC = () => {
         </div>
         
       </div>
+
+      {/* Forgot Password Modal */}
+      <Dialog open={showForgotPasswordModal} onOpenChange={handleCloseForgotPasswordModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Reset Password
+            </DialogTitle>
+            <DialogDescription>
+              {resetSent ? (
+                "Check your email for the password reset link"
+              ) : (
+                "Enter your email address and we'll send you a link to reset your password"
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {resetSent ? (
+            <div className="space-y-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+                <Mail className="h-5 w-5 text-green-600 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-green-900">Email sent successfully!</p>
+                  <p className="text-sm text-green-700 mt-1">
+                    We've sent a password reset link to <strong>{resetEmail}</strong>
+                  </p>
+                  <p className="text-xs text-green-600 mt-2">
+                    Please check your inbox and spam folder. The link will expire in 1 hour.
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+                    <strong>Development Mode:</strong> If you don't receive an email, check your Supabase Dashboard → Authentication → Logs for the reset link, or configure SMTP settings.
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={handleCloseForgotPasswordModal}
+                className="w-full"
+              >
+                Close
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email Address</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  placeholder="your.name@nbsc.edu.ph"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleForgotPassword();
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleCloseForgotPasswordModal}
+                  className="flex-1"
+                  disabled={isResetting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleForgotPassword}
+                  className="flex-1"
+                  disabled={isResetting}
+                >
+                  {isResetting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Reset Link"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
