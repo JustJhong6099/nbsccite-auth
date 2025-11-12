@@ -174,17 +174,14 @@ const Index = () => {
         </div>
       </div>
 
-      {/* About Us Button - Fixed Bottom Left */}
+      {/* About Us Link - Fixed Bottom Left */}
       <div className="fixed bottom-6 left-6 z-50">
         <Dialog>
           <DialogTrigger asChild>
-            <Button
-              size="lg"
-              className="bg-white/90 hover:bg-white text-primary shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm"
-            >
-              <Info className="mr-2 h-5 w-5" />
+            <button className="text-white/90 hover:text-white font-medium text-lg underline decoration-white/50 hover:decoration-white underline-offset-4 transition-all duration-300 flex items-center gap-2">
+              <Info className="h-5 w-5" />
               About Us
-            </Button>
+            </button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
@@ -194,7 +191,7 @@ const Index = () => {
                   The <strong>Web-Based Entity Extraction System</strong> is an innovative solution developed by{" "}
                   <strong>Christian Cholo Llenas</strong>, <strong>Catherene T. Labinisia</strong>,{" "}
                   <strong>Roger Dimatao Jr.</strong>, and <strong>Aljhon G. Emata</strong>—Bachelor of Science in 
-                  Information Technology students from <strong>Northern Bukidnon State College - Institute for Computer Studies</strong>.
+                  Information Technology students of <strong>Northern Bukidnon State College - Institute for Computer Studies</strong>.
                 </p>
                 
                 <p>
