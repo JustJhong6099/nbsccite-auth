@@ -194,8 +194,7 @@ const Index = () => {
                   The <strong>Web-Based Entity Extraction System</strong> is an innovative solution developed by{" "}
                   <strong>Christian Cholo Llenas</strong>, <strong>Catherene T. Labinisia</strong>,{" "}
                   <strong>Roger Dimatao Jr.</strong>, and <strong>Aljhon G. Emata</strong>—Bachelor of Science in 
-                  Information Technology students from <strong>Northern Bukidnon State College - Institute for Computer Studies</strong>—as 
-                  their capstone project.
+                  Information Technology students from <strong>Northern Bukidnon State College - Institute for Computer Studies</strong>.
                 </p>
                 
                 <p>
@@ -205,7 +204,7 @@ const Index = () => {
                 </p>
                 
                 <p>
-                  We must especially acknowledge <strong>Sir Cliff Amadeus F. Evangelio, ICS Faculty</strong>, whose 
+                  We must especially acknowledge <strong>Sir Cliff Amadeus F. Evangelio</strong>, whose 
                   instrumental role in developing the foundational concept and idea for this web-based entity extraction 
                   system became the cornerstone of our entire research and development journey. His vision provided the 
                   conceptual framework that guided every phase of our project.
