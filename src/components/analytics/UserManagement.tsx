@@ -7,20 +7,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/lib/supabase';
 import { 
-  Users, 
   Search, 
-  Filter,
-  Edit,
-  UserPlus,
   Mail,
-  Phone,
   Calendar,
+  RefreshCw,
   MoreHorizontal,
-  Shield,
   UserCheck,
-  UserX,
-  Download,
-  RefreshCw
+  UserX
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -30,16 +23,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
@@ -61,12 +44,10 @@ export const UserManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState('students');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState<User[]>([]);
   const [faculty, setFaculty] = useState<User[]>([]);
+  const [showAllUsers, setShowAllUsers] = useState(false);
 
   // Fetch users from database
   useEffect(() => {
@@ -184,14 +165,17 @@ export const UserManagement: React.FC = () => {
     return matchesSearch && matchesFilter;
   });
 
+  // Limit to 10 users unless "Show All" is enabled
+  const displayedUsers = showAllUsers ? filteredUsers : filteredUsers.slice(0, 10);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
         return <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>;
-      case 'inactive':
+      case 'pending':
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+      case 'rejected':
         return <Badge variant="secondary" className="bg-gray-100 text-gray-800">Inactive</Badge>;
-      case 'suspended':
-        return <Badge variant="destructive">Suspended</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -210,44 +194,10 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  const handleEditUser = (user: User) => {
-    setSelectedUser(user);
-    setIsEditDialogOpen(true);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!selectedUser) return;
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: (document.getElementById('name') as HTMLInputElement)?.value,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', selectedUser.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "User updated successfully",
-      });
-
-      setIsEditDialogOpen(false);
-      fetchUsers(); // Refresh the list
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update user",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleToggleStatus = async (user: User) => {
     try {
-      const newStatus = user.status === 'active' ? 'inactive' : 'active';
+      // Toggle between 'active' and 'rejected' (displayed as Inactive)
+      const newStatus = user.status === 'active' ? 'rejected' : 'active';
       
       const { error } = await supabase
         .from('profiles')
@@ -258,7 +208,7 @@ export const UserManagement: React.FC = () => {
 
       toast({
         title: "Success",
-        description: `User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`,
+        description: `User status changed to ${newStatus === 'active' ? 'Active' : 'Inactive'} successfully`,
       });
 
       fetchUsers(); // Refresh the list
@@ -312,8 +262,8 @@ export const UserManagement: React.FC = () => {
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
+                  <SelectItem value="rejected">Inactive</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -357,7 +307,7 @@ export const UserManagement: React.FC = () => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredUsers.map((user) => (
+                      displayedUsers.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell>
                           <div>
@@ -408,36 +358,22 @@ export const UserManagement: React.FC = () => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              {user.role === 'student' && (
-                                <>
-                                  <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Edit User
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem 
-                                    onClick={() => handleToggleStatus(user)}
-                                    className={user.status === 'active' ? 'text-orange-600' : 'text-green-600'}
-                                  >
-                                    {user.status === 'active' ? (
-                                      <>
-                                        <UserX className="h-4 w-4 mr-2" />
-                                        Deactivate User
-                                      </>
-                                    ) : (
-                                      <>
-                                        <UserCheck className="h-4 w-4 mr-2" />
-                                        Activate User
-                                      </>
-                                    )}
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                              {user.role === 'faculty' && (
-                                <DropdownMenuItem disabled className="text-gray-400">
-                                  No actions available
-                                </DropdownMenuItem>
-                              )}
+                              <DropdownMenuItem 
+                                onClick={() => handleToggleStatus(user)}
+                                className={user.status === 'active' ? 'text-orange-600' : 'text-green-600'}
+                              >
+                                {user.status === 'active' ? (
+                                  <>
+                                    <UserX className="h-4 w-4 mr-2" />
+                                    Set Inactive
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserCheck className="h-4 w-4 mr-2" />
+                                    Set Active
+                                  </>
+                                )}
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -447,116 +383,26 @@ export const UserManagement: React.FC = () => {
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Show All / Show Less Button */}
+              {filteredUsers.length > 10 && (
+                <div className="flex justify-center pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAllUsers(!showAllUsers)}
+                  >
+                    {showAllUsers ? (
+                      <>Show Less (10 users)</>
+                    ) : (
+                      <>Show All ({filteredUsers.length} users)</>
+                    )}
+                  </Button>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
-
-      {/* Edit User Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>
-              Make changes to the user account information.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedUser && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  defaultValue={selectedUser.full_name}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="email" className="text-right">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  defaultValue={selectedUser.email}
-                  className="col-span-3 bg-gray-50"
-                  disabled
-                  readOnly
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveEdit}>Save changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add User Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add New User</DialogTitle>
-            <DialogDescription>
-              Create a new user account.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="new-name"
-                placeholder="Full name"
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-email" className="text-right">
-                Email
-              </Label>
-              <Input
-                id="new-email"
-                placeholder="email@example.com"
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-phone" className="text-right">
-                Phone
-              </Label>
-              <Input
-                id="new-phone"
-                placeholder="+1-555-0123"
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-role" className="text-right">
-                Role
-              </Label>
-              <Select>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="student">Student</SelectItem>
-                  <SelectItem value="faculty">Faculty</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="submit">Create User</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

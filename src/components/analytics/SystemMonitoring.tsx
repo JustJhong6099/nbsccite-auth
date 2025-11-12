@@ -128,6 +128,7 @@ export const SystemMonitoring: React.FC = () => {
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [activitySearchTerm, setActivitySearchTerm] = useState('');
   const [activityActionFilter, setActivityActionFilter] = useState('all');
+  const [showAllActivityLogs, setShowAllActivityLogs] = useState(false);
 
   // Fetch real-time system metrics
   useEffect(() => {
@@ -520,6 +521,9 @@ export const SystemMonitoring: React.FC = () => {
     return matchesSearch && matchesFilter;
   });
 
+  // Limit to 10 activity logs unless "Show All" is enabled
+  const displayedActivityLogs = showAllActivityLogs ? filteredActivityLogs : filteredActivityLogs.slice(0, 10);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'success':
@@ -858,8 +862,8 @@ export const SystemMonitoring: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredActivityLogs.length > 0 ? (
-                      filteredActivityLogs.map((log) => (
+                    {displayedActivityLogs.length > 0 ? (
+                      displayedActivityLogs.map((log) => (
                         <TableRow key={log.id}>
                           <TableCell className="font-medium">{log.user_name}</TableCell>
                           <TableCell className="text-sm text-gray-600">{log.user_email}</TableCell>
@@ -950,6 +954,22 @@ export const SystemMonitoring: React.FC = () => {
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Show All / Show Less Button */}
+              {filteredActivityLogs.length > 10 && (
+                <div className="flex justify-center pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAllActivityLogs(!showAllActivityLogs)}
+                  >
+                    {showAllActivityLogs ? (
+                      <>Show Less (10 records)</>
+                    ) : (
+                      <>Show All ({filteredActivityLogs.length} records)</>
+                    )}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
