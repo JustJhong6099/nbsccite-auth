@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import * as d3 from "d3";
+import { logAbstractDeletion } from "@/lib/activity-logger";
 import { FacultyAbstractSubmission } from "@/components/faculty/FacultyAbstractSubmission";
 import jsPDF from 'jspdf';
 import { 
@@ -267,7 +268,7 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
   };
 
   const handleConfirmDelete = async () => {
-    if (!selectedAbstract) return;
+    if (!selectedAbstract || !user) return;
 
     try {
       const { error } = await supabase
@@ -276,6 +277,17 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
         .eq('id', selectedAbstract.id);
 
       if (error) throw error;
+
+      // Log the deletion activity (only if user is faculty)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile?.role === 'faculty') {
+        await logAbstractDeletion(selectedAbstract.id, selectedAbstract.title, 'approved');
+      }
 
       toast({
         title: "Abstract Deleted",
