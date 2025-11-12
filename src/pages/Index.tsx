@@ -7,6 +7,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   GraduationCap,
@@ -15,6 +23,7 @@ import {
   Brain,
   FileText,
   BarChart3,
+  Info,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -163,6 +172,56 @@ const Index = () => {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* About Us Button - Fixed Bottom Left */}
+      <div className="fixed bottom-6 left-6 z-50">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button
+              size="lg"
+              className="bg-white/90 hover:bg-white text-primary shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm"
+            >
+              <Info className="mr-2 h-5 w-5" />
+              About Us
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-primary">About Us</DialogTitle>
+              <DialogDescription className="text-base text-gray-700 space-y-4 mt-4">
+                <p>
+                  The <strong>Web-Based Entity Extraction System</strong> is an innovative solution developed by{" "}
+                  <strong>Christian Cholo Llenas</strong>, <strong>Catherene T. Labinisia</strong>,{" "}
+                  <strong>Roger Dimatao Jr.</strong>, and <strong>Aljhon G. Emata</strong>—Bachelor of Science in 
+                  Information Technology students from <strong>Northern Bukidnon State College - Institute for Computer Studies</strong>—as 
+                  their capstone project.
+                </p>
+                
+                <p>
+                  This project stands as a testament to dedicated academic collaboration and visionary guidance. We are 
+                  profoundly grateful to our <strong>Project Adviser, Ms. Cristine Joy G. Sagaosao</strong>, whose 
+                  mentorship and direction have been instrumental in shaping this system from concept to implementation.
+                </p>
+                
+                <p>
+                  We must especially acknowledge <strong>Sir Cliff Amadeus F. Evangelio, ICS Faculty</strong>, whose 
+                  instrumental role in developing the foundational concept and idea for this web-based entity extraction 
+                  system became the cornerstone of our entire research and development journey. His vision provided the 
+                  conceptual framework that guided every phase of our project.
+                </p>
+                
+                <p>
+                  We also extend our gratitude to <strong>Ms. SHIELA MAE M. OROZCO, MIT - PROGRAM HEAD</strong>, 
+                  whose leadership and support provided the institutional foundation necessary for this capstone project 
+                  to thrive. We are equally grateful to our esteemed panelists, <strong>Ms. CHARLENE O. BULAHAN, MSCA</strong> and{" "}
+                  <strong>Ms. MARCHILYN A. ABUNDA</strong>, whose valuable insights and constructive feedback 
+                  significantly enhanced the quality and depth of our research.
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

@@ -57,6 +57,30 @@ const Signup: React.FC = () => {
       return;
     }
 
+    // Email validation based on role
+    const emailLocalPart = data.email.split('@')[0]; // Get part before @
+    const startsWithNumber = /^\d/.test(emailLocalPart); // Check if starts with number
+    
+    // Validate student email (must start with number)
+    if (data.role === 'student' && !startsWithNumber) {
+      toast({
+        title: "Invalid Student Email",
+        description: "Student emails must start with a number (e.g., 20211199@nbsc.edu.ph)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate faculty email (must NOT start with number)
+    if (data.role === 'faculty' && startsWithNumber) {
+      toast({
+        title: "Invalid Faculty Email",
+        description: "Faculty emails must start with letters (e.g., jhongemata@nbsc.edu.ph)",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await signup({
         full_name: data.full_name,
@@ -152,11 +176,19 @@ const Signup: React.FC = () => {
                 <Input
                   {...register("email")}
                   type="email"
-                  placeholder="student.number@nbsc.edu.ph"
+                  placeholder="your.email@nbsc.edu.ph"
                   className={errors.email ? "border-destructive focus:ring-destructive" : ""}
                 />
                 {errors.email && (
                   <p className="text-sm text-destructive">{errors.email.message}</p>
+                )}
+                {selectedRole && (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedRole === "student" 
+                      ? "📌 Student emails must start with a number (e.g., 20211199@nbsc.edu.ph)"
+                      : "📌 Faculty emails must start with letters (e.g., jhongemata@nbsc.edu.ph)"
+                    }
+                  </p>
                 )}
               </div>
 
@@ -327,111 +359,36 @@ const Signup: React.FC = () => {
           
           <div className="space-y-4 text-sm">
             <section>
-              <h3 className="font-semibold text-base mb-2">1. Acceptance of Terms</h3>
-              <p className="text-gray-700">
-                By creating an account and using the Northern Bukidnon State College (NBSC) Research Analytics Platform, 
-                you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions and 
-                our Data Privacy Policy.
+              <p className="text-gray-700 leading-relaxed mb-3">
+                By creating an account and using the Northern Bukidnon State College (NBSC) Research Analytics Platform, you agree to these Terms and Conditions.
+              </p>
+              
+              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mb-3">
+                <p className="font-semibold text-gray-800 mb-2">Data Collection and Usage:</p>
+                <p className="text-gray-700 mb-2">The platform collects and processes the following personal information:</p>
+                <ul className="list-disc list-inside space-y-1 text-gray-700 ml-4">
+                  <li><strong>Full Name</strong></li>
+                  <li><strong>Email Address</strong></li>
+                  <li><strong>Contact Details</strong></li>
+                  <li><strong>Role Information</strong></li>
+                  <li><strong>Research Data</strong> (abstracts, themes, and contributions)</li>
+                </ul>
+                <p className="text-gray-700 mt-2">
+                  <strong>Purpose:</strong> Account management, research collaboration, institutional analytics, and communication purposes.
+                </p>
+              </div>
+              
+              <p className="text-gray-700 leading-relaxed">
+                All data is stored securely with industry-standard encryption, accessible only to authorized personnel, and retained as long as your account is active or as required by institutional and legal obligations. 
+                You agree to provide accurate information, use your official NBSC email, maintain account confidentiality, and use the platform for legitimate academic purposes while respecting intellectual property rights. 
+                This platform complies with the Data Privacy Act of 2012 (RA 10173), protecting your rights to access, correct, and delete personal data, and NBSC reserves the right to update these terms with user notification.
               </p>
             </section>
 
-            <section>
-              <h3 className="font-semibold text-base mb-2">2. Data Collection and Usage</h3>
-              <p className="text-gray-700 mb-2">
-                The NBSC Research Analytics Platform collects and processes the following personal information:
-              </p>
-              <ul className="list-disc list-inside space-y-1 text-gray-700 ml-4">
-                <li><strong>Full Name:</strong> Used for identification and communication purposes</li>
-                <li><strong>Email Address:</strong> Used for account verification, notifications, and official communications</li>
-                <li><strong>Contact Information:</strong> Used to facilitate collaboration and research coordination</li>
-                <li><strong>Role Information:</strong> To determine access levels (Student or Faculty)</li>
-                <li><strong>Research Data:</strong> Including submitted abstracts, research themes, and academic contributions</li>
-              </ul>
-            </section>
-
-            <section>
-              <h3 className="font-semibold text-base mb-2">3. Purpose of Data Collection</h3>
-              <p className="text-gray-700 mb-2">Your personal information is collected for the following purposes:</p>
-              <ul className="list-disc list-inside space-y-1 text-gray-700 ml-4">
-                <li>To create and manage your user account</li>
-                <li>To provide access to research analytics tools and resources</li>
-                <li>To facilitate academic research collaboration within NBSC</li>
-                <li>To generate institutional research insights and analytics</li>
-                <li>To communicate important updates regarding the platform and your submissions</li>
-                <li>To maintain system security and prevent unauthorized access</li>
-              </ul>
-            </section>
-
-            <section>
-              <h3 className="font-semibold text-base mb-2">4. Data Protection and Security</h3>
-              <p className="text-gray-700">
-                We are committed to protecting your personal information. All data is stored securely using industry-standard 
-                encryption and security measures. Access to personal information is restricted to authorized personnel only and 
-                is used strictly for the purposes outlined in these terms.
-              </p>
-            </section>
-
-            <section>
-              <h3 className="font-semibold text-base mb-2">5. User Responsibilities</h3>
-              <p className="text-gray-700 mb-2">As a user of this platform, you agree to:</p>
-              <ul className="list-disc list-inside space-y-1 text-gray-700 ml-4">
-                <li>Provide accurate and truthful information during registration</li>
-                <li>Use your official NBSC email address for account creation</li>
-                <li>Maintain the confidentiality of your account credentials</li>
-                <li>Use the platform solely for legitimate academic and research purposes</li>
-                <li>Respect intellectual property rights and academic integrity standards</li>
-                <li>Comply with all applicable NBSC policies and guidelines</li>
-              </ul>
-            </section>
-
-            <section>
-              <h3 className="font-semibold text-base mb-2">6. Data Retention and Deletion</h3>
-              <p className="text-gray-700">
-                Your personal data will be retained for as long as your account remains active or as necessary to provide 
-                platform services. You may request account deactivation or data deletion by contacting the system administrator. 
-                However, certain data may be retained for legitimate institutional purposes, legal compliance, or archival requirements.
-              </p>
-            </section>
-
-            <section>
-              <h3 className="font-semibold text-base mb-2">7. Research Data and Publications</h3>
-              <p className="text-gray-700">
-                Research abstracts and materials submitted through this platform may be used for institutional analytics, 
-                reporting, and publication purposes. Proper attribution will be maintained, and academic authorship rights 
-                will be respected in accordance with NBSC research policies.
-              </p>
-            </section>
-
-            <section>
-              <h3 className="font-semibold text-base mb-2">8. Compliance with Data Privacy Act</h3>
-              <p className="text-gray-700">
-                This platform complies with Republic Act No. 10173, also known as the Data Privacy Act of 2012, and its 
-                implementing rules and regulations. Your rights as a data subject, including rights to access, correction, 
-                and deletion of personal data, are hereby recognized and protected.
-              </p>
-            </section>
-
-            <section>
-              <h3 className="font-semibold text-base mb-2">9. Updates to Terms and Conditions</h3>
-              <p className="text-gray-700">
-                NBSC reserves the right to modify these Terms and Conditions at any time. Users will be notified of 
-                significant changes via email. Continued use of the platform after modifications constitutes acceptance 
-                of the updated terms.
-              </p>
-            </section>
-
-            <section>
-              <h3 className="font-semibold text-base mb-2">10. Contact Information</h3>
-              <p className="text-gray-700">
-                For questions, concerns, or requests regarding these Terms and Conditions or your personal data, 
-                please contact the NBSC Research Analytics Platform administrator through your official NBSC email.
-              </p>
-            </section>
-
-            <section className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <section className="bg-blue-50 p-4 rounded-lg border border-blue-200 mt-4">
               <p className="text-sm text-gray-800 italic">
-                <strong>Last Updated:</strong> November 11, 2025<br />
-                <strong>Effective Date:</strong> November 11, 2025<br />
+                <strong>Last Updated:</strong> November 12, 2025<br />
+                <strong>Effective Date:</strong> November 12, 2025<br />
                 <strong>Platform:</strong> NBSC Research Analytics & Citation Tracking System
               </p>
             </section>
