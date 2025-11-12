@@ -35,6 +35,16 @@ const Index = () => {
 
   // Redirect authenticated users to their respective dashboards
   useEffect(() => {
+    // Don't redirect if user is trying to access reset password
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get('type');
+    
+    if (type === 'recovery') {
+      console.log('🔒 Recovery token detected on homepage - redirecting to reset-password page');
+      navigate('/reset-password');
+      return;
+    }
+    
     if (isAuthenticated && user && !pageLoading) {
       // v2.0: Admin role removed, faculty now has full privileges
       if (user.role === 'student') {

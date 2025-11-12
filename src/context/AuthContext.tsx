@@ -120,6 +120,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setIsLoading(true);
       console.log('🔍 Getting initial session...');
       
+      // Check if user is on password reset page - if so, don't set user state yet
+      const isOnResetPasswordPage = window.location.pathname === '/reset-password';
+      const hasResetToken = window.location.hash.includes('type=recovery');
+      
+      console.log('🔍 Page check:', { 
+        pathname: window.location.pathname, 
+        isOnResetPasswordPage, 
+        hasResetToken 
+      });
+      
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         console.log('📝 Session data:', session);
@@ -127,6 +137,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         
         if (session?.user) {
           console.log('👤 User found:', session.user.id);
+          
+          // If user is on reset password page with a reset token, don't set the user state
+          // This prevents auto-login during password reset
+          if (isOnResetPasswordPage && hasResetToken) {
+            console.log('🔒 User is resetting password - not setting user state');
+            setIsLoading(false);
+            return;
+          }
+          
           const userProfile = await fetchProfile(session.user.id);
           console.log('📋 Profile data:', userProfile);
           
@@ -161,6 +180,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event);
+        
+        // Don't update auth state if user is resetting password
+        const isOnResetPasswordPage = window.location.pathname === '/reset-password';
+        const hasResetToken = window.location.hash.includes('type=recovery');
+        
+        if (isOnResetPasswordPage && hasResetToken && event !== 'SIGNED_OUT') {
+          console.log('🔒 Ignoring auth state change during password reset');
+          return;
+        }
         
         if (session?.user) {
           const userProfile = await fetchProfile(session.user.id);
