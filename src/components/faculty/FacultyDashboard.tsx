@@ -633,30 +633,31 @@ const StudentAbstractReview: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Student Abstract Review</h2>
-          <p className="text-gray-600">Review and provide feedback on student research submissions</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Student Abstract Review</h2>
+          <p className="text-sm sm:text-base text-gray-600">Review and provide feedback on student research submissions</p>
         </div>
         <Button 
           onClick={() => setIsArchiveModalOpen(true)}
           variant="outline"
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 w-full sm:w-auto text-sm"
         >
           <Archive className="h-4 w-4" />
-          View Archive ({archivedSubmissions.length})
+          <span className="hidden sm:inline">View Archive ({archivedSubmissions.length})</span>
+          <span className="sm:hidden">Archive ({archivedSubmissions.length})</span>
         </Button>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Active Submissions ({filteredActiveSubmissions.length})</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-base sm:text-lg">Active Submissions ({filteredActiveSubmissions.length})</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Review pending student research abstracts. Approved/rejected submissions are in the archive.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mr-2" />
@@ -1717,13 +1718,13 @@ const FacultyDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-3 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Faculty Dashboard</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Faculty Dashboard</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">
               Manage research abstracts, review submissions, and analyze academic trends
             </p>
           </div>
@@ -1746,70 +1747,78 @@ const FacultyDashboard: React.FC = () => {
                 });
               }
             }}
-            className="flex items-center space-x-1"
+            className="flex items-center space-x-1 w-full sm:w-auto"
           >
             <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Logout</span>
+            <span>Logout</span>
           </Button>
         </div>
 
         {/* Main Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-1">
-            <TabsTrigger value="overview" className="flex items-center space-x-2">
-              <BarChart3 className="w-4 h-4" />
-              <span className="hidden sm:inline">Overview</span>
-            </TabsTrigger>
-            <TabsTrigger value="reviews" className="flex items-center space-x-2">
-              <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">Student Reviews</span>
-            </TabsTrigger>
-            <TabsTrigger value="visualization" className="flex items-center space-x-2">
-              <TrendingUp className="w-4 h-4" />
-              <span className="hidden sm:inline">Visualization</span>
-            </TabsTrigger>
-            {/* v2.0: New Admin Features for Faculty */}
-            <TabsTrigger value="all-abstracts" className="flex items-center space-x-2">
-              <BookOpen className="w-4 h-4" />
-              <span className="hidden sm:inline">Abstracts Library</span>
-            </TabsTrigger>
-            <TabsTrigger value="research-insights" className="flex items-center space-x-2">
-              <Brain className="w-4 h-4" />
-              <span className="hidden sm:inline">Research Insights</span>
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center space-x-2">
-              <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Users</span>
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="flex items-center space-x-2">
-              <UserCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">Profile</span>
-            </TabsTrigger>
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-full sm:grid sm:w-full sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-1 min-w-max sm:min-w-0">
+              <TabsTrigger value="overview" className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 sm:px-3">
+                <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span>Overview</span>
+              </TabsTrigger>
+              <TabsTrigger value="reviews" className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 sm:px-3">
+                <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Student Reviews</span>
+                <span className="sm:hidden">Reviews</span>
+              </TabsTrigger>
+              <TabsTrigger value="visualization" className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 sm:px-3">
+                <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Visualization</span>
+                <span className="sm:hidden">Charts</span>
+              </TabsTrigger>
+              {/* v2.0: New Admin Features for Faculty */}
+              <TabsTrigger value="all-abstracts" className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 sm:px-3">
+                <BookOpen className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Abstracts Library</span>
+                <span className="sm:hidden">Library</span>
+              </TabsTrigger>
+              <TabsTrigger value="research-insights" className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 sm:px-3">
+                <Brain className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Research Insights</span>
+                <span className="sm:hidden">Insights</span>
+              </TabsTrigger>
+              <TabsTrigger value="users" className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 sm:px-3">
+                <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span>Users</span>
+              </TabsTrigger>
+              <TabsTrigger value="profile" className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 sm:px-3">
+                <UserCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span>Profile</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Overview Tab - v2.0: Enhanced with system-wide admin statistics */}
-          <TabsContent value="overview" className="space-y-6">
+          <TabsContent value="overview" className="space-y-4 sm:space-y-6">
             {/* System-Wide Statistics (Admin-level view) */}
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">System Overview</h2>
-                  <p className="text-sm text-gray-600 mt-1">Comprehensive dashboard analytics and statistics</p>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">System Overview</h2>
+                  <p className="text-xs sm:text-sm text-gray-600 mt-1">Comprehensive dashboard analytics and statistics</p>
                 </div>
                 <Button
                   onClick={handleExportPDF}
                   disabled={isExporting}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 w-full sm:w-auto"
                 >
                   {isExporting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Generating Report...
+                      <span className="hidden sm:inline">Generating Report...</span>
+                      <span className="sm:hidden">Generating...</span>
                     </>
                   ) : (
                     <>
                       <FileDown className="w-4 h-4" />
-                      Generate Report
+                      <span className="hidden sm:inline">Generate Report</span>
+                      <span className="sm:hidden">Report</span>
                     </>
                   )}
                 </Button>
@@ -1820,31 +1829,31 @@ const FacultyDashboard: React.FC = () => {
             </div>
 
             {/* New Comprehensive Charts - Top Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-pdf-section="charts-row-1">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6" data-pdf-section="charts-row-1">
               {/* Submission Trends Chart */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-blue-600" />
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                    <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                     Submission Trends
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-xs sm:text-sm">
                     Track submission activity by week or month with status breakdown
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6">
                   <SubmissionTrendsChart />
                 </CardContent>
               </Card>
 
               {/* Entity Distribution Chart */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <PieChart className="w-5 h-5 text-purple-600" />
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                    <PieChart className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
                     Entity Distribution
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-xs sm:text-sm">
                     Technologies, domains, and methodologies breakdown
                   </CardDescription>
                 </CardHeader>
@@ -1855,19 +1864,19 @@ const FacultyDashboard: React.FC = () => {
             </div>
 
             {/* New Comprehensive Charts - Bottom Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-pdf-section="charts-row-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6" data-pdf-section="charts-row-2">
               {/* Top Research Domains Chart */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-green-600" />
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                    <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                     Top Research Trends
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-xs sm:text-sm">
                     Most popular domains, technologies, and methodologies
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6">
                   <TopResearchDomainsChart />
                 </CardContent>
               </Card>
@@ -1878,15 +1887,15 @@ const FacultyDashboard: React.FC = () => {
 
             {/* Recent Activities */}
             <Card data-pdf-section="recent-activities">
-              <CardHeader>
-                <div className="flex items-center justify-between">
+              <CardHeader className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                   <div>
-                    <CardTitle>Recent Activities</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-base sm:text-lg">Recent Activities</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
                       Real-time system-wide actions and updates
                     </CardDescription>
                   </div>
-                  <Badge variant="outline" className="flex items-center gap-1 border-green-300 text-green-700 bg-green-50">
+                  <Badge variant="outline" className="flex items-center gap-1 border-green-300 text-green-700 bg-green-50 text-xs">
                     <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
@@ -1895,17 +1904,17 @@ const FacultyDashboard: React.FC = () => {
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="p-4 sm:p-6">
+                <div className="space-y-3 sm:space-y-4">
                   {recentActivities.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-center">
-                      <Activity className="w-12 h-12 text-gray-300 mb-3" />
-                      <p className="text-sm text-gray-500">No recent activities</p>
+                      <Activity className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mb-3" />
+                      <p className="text-xs sm:text-sm text-gray-500">No recent activities</p>
                       <p className="text-xs text-gray-400 mt-1">Activities will appear here as they happen</p>
                     </div>
                   ) : (
                     recentActivities.map((activity) => (
-                      <div key={activity.id} className="flex items-start space-x-4 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                      <div key={activity.id} className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                         <div className="flex-shrink-0">
                           {activity.type === "review" && <Eye className="w-5 h-5 text-blue-500 mt-1" />}
                           {activity.type === "upload" && <Upload className="w-5 h-5 text-green-500 mt-1" />}

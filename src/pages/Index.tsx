@@ -76,41 +76,41 @@ const Index = () => {
       {/* Subtle overlay to ensure readability while preserving the NBSC imagery */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-blue-800/20 to-blue-900/40"></div>
       {/* Hero Section */}
-      <div className="container mx-auto px-4 py-16 relative z-10">
-        <div className="text-center mb-16">
-          <div className="flex justify-center mb-6">
+      <div className="container mx-auto px-3 sm:px-4 py-8 sm:py-12 lg:py-16 relative z-10">
+        <div className="text-center mb-8 sm:mb-12 lg:mb-16">
+          <div className="flex justify-center mb-4 sm:mb-6">
             <img
               src="/NBSCLOGO.png"
               alt="NBSC Logo"
-              className="w-40 h-40 object-contain drop-shadow-lg"
+              className="w-28 h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 object-contain drop-shadow-lg"
             />
           </div>
-          <h1 className="text-3xl md:text-5xl font-bold mb-2 text-white leading-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 text-white leading-tight px-2">
             NORTHERN BUKIDNON STATE COLLEGE
           </h1>
-          <h2 className="text-2xl md:text-4xl font-bold mb-6 text-white">
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6 text-white">
             Entity Extraction System
           </h2>
-          <p className="text-xl text-white mb-8 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg lg:text-xl text-white mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
             A Research analytics platform for Northern Bukidnon State College - Institute for Computer Studies
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/login">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
+            <Link to="/login" className="w-full sm:w-auto">
               <Button
                 size="lg"
-                className="bg-gradient-primary hover:bg-primary-hover shadow-elegant transition-smooth"
+                className="bg-gradient-primary hover:bg-primary-hover shadow-elegant transition-smooth w-full sm:w-auto"
               >
-                <LogIn className="mr-2 h-5 w-5" />
+                <LogIn className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                 Sign In
               </Button>
             </Link>
-            <Link to="/signup">
+            <Link to="/signup" className="w-full sm:w-auto">
               <Button
                 size="lg"
                 variant="outline"
-                className="border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-smooth"
+                className="border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-smooth w-full sm:w-auto"
               >
-                <UserPlus className="mr-2 h-5 w-5" />
+                <UserPlus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                 Create Account
               </Button>
             </Link>
@@ -118,7 +118,7 @@ const Index = () => {
         </div>
 
         {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 max-w-6xl mx-auto px-3 sm:px-4">
           {/* Entity Extraction */}
           <Card className="bg-white border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.15)] backdrop-blur-sm transition-all hover:scale-105 hover:border-primary/40 hover:shadow-[0_8px_40px_rgba(0,0,0,0.25)]">
             <CardHeader className="text-center">
@@ -175,11 +175,11 @@ const Index = () => {
       </div>
 
       {/* About Us Link - Fixed Bottom Left */}
-      <div className="fixed bottom-6 left-6 z-50">
+      <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-50">
         <Dialog>
           <DialogTrigger asChild>
-            <button className="text-white/90 hover:text-white font-medium text-lg underline decoration-white/50 hover:decoration-white underline-offset-4 transition-all duration-300 flex items-center gap-2">
-              <Info className="h-5 w-5" />
+            <button className="text-white/90 hover:text-white font-medium text-sm sm:text-lg underline decoration-white/50 hover:decoration-white underline-offset-4 transition-all duration-300 flex items-center gap-1 sm:gap-2">
+              <Info className="h-4 w-4 sm:h-5 sm:w-5" />
               About Us
             </button>
           </DialogTrigger>
