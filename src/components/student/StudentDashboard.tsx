@@ -147,16 +147,16 @@ export const StudentDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Student Dashboard</h1>
-            <p className="text-gray-600">Welcome back, {user?.full_name || 'Student'}</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Student Dashboard</h1>
+            <p className="text-sm sm:text-base text-gray-600">Welcome back, {user?.full_name || 'Student'}</p>
           </div>
-          <div className="flex items-center gap-4">
-            <Button onClick={handleLogout} variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+          <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+            <Button onClick={handleLogout} variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-1 sm:flex-initial">
               <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>
@@ -169,37 +169,46 @@ export const StudentDashboard: React.FC = () => {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="submit" className="flex items-center gap-2">
-              <Upload className="h-4 w-4" />
-              Submit Abstract
-            </TabsTrigger>
-            <TabsTrigger value="abstracts" className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              My Abstracts
-            </TabsTrigger>
-            <TabsTrigger value="library" className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              Library
-            </TabsTrigger>
-            <TabsTrigger value="visualization" className="flex items-center gap-2">
-              <Brain className="h-4 w-4" />
-              Entity Network
-            </TabsTrigger>
-            <TabsTrigger value="insights" className="flex items-center gap-2">
-              <Lightbulb className="h-4 w-4" />
-              Research Insights
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Profile
-            </TabsTrigger>
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-full sm:grid sm:w-full sm:grid-cols-7 min-w-max sm:min-w-0">
+              <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Overview</span>
+                <span className="sm:hidden">Home</span>
+              </TabsTrigger>
+              <TabsTrigger value="submit" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+                <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Submit Abstract</span>
+                <span className="sm:hidden">Submit</span>
+              </TabsTrigger>
+              <TabsTrigger value="abstracts" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+                <BookOpen className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">My Abstracts</span>
+                <span className="sm:hidden">My Work</span>
+              </TabsTrigger>
+              <TabsTrigger value="library" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+                <BookOpen className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Library</span>
+                <span className="sm:hidden">Library</span>
+              </TabsTrigger>
+              <TabsTrigger value="visualization" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+                <Brain className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Entity Network</span>
+                <span className="sm:hidden">Network</span>
+              </TabsTrigger>
+              <TabsTrigger value="insights" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+                <Lightbulb className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Research Insights</span>
+                <span className="sm:hidden">Insights</span>
+              </TabsTrigger>
+              <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+                <User className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Profile</span>
+                <span className="sm:hidden">Profile</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
@@ -212,65 +221,65 @@ export const StudentDashboard: React.FC = () => {
               <>
                 {/* Student Info Card */}
                 <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-6">
-                      <Avatar className="h-20 w-20">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
+                      <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
                         <AvatarImage src={undefined} />
-                        <AvatarFallback className="text-xl">
+                        <AvatarFallback className="text-lg sm:text-xl">
                           {user?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       
-                      <div className="flex-1">
-                        <h2 className="text-2xl font-bold text-gray-900">{user?.full_name || 'Student'}</h2>
-                        <p className="text-gray-600">Student</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                          <span>{user?.email}</span>
+                      <div className="flex-1 text-center sm:text-left">
+                        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{user?.full_name || 'Student'}</h2>
+                        <p className="text-sm sm:text-base text-gray-600">Student</p>
+                        <div className="flex items-center justify-center sm:justify-start gap-4 mt-2 text-xs sm:text-sm text-gray-500">
+                          <span className="break-all">{user?.email}</span>
                         </div>
                       </div>
 
-                      <div className="text-right">
+                      <div className="text-center sm:text-right">
                         <div className="text-2xl font-bold text-blue-600">{stats.totalAbstracts}</div>
-                        <div className="text-sm text-gray-600">Total Papers</div>
+                        <div className="text-xs sm:text-sm text-gray-600">Total Papers</div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
                   <Card>
-                    <CardContent className="p-6">
+                    <CardContent className="p-4 sm:p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-gray-600">Submitted Abstracts</p>
-                          <p className="text-3xl font-bold text-blue-600">{stats.totalAbstracts}</p>
+                          <p className="text-xs sm:text-sm text-gray-600">Submitted Abstracts</p>
+                          <p className="text-2xl sm:text-3xl font-bold text-blue-600">{stats.totalAbstracts}</p>
                         </div>
-                        <FileText className="h-12 w-12 text-blue-500" />
+                        <FileText className="h-8 w-8 sm:h-12 sm:w-12 text-blue-500" />
                       </div>
                     </CardContent>
                   </Card>
 
                   <Card>
-                    <CardContent className="p-6">
+                    <CardContent className="p-4 sm:p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-gray-600">Accepted Papers</p>
-                          <p className="text-3xl font-bold text-green-600">{stats.acceptedPapers}</p>
+                          <p className="text-xs sm:text-sm text-gray-600">Accepted Papers</p>
+                          <p className="text-2xl sm:text-3xl font-bold text-green-600">{stats.acceptedPapers}</p>
                         </div>
-                        <Award className="h-12 w-12 text-green-500" />
+                        <Award className="h-8 w-8 sm:h-12 sm:w-12 text-green-500" />
                       </div>
                     </CardContent>
                   </Card>
 
                   <Card>
-                    <CardContent className="p-6">
+                    <CardContent className="p-4 sm:p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-gray-600">Pending Reviews</p>
-                          <p className="text-3xl font-bold text-yellow-600">{stats.pendingReviews}</p>
+                          <p className="text-xs sm:text-sm text-gray-600">Pending Reviews</p>
+                          <p className="text-2xl sm:text-3xl font-bold text-yellow-600">{stats.pendingReviews}</p>
                         </div>
-                        <Calendar className="h-12 w-12 text-yellow-500" />
+                        <Calendar className="h-8 w-8 sm:h-12 sm:w-12 text-yellow-500" />
                       </div>
                     </CardContent>
                   </Card>
@@ -320,22 +329,22 @@ export const StudentDashboard: React.FC = () => {
 
                 {/* Quick Actions */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Quick Actions</CardTitle>
-                    <CardDescription>Common tasks and shortcuts</CardDescription>
+                  <CardHeader className="p-4 sm:p-6">
+                    <CardTitle className="text-lg sm:text-xl">Quick Actions</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">Common tasks and shortcuts</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <Button onClick={() => setActiveTab('submit')} className="h-20 flex flex-col gap-2">
-                        <Upload className="h-6 w-6" />
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                      <Button onClick={() => setActiveTab('submit')} className="h-16 sm:h-20 flex flex-col gap-1 sm:gap-2 text-sm sm:text-base">
+                        <Upload className="h-5 w-5 sm:h-6 sm:w-6" />
                         Submit New Abstract
                       </Button>
-                      <Button onClick={() => setActiveTab('abstracts')} variant="outline" className="h-20 flex flex-col gap-2">
-                        <FileText className="h-6 w-6" />
+                      <Button onClick={() => setActiveTab('abstracts')} variant="outline" className="h-16 sm:h-20 flex flex-col gap-1 sm:gap-2 text-sm sm:text-base">
+                        <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
                         View My Abstracts
                       </Button>
-                      <Button onClick={() => setActiveTab('visualization')} variant="outline" className="h-20 flex flex-col gap-2">
-                        <Brain className="h-6 w-6" />
+                      <Button onClick={() => setActiveTab('visualization')} variant="outline" className="h-16 sm:h-20 flex flex-col gap-1 sm:gap-2 text-sm sm:text-base">
+                        <Brain className="h-5 w-5 sm:h-6 sm:w-6" />
                         Entity Network
                       </Button>
                     </div>

@@ -139,6 +139,20 @@ const Signup: React.FC = () => {
 
         {/* Right Pane - Signup Card */}
         <div className="w-full max-w-md mx-auto lg:mx-0 relative">
+          {/* Mobile Logo - only show on small screens */}
+          <div className="lg:hidden text-center mb-6">
+            <div className="flex justify-center mb-4">
+              <img
+                src="/NBSCLOGO.png"
+                alt="NBSC Logo"
+                className="w-24 h-24 sm:w-32 sm:h-32 object-contain drop-shadow-lg"
+              />
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold text-white leading-tight">
+              NORTHERN BUKIDNON STATE COLLEGE
+            </h1>
+          </div>
+          
           <Card className="bg-white border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.15)] backdrop-blur-sm transition-all hover:scale-105 hover:border-primary/40 hover:shadow-[0_8px_40px_rgba(0,0,0,0.25)]">
             {/* Loading Overlay */}
             {isLoading && (

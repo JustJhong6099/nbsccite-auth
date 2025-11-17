@@ -153,15 +153,15 @@ const Login: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 bg-cover bg-center bg-no-repeat flex items-center justify-center p-4" style={{backgroundImage: 'url(/background.jpg)'}}>
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 bg-cover bg-center bg-no-repeat flex items-center justify-center p-3 sm:p-4" style={{backgroundImage: 'url(/background.jpg)'}}>
       {/* Subtle overlay to ensure readability while preserving the NBSC imagery */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-900/40 via-blue-800/30 to-blue-900/50"></div>
       
       {/* Two-pane layout container */}
-      <div className="w-full max-w-6xl relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+      <div className="w-full max-w-6xl relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-center">
         
         {/* Left Pane - Academic Achievement Theme */}
-        <div className="text-center">
+        <div className="text-center hidden lg:block">
           <div className="flex justify-center mb-6">
             <img
               src="/NBSCLOGO.png"
@@ -186,6 +186,20 @@ const Login: React.FC = () => {
 
         {/* Right Pane - Login Card */}
         <div className="w-full max-w-md mx-auto lg:mx-0 relative">
+          {/* Mobile Logo - only show on small screens */}
+          <div className="lg:hidden text-center mb-6">
+            <div className="flex justify-center mb-4">
+              <img
+                src="/NBSCLOGO.png"
+                alt="NBSC Logo"
+                className="w-24 h-24 sm:w-32 sm:h-32 object-contain drop-shadow-lg"
+              />
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold text-white leading-tight">
+              NORTHERN BUKIDNON STATE COLLEGE
+            </h1>
+          </div>
+          
           <Card className="bg-white border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.15)] backdrop-blur-sm transition-all hover:scale-105 hover:border-primary/40 hover:shadow-[0_8px_40px_rgba(0,0,0,0.25)]">
             {/* Loading Overlay */}
             {isLoading && (
