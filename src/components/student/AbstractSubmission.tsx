@@ -69,6 +69,11 @@ export const AbstractSubmission: React.FC = () => {
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const [ocrImage, setOcrImage] = useState<string | null>(null);
   
+  // Approval sheet states
+  const [approvalSheet, setApprovalSheet] = useState<File | null>(null);
+  const [approvalSheetPreview, setApprovalSheetPreview] = useState<string | null>(null);
+  const [isUploadingApproval, setIsUploadingApproval] = useState(false);
+  
   // Entity extraction states
   const [extractedEntities, setExtractedEntities] = useState<ExtractedEntities | null>(null);
   const [isExtractingEntities, setIsExtractingEntities] = useState(false);
@@ -181,7 +186,101 @@ export const AbstractSubmission: React.FC = () => {
     } finally {
       setIsExtractingEntities(false);
     }
-  }, [formData.abstract, formData.keywords]);
+  }, [formData.abstract, formData.keywords]); // buildEntityGraph is stable (useCallback with []), no need to include
+
+  const handleApprovalSheetUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+      if (!validTypes.includes(file.type)) {
+        toast.error("Please upload a valid image file (JPEG, PNG, WebP) or PDF");
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        toast.error("File size must be less than 5MB");
+        return;
+      }
+
+      setApprovalSheet(file);
+      
+      // Create preview for images
+      if (file.type.startsWith('image/')) {
+        const previewUrl = URL.createObjectURL(file);
+        setApprovalSheetPreview(previewUrl);
+      } else {
+        setApprovalSheetPreview(null);
+      }
+      
+      toast.success(`Approval sheet "${file.name}" selected`);
+    }
+  }, []);
+
+  const handleRemoveApprovalSheet = useCallback(() => {
+    setApprovalSheet(null);
+    if (approvalSheetPreview) {
+      URL.revokeObjectURL(approvalSheetPreview);
+      setApprovalSheetPreview(null);
+    }
+    toast.info("Approval sheet removed");
+  }, [approvalSheetPreview]);
+
+  const uploadApprovalSheet = async (abstractId: string): Promise<string | null> => {
+    if (!approvalSheet || !user) return null;
+
+    try {
+      setIsUploadingApproval(true);
+      
+      // Create file path: user_id/abstract_id/filename
+      const fileExt = approvalSheet.name.split('.').pop();
+      const fileName = `${user.id}/${abstractId}/approval_sheet.${fileExt}`;
+      
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('approval-sheets')
+        .upload(fileName, approvalSheet, {
+          upsert: true,
+          contentType: approvalSheet.type
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Save approval sheet record to database with file path
+      const { error: dbError } = await supabase
+        .from('approval_sheets')
+        .insert({
+          abstract_id: abstractId,
+          student_id: user.id,
+          file_name: approvalSheet.name,
+          file_path: fileName,
+          file_size: approvalSheet.size,
+          file_type: approvalSheet.type,
+          storage_url: fileName
+        });
+
+      if (dbError) throw dbError;
+
+      toast.success("Approval sheet uploaded successfully!");
+      return fileName;
+    } catch (error: any) {
+      console.error('Approval sheet upload error:', error);
+      
+      // Provide more helpful error messages
+      if (error.message?.includes('Bucket not found')) {
+        toast.error('Storage bucket not configured. Please contact administrator to set up approval-sheets bucket.');
+      } else if (error.message?.includes('new row violates row-level security')) {
+        toast.error('Permission denied. Please ensure you have upload permissions.');
+      } else {
+        toast.error(`Failed to upload approval sheet: ${error.message}`);
+      }
+      return null;
+    } finally {
+      setIsUploadingApproval(false);
+    }
+  };
 
   const handleSaveEditedEntities = (updatedEntities: ExtractedEntities) => {
     setExtractedEntities(updatedEntities);
@@ -199,7 +298,7 @@ export const AbstractSubmission: React.FC = () => {
     setIsEditingEntities(false);
   };
 
-  const buildEntityGraph = (entities: ExtractedEntities) => {
+  const buildEntityGraph = useCallback((entities: ExtractedEntities) => {
     if (!svgRef.current) return;
 
     // Clear previous graph
@@ -357,7 +456,7 @@ export const AbstractSubmission: React.FC = () => {
 
     // Store simulation reference
     simulationRef.current = simulation;
-  };
+  }, []); // Empty deps since it only uses refs and doesn't depend on external state
 
   const handleZoomIn = () => {
     if (svgRef.current && zoomBehaviorRef.current) {
@@ -464,9 +563,14 @@ export const AbstractSubmission: React.FC = () => {
 
       if (error) throw error;
 
+      // Upload approval sheet if provided
+      if (data && data[0] && approvalSheet) {
+        await uploadApprovalSheet(data[0].id);
+      }
+
       setIsSubmitting(false);
       setShowSubmitModal(false);
-      toast.success("Abstract submitted for review!");
+      toast.success(approvalSheet ? "Abstract and approval sheet submitted for review!" : "Abstract submitted for review!");
       
       // Reset form and clear temporary entities
       setFormData({
@@ -478,6 +582,7 @@ export const AbstractSubmission: React.FC = () => {
       });
       setExtractedEntities(null); // Clear extracted entities from memory
       setOcrImage(null);
+      handleRemoveApprovalSheet(); // Clear approval sheet
     } catch (error: any) {
       console.error('Submission error:', error);
       toast.error(error.message || "Failed to submit abstract");
@@ -499,6 +604,16 @@ export const AbstractSubmission: React.FC = () => {
       setExtractedEntities(null);
     };
   }, []);
+
+  // Rebuild graph when modal opens with entities
+  React.useEffect(() => {
+    if (showSubmitModal && extractedEntities && svgRef.current && !isEditingEntities) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        buildEntityGraph(extractedEntities);
+      }, 150);
+    }
+  }, [showSubmitModal, extractedEntities, isEditingEntities, buildEntityGraph]);
 
   if (previewMode) {
     return (
@@ -827,6 +942,111 @@ export const AbstractSubmission: React.FC = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Approval Sheet Upload Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Approval Sheet (Optional)
+              </CardTitle>
+              <CardDescription>Upload your research approval sheet or signature page</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Approval Sheet Tips */}
+              <Card className="border-green-200 bg-green-50">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-medium text-green-900 text-sm">Why Upload?</h4>
+                      <ul className="mt-2 text-xs text-green-800 space-y-1">
+                        <li>• Validates your research authenticity</li>
+                        <li>• Speeds up faculty review process</li>
+                        <li>• Required for final approval</li>
+                        <li>• Supports: JPG, PNG, WebP, PDF (Max 5MB)</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">
+                    Upload your approval sheet document
+                  </p>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={handleApprovalSheetUpload}
+                    className="hidden"
+                    id="approval-upload"
+                    disabled={isUploadingApproval}
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => document.getElementById('approval-upload')?.click()}
+                    disabled={isUploadingApproval}
+                  >
+                    {isUploadingApproval ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Choose File
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-gray-500">
+                    Supports JPG, PNG, WebP, PDF (Max 5MB)
+                  </p>
+                </div>
+              </div>
+
+              {approvalSheet && (
+                <div className="space-y-3">
+                  <Label>Selected File</Label>
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-8 w-8 text-blue-600" />
+                        <div>
+                          <p className="text-sm font-medium">{approvalSheet.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {(approvalSheet.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {approvalSheetPreview && (
+                    <div className="border rounded-lg overflow-hidden">
+                      <img 
+                        src={approvalSheetPreview} 
+                        alt="Approval Sheet Preview" 
+                        className="w-full h-64 object-contain bg-gray-50"
+                      />
+                    </div>
+                  )}
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleRemoveApprovalSheet}
+                    className="w-full"
+                  >
+                    Remove File
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
@@ -1034,6 +1254,19 @@ export const AbstractSubmission: React.FC = () => {
               </div>
             )}
 
+            {/* Approval Sheet Status */}
+            {approvalSheet && (
+              <div className="border-t pt-4">
+                <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-green-900">Approval Sheet Attached</p>
+                    <p className="text-xs text-green-700">{approvalSheet.name} ({(approvalSheet.size / 1024 / 1024).toFixed(2)} MB)</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4 border-t">
               <Button 
@@ -1046,13 +1279,13 @@ export const AbstractSubmission: React.FC = () => {
               </Button>
               <Button 
                 onClick={handleSubmit}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUploadingApproval}
                 className="flex-1 bg-green-600 hover:bg-green-700"
               >
-                {isSubmitting ? (
+                {isSubmitting || isUploadingApproval ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Submitting...
+                    {isUploadingApproval ? "Uploading..." : "Submitting..."}
                   </>
                 ) : (
                   <>

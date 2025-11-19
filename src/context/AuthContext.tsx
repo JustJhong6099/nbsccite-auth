@@ -25,8 +25,14 @@ interface SignupData {
   full_name: string;
   email: string;
   password: string;
-  role: "student" | "faculty";
 }
+
+// Helper function to detect role from email
+const detectRoleFromEmail = (email: string): 'student' | 'faculty' => {
+  const emailLocalPart = email.split('@')[0];
+  const startsWithNumber = /^\d/.test(emailLocalPart);
+  return startsWithNumber ? 'student' : 'faculty';
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -268,8 +274,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const signup = async (userData: SignupData) => {
     setIsLoading(true);
     try {
+      // Auto-detect role from email format
+      const detectedRole = detectRoleFromEmail(userData.email);
+      
       console.log('🔍 Starting signup for:', userData.email);
-      console.log('📝 Signup data:', { ...userData, password: '[HIDDEN]' });
+      console.log('📝 Signup data:', { ...userData, password: '[HIDDEN]', detectedRole });
       
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
@@ -277,13 +286,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         options: {
           data: {
             full_name: userData.full_name,
-            role: userData.role,
+            role: detectedRole,
           },
         },
       });
 
       console.log('📝 Signup result:', { data, error });
-      console.log('📝 User metadata sent:', { full_name: userData.full_name, role: userData.role });
+      console.log('📝 User metadata sent:', { full_name: userData.full_name, role: detectedRole });
 
       if (error) {
         console.error('❌ Signup error:', error);

@@ -7,14 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordInput } from "@/components/PasswordInput";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useAuth } from "@/context/AuthContext";
 import { signupSchema, SignupFormData } from "@/lib/auth-schemas";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, GraduationCap, CheckCircle, Mail, Users, BookOpen, FileText } from "lucide-react";
+import { Loader2, CheckCircle, Mail, FileText } from "lucide-react";
 
 const Signup: React.FC = () => {
   const { signup, isLoading } = useAuth();
@@ -23,20 +22,15 @@ const Signup: React.FC = () => {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
-  const [registeredRole, setRegisteredRole] = useState<"student" | "faculty">("student");
   const [pageLoading, setPageLoading] = useState(true);
 
   const {
     register,
     handleSubmit,
-    setValue,
-    watch,
     formState: { errors },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
   });
-
-  const selectedRole = watch("role");
 
   useEffect(() => {
     // Simulate page loading time
@@ -57,39 +51,13 @@ const Signup: React.FC = () => {
       return;
     }
 
-    // Email validation based on role
-    const emailLocalPart = data.email.split('@')[0]; // Get part before @
-    const startsWithNumber = /^\d/.test(emailLocalPart); // Check if starts with number
-    
-    // Validate student email (must start with number)
-    if (data.role === 'student' && !startsWithNumber) {
-      toast({
-        title: "Invalid Student Email",
-        description: "Student emails must start with a number (e.g., 20211199@nbsc.edu.ph)",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Validate faculty email (must NOT start with number)
-    if (data.role === 'faculty' && startsWithNumber) {
-      toast({
-        title: "Invalid Faculty Email",
-        description: "Faculty emails must start with letters (e.g., jhongemata@nbsc.edu.ph)",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       await signup({
         full_name: data.full_name,
         email: data.email,
         password: data.password,
-        role: data.role,
       });
       setRegisteredEmail(data.email);
-      setRegisteredRole(data.role);
       setShowSuccessModal(true);
     } catch (error: any) {
       console.error('Signup error:', error);
@@ -196,40 +164,10 @@ const Signup: React.FC = () => {
                 {errors.email && (
                   <p className="text-sm text-destructive">{errors.email.message}</p>
                 )}
-                {selectedRole && (
-                  <p className="text-xs text-muted-foreground">
-                    {selectedRole === "student" 
-                      ? "📌 Student emails must start with a number (e.g., 20211199@nbsc.edu.ph)"
-                      : "📌 Faculty emails must start with letters (e.g., jhongemata@nbsc.edu.ph)"
-                    }
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Select onValueChange={(value: "student" | "faculty") => setValue("role", value)}>
-                  <SelectTrigger className={errors.role ? "border-destructive" : ""}>
-                    <SelectValue placeholder="Select your role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="student">
-                      <div className="flex items-center gap-2">
-                        <GraduationCap className="h-4 w-4" />
-                        <span>Student</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="faculty">
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="h-4 w-4" />
-                        <span>Faculty</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.role && (
-                  <p className="text-sm text-destructive">{errors.role.message}</p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  📌 Student emails start with numbers (e.g., 20211199@nbsc.edu.ph)<br />
+                  📌 Faculty emails start with letters (e.g., jhongemata@nbsc.edu.ph)
+                </p>
               </div>
 
               <div className="space-y-2">
