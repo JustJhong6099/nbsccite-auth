@@ -87,6 +87,21 @@ import {
 } from "lucide-react";
 
 // Interfaces for data types
+interface ApprovalSheet {
+  id: string;
+  abstract_id: string;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  file_type: string;
+  storage_url: string;
+  uploaded_at: string;
+  is_verified: boolean;
+  verified_by?: string;
+  verified_at?: string;
+  verification_notes?: string;
+}
+
 interface StudentSubmission {
   id: string;
   title: string;
@@ -99,6 +114,7 @@ interface StudentSubmission {
   keywords: string[];
   department: string;
   advisorNotes?: string;
+  approvalSheet?: ApprovalSheet;
   feedback?: string;
   rating?: number;
   lastReviewDate?: string;
@@ -253,8 +269,10 @@ const StudentAbstractReview: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [archiveFilterStatus, setArchiveFilterStatus] = useState<"approved" | "rejected" | "all">("all");
+  const [loadingApprovalSheet, setLoadingApprovalSheet] = useState(false);
+  const [approvalSheetUrl, setApprovalSheetUrl] = useState<string | null>(null);
 
-  const openReviewDialog = (submission: StudentSubmission) => {
+  const openReviewDialog = async (submission: StudentSubmission) => {
     setSelectedSubmission(submission);
     setReviewForm({
       status: submission.status,
@@ -264,12 +282,58 @@ const StudentAbstractReview: React.FC = () => {
     });
     setIsReviewDialogOpen(true);
     
+    // Fetch approval sheet if it exists
+    await fetchApprovalSheet(submission.id);
+    
     // Build entity graph after modal opens
     setTimeout(() => {
       if (submission.extractedEntities) {
         buildEntityGraph(submission.extractedEntities);
       }
     }, 100);
+  };
+
+  const fetchApprovalSheet = async (abstractId: string) => {
+    setLoadingApprovalSheet(true);
+    setApprovalSheetUrl(null);
+    
+    try {
+      const { data, error } = await supabase
+        .from('approval_sheets')
+        .select('*')
+        .eq('abstract_id', abstractId)
+        .single();
+
+      if (error) {
+        if (error.code !== 'PGRST116') { // Not found error
+          console.error('Error fetching approval sheet:', error);
+          if (error.message?.includes('Bucket not found')) {
+            console.warn('Approval sheets storage bucket not configured');
+          }
+        }
+        return;
+      }
+
+      if (data) {
+        // Generate signed URL from file path (valid for 1 hour)
+        const { data: signedUrlData, error: urlError } = await supabase.storage
+          .from('approval-sheets')
+          .createSignedUrl(data.storage_url, 3600);
+
+        if (urlError) {
+          console.error('Error generating signed URL:', urlError);
+          return;
+        }
+
+        if (signedUrlData) {
+          setApprovalSheetUrl(signedUrlData.signedUrl);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching approval sheet:', error);
+    } finally {
+      setLoadingApprovalSheet(false);
+    }
   };
 
   // Build D3.js entity relationship graph with advanced physics and animations
@@ -767,6 +831,71 @@ const StudentAbstractReview: React.FC = () => {
                           <Badge key={index} variant="outline">{keyword}</Badge>
                         ))}
                       </div>
+                    </div>
+
+                    {/* Approval Sheet Section */}
+                    <div className="pt-4 border-t">
+                      <Label className="text-sm font-medium">Approval Sheet:</Label>
+                      {loadingApprovalSheet ? (
+                        <div className="mt-2 p-4 bg-gray-50 rounded-lg border border-dashed">
+                          <p className="text-sm text-gray-600 text-center">Loading approval sheet...</p>
+                        </div>
+                      ) : approvalSheetUrl ? (
+                        <div className="mt-2 space-y-3">
+                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="h-5 w-5 text-green-600" />
+                              <span className="text-sm font-medium text-green-900">Approval Sheet Attached</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.open(approvalSheetUrl, '_blank')}
+                                className="flex items-center gap-1"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                                View
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  const link = document.createElement('a');
+                                  link.href = approvalSheetUrl;
+                                  link.download = `approval_sheet_${selectedSubmission.id}`;
+                                  link.click();
+                                }}
+                                className="flex items-center gap-1"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                                Download
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          {/* Preview of approval sheet if it's an image */}
+                          {approvalSheetUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
+                            <div className="border rounded-lg overflow-hidden">
+                              <img 
+                                src={approvalSheetUrl} 
+                                alt="Approval Sheet" 
+                                className="w-full max-h-96 object-contain bg-gray-50"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="mt-2 p-4 bg-gray-50 rounded-lg border border-dashed">
+                          <div className="flex items-center gap-2 text-gray-500">
+                            <AlertCircle className="h-4 w-4" />
+                            <p className="text-sm">No approval sheet uploaded</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
