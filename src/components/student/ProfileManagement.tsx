@@ -258,16 +258,16 @@ export const ProfileManagement: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Profile Management</h2>
-          <p className="text-gray-600">Manage your personal information and research profile</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Profile Management</h2>
+          <p className="text-sm sm:text-base text-gray-600">Manage your personal information and research profile</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {isEditing ? (
             <>
-              <Button onClick={handleSave} disabled={isSaving}>
+              <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
                 {isSaving ? (
                   <>
                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -300,21 +300,21 @@ export const ProfileManagement: React.FC = () => {
       </div>
 
       {/* Profile Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Profile Overview Card */}
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <User className="w-5 h-5" />
+            <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+              <User className="w-4 h-4 sm:w-5 sm:h-5" />
               <span>Profile Overview</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-center">
                 <div className="relative">
-                  <Avatar className="h-24 w-24">
-                    <AvatarFallback className="text-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                  <Avatar className="h-20 w-20 sm:h-24 sm:w-24">
+                    <AvatarFallback className="text-xl sm:text-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
                       {profile.personal.firstName[0]}{profile.personal.lastName[0]}
                     </AvatarFallback>
                   </Avatar>

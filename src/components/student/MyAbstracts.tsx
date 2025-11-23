@@ -540,13 +540,13 @@ export const MyAbstracts: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">My Abstracts</h2>
-          <p className="text-gray-600">Manage your research submissions and track their status</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">My Abstracts</h2>
+          <p className="text-sm sm:text-base text-gray-600">Manage your research submissions and track their status</p>
         </div>
-        <Button onClick={fetchAbstracts} variant="outline">
+        <Button onClick={fetchAbstracts} variant="outline" className="w-full sm:w-auto">
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
@@ -561,29 +561,29 @@ export const MyAbstracts: React.FC = () => {
       ) : (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-blue-600">{abstractsByStatus.all.length}</div>
-                <div className="text-sm text-gray-600">Total</div>
+              <CardContent className="p-3 sm:p-4 text-center">
+                <div className="text-xl sm:text-2xl font-bold text-blue-600">{abstractsByStatus.all.length}</div>
+                <div className="text-xs sm:text-sm text-gray-600">Total</div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-green-600">{abstractsByStatus.approved.length}</div>
-                <div className="text-sm text-gray-600">Approved</div>
+              <CardContent className="p-3 sm:p-4 text-center">
+                <div className="text-xl sm:text-2xl font-bold text-green-600">{abstractsByStatus.approved.length}</div>
+                <div className="text-xs sm:text-sm text-gray-600">Approved</div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-orange-600">{abstractsByStatus.pending.length}</div>
-                <div className="text-sm text-gray-600">Pending</div>
+              <CardContent className="p-3 sm:p-4 text-center">
+                <div className="text-xl sm:text-2xl font-bold text-orange-600">{abstractsByStatus.pending.length}</div>
+                <div className="text-xs sm:text-sm text-gray-600">Pending</div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-red-600">{abstractsByStatus.rejected.length}</div>
-                <div className="text-sm text-gray-600">Rejected</div>
+              <CardContent className="p-3 sm:p-4 text-center">
+                <div className="text-xl sm:text-2xl font-bold text-red-600">{abstractsByStatus.rejected.length}</div>
+                <div className="text-xs sm:text-sm text-gray-600">Rejected</div>
               </CardContent>
             </Card>
           </div>
@@ -591,40 +591,44 @@ export const MyAbstracts: React.FC = () => {
           {/* Filters and Search */}
           <Card>
             <CardHeader>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <CardTitle>Research Submissions</CardTitle>
-                  <CardDescription>Your abstract submissions and their current status</CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Search abstracts..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 w-64"
-                    />
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                  <div>
+                    <CardTitle className="text-lg sm:text-xl">Research Submissions</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">Your abstract submissions and their current status</CardDescription>
+                  </div>
+                  <div className="w-full sm:w-auto">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search abstracts..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 w-full sm:w-64"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <Tabs value={selectedStatus} onValueChange={setSelectedStatus}>
-                <TabsList className="mb-6">
-                  <TabsTrigger value="all">All ({abstractsByStatus.all.length})</TabsTrigger>
-                  <TabsTrigger value="approved">Approved ({abstractsByStatus.approved.length})</TabsTrigger>
-                  <TabsTrigger value="pending">Pending ({abstractsByStatus.pending.length})</TabsTrigger>
-                  <TabsTrigger value="rejected">Rejected ({abstractsByStatus.rejected.length})</TabsTrigger>
-                </TabsList>
+                <div className="overflow-x-auto -mx-3 sm:-mx-4 md:mx-0">
+                  <TabsList className="inline-flex min-w-full md:w-auto mb-6 px-3 sm:px-4 md:px-0">
+                    <TabsTrigger value="all" className="whitespace-nowrap text-xs sm:text-sm">All ({abstractsByStatus.all.length})</TabsTrigger>
+                    <TabsTrigger value="approved" className="whitespace-nowrap text-xs sm:text-sm">Approved ({abstractsByStatus.approved.length})</TabsTrigger>
+                    <TabsTrigger value="pending" className="whitespace-nowrap text-xs sm:text-sm">Pending ({abstractsByStatus.pending.length})</TabsTrigger>
+                    <TabsTrigger value="rejected" className="whitespace-nowrap text-xs sm:text-sm">Rejected ({abstractsByStatus.rejected.length})</TabsTrigger>
+                  </TabsList>
+                </div>
 
-                <div className="space-y-4">{filteredAbstracts.length === 0 ? (
+                <div className="space-y-3 sm:space-y-4">{filteredAbstracts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <FileText className="w-12 h-12 text-gray-300 mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mb-4" />
+                      <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
                         {selectedStatus === 'all' ? 'No Abstracts Yet' : `No ${selectedStatus.replace('_', ' ')} Abstracts`}
                       </h3>
-                      <p className="text-gray-500 max-w-sm">
+                      <p className="text-sm sm:text-base text-gray-500 max-w-sm px-4">
                         {selectedStatus === 'all' 
                           ? 'Start by submitting your first research abstract.' 
                           : `You don't have any ${selectedStatus.replace('_', ' ')} abstracts.`}
@@ -633,18 +637,18 @@ export const MyAbstracts: React.FC = () => {
                   ) : (
                     filteredAbstracts.map((abstract) => (
                 <Card key={abstract.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                      <div className="flex-1 w-full">
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="flex-1">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 break-words">
                               {abstract.title}
                             </h3>
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
                               {getStatusBadge(abstract.status)}
-                              <Badge variant="outline">{abstract.research_area}</Badge>
-                              <Badge variant="outline">{abstract.year}</Badge>
+                              {abstract.research_area && <Badge variant="outline" className="text-xs">{abstract.research_area}</Badge>}
+                              <Badge variant="outline" className="text-xs">{abstract.year}</Badge>
                             </div>
                           </div>
                           <DropdownMenu>

@@ -884,21 +884,22 @@ export const ResearchInsights: React.FC = () => {
   const categories = Array.from(new Set(emergingTechnologies.map(t => t.category)));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Research Insights</h2>
-          <p className="text-gray-600">Discover patterns and opportunities in your research portfolio</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Research Insights</h2>
+          <p className="text-sm sm:text-base text-gray-600">Discover patterns and opportunities in your research portfolio</p>
         </div>
         
         {/* Classification Guide Button */}
         <Button
           variant="outline"
           onClick={() => setIsGuideModalOpen(true)}
-          className="flex items-center gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+          className="flex items-center gap-2 border-blue-300 text-blue-700 hover:bg-blue-50 w-full sm:w-auto"
         >
           <Brain className="h-4 w-4" />
-          Understanding Classifications
+          <span className="hidden sm:inline">Understanding Classifications</span>
+          <span className="sm:hidden">Classifications</span>
         </Button>
       </div>
 
@@ -1079,22 +1080,27 @@ export const ResearchInsights: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <div className="flex items-center justify-between mb-2">
-          <TabsList className="grid w-full grid-cols-3 max-w-2xl">
-            <TabsTrigger value="themes" className="flex items-center gap-2">
-              <Brain className="h-4 w-4" />
-              Research Themes
-            </TabsTrigger>
-            <TabsTrigger value="trends" className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Trend Analysis
-            </TabsTrigger>
-            <TabsTrigger value="emerging" className="flex items-center gap-2">
-              <Zap className="h-4 w-4" />
-              Emerging Technologies
-            </TabsTrigger>
-          </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 gap-3 sm:gap-2">
+          <div className="overflow-x-auto w-full sm:max-w-2xl -mx-3 sm:mx-0">
+            <TabsList className="inline-flex min-w-full sm:grid sm:grid-cols-3 sm:w-full px-3 sm:px-0">
+              <TabsTrigger value="themes" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap text-xs sm:text-sm">
+                <Brain className="h-4 w-4" />
+                <span className="hidden sm:inline">Research Themes</span>
+                <span className="sm:hidden">Themes</span>
+              </TabsTrigger>
+              <TabsTrigger value="trends" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap text-xs sm:text-sm">
+                <Activity className="h-4 w-4" />
+                <span className="hidden sm:inline">Trend Analysis</span>
+                <span className="sm:hidden">Trends</span>
+              </TabsTrigger>
+              <TabsTrigger value="emerging" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap text-xs sm:text-sm">
+                <Zap className="h-4 w-4" />
+                <span className="hidden sm:inline">Emerging Technologies</span>
+                <span className="sm:hidden">Emerging</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
           
           {/* Real-Time Indicator Badge */}
           <Badge variant="outline" className="ml-auto flex items-center gap-1 border-green-300 text-green-700 bg-green-50">

@@ -571,11 +571,11 @@ export const EntityVisualization: React.FC = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Entity Visualization</h2>
-          <p className="text-gray-600">Explore relationships between technologies, domains, and research</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Entity Network Visualization</h2>
+          <p className="text-sm sm:text-base text-gray-600">Explore relationships between technologies, domains, and methodologies</p>
         </div>
       </div>
 
@@ -617,13 +617,13 @@ export const EntityVisualization: React.FC = () => {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
-                  <CardTitle>Interactive Entity Graph</CardTitle>
-                  <CardDescription>Explore connections between your research entities. Click on nodes to view details.</CardDescription>
+                  <CardTitle className="text-lg sm:text-xl">Interactive Entity Graph</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Explore connections between your research entities. Click on nodes to view details.</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                 {/* Left pane - Visualization (2/3 width) */}
                 <div className="lg:col-span-2">
                   <div className="relative w-full bg-white rounded-lg border overflow-hidden">
@@ -635,14 +635,14 @@ export const EntityVisualization: React.FC = () => {
                     >
                     </svg>
                     {/* Instructions overlay */}
-                    <div className="absolute top-4 left-4 bg-white/90 p-3 rounded-lg shadow-sm border max-w-xs">
-                      <h4 className="text-sm font-medium mb-2">Interactive Controls:</h4>
-                      <ul className="text-xs text-gray-600 space-y-1">
+                    <div className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-white/90 p-2 sm:p-3 rounded-lg shadow-sm border max-w-[200px] sm:max-w-xs">
+                      <h4 className="text-xs sm:text-sm font-medium mb-1 sm:mb-2">Interactive Controls:</h4>
+                      <ul className="text-[10px] sm:text-xs text-gray-600 space-y-0.5 sm:space-y-1">
                         <li>• Click abstract centers (blue) to view details</li>
                         <li>• Drag any node to rearrange position</li>
                         <li>• Scroll to zoom in/out</li>
-                        <li>• Hover abstracts to highlight connections</li>
-                        <li>• Each abstract group stays together (no merging)</li>
+                        <li className="hidden sm:list-item">• Hover abstracts to highlight connections</li>
+                        <li className="hidden sm:list-item">• Each abstract group stays together (no merging)</li>
                       </ul>
                     </div>
                   </div>

@@ -870,37 +870,37 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
   }, [selectedAbstract, isDetailOpen]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="h-6 w-6" />
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <BookOpen className="h-5 w-5 sm:h-6 sm:w-6" />
                 Approved Abstracts Library
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 Browse all approved research abstracts from faculty and students
               </CardDescription>
             </div>
             {isFacultyMode && (
-              <Button onClick={() => setIsAddAbstractOpen(true)} className="flex items-center gap-2">
+              <Button onClick={() => setIsAddAbstractOpen(true)} className="flex items-center gap-2 w-full sm:w-auto">
                 <Plus className="h-4 w-4" />
                 Add Abstract
               </Button>
             )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 sm:space-y-6">
           {/* Search and Filter Section */}
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col md:flex-row gap-3 sm:gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Search by title, authors, keywords..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 text-sm"
               />
             </div>
             

@@ -502,10 +502,10 @@ export const AbstractSubmission: React.FC = () => {
 
   if (previewMode) {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-900">Abstract Preview</h2>
-          <Button variant="outline" onClick={() => setPreviewMode(false)}>
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Abstract Preview</h2>
+          <Button variant="outline" onClick={() => setPreviewMode(false)} className="w-full sm:w-auto">
             <FileText className="h-4 w-4 mr-2" />
             Back to Edit
           </Button>
@@ -513,17 +513,17 @@ export const AbstractSubmission: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>{formData.title || "Untitled Abstract"}</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg sm:text-xl">{formData.title || "Untitled Abstract"}</CardTitle>
+            <CardDescription className="text-sm">
               {formData.authors && <span>{formData.authors} • </span>}
               {formData.year}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 sm:space-y-6">
             <div>
               <Label className="text-sm font-medium text-gray-700">Abstract</Label>
-              <div className="mt-2 p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap text-justify">
+              <div className="mt-2 p-3 sm:p-4 bg-gray-50 rounded-lg">
+                <p className="text-xs sm:text-sm text-gray-700 whitespace-pre-wrap text-justify break-words">
                   {formData.abstract || "No abstract content provided."}
                 </p>
               </div>
@@ -533,17 +533,17 @@ export const AbstractSubmission: React.FC = () => {
               <Label className="text-sm font-medium text-gray-700">Keywords</Label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {formData.keywords.map((keyword, index) => (
-                  <Badge key={index} variant="outline" className="bg-blue-50 text-blue-700">
+                  <Badge key={index} variant="outline" className="bg-blue-50 text-blue-700 text-xs">
                     {keyword}
                   </Badge>
                 ))}
                 {formData.keywords.length === 0 && (
-                  <span className="text-sm text-gray-500">No keywords added.</span>
+                  <span className="text-xs sm:text-sm text-gray-500">No keywords added.</span>
                 )}
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <Button onClick={handleSubmit} disabled={isSubmitting} className="flex-1">
                 {isSubmitting ? (
                   <>
@@ -557,7 +557,7 @@ export const AbstractSubmission: React.FC = () => {
                   </>
                 )}
               </Button>
-              <Button variant="outline" onClick={handleSaveDraft} disabled={isDraft}>
+              <Button variant="outline" onClick={handleSaveDraft} disabled={isDraft} className="flex-1 sm:flex-initial">
                 {isDraft ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
@@ -578,22 +578,22 @@ export const AbstractSubmission: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Submit Research Abstract</h2>
-          <p className="text-gray-600">Share your research work with the NBSC-ICS community</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Submit Research Abstract</h2>
+          <p className="text-sm sm:text-base text-gray-600">Share your research work with the NBSC-ICS community</p>
         </div>
       </div>
 
       {/* Submission Guidelines */}
       <Card className="border-blue-200 bg-blue-50">
-        <CardContent className="p-6">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-start gap-2 sm:gap-3">
+            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
             <div>
-              <h3 className="font-medium text-blue-900">Submission Guidelines</h3>
-              <ul className="mt-2 text-sm text-blue-800 space-y-1">
+              <h3 className="font-medium text-blue-900 text-sm sm:text-base">Submission Guidelines</h3>
+              <ul className="mt-2 text-xs sm:text-sm text-blue-800 space-y-1">
                 <li>• Abstract should be maximum 500 words</li>
                 <li>• Ensure your research falls within 2020-2025 timeframe</li>
                 <li>• Abstracts will undergo peer review before publication</li>
@@ -603,15 +603,15 @@ export const AbstractSubmission: React.FC = () => {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         {/* Left Pane - Abstract Content */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Abstract Submission</CardTitle>
-              <CardDescription>Provide your research details and abstract content</CardDescription>
+              <CardTitle className="text-lg sm:text-xl">Abstract Submission</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Provide your research details and abstract content</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4">
               <div>
                 <Label htmlFor="title">Research Title *</Label>
                 <Input
@@ -663,9 +663,9 @@ export const AbstractSubmission: React.FC = () => {
                   placeholder="Write your research abstract here or use the OCR feature to extract text from an image..."
                   value={formData.abstract}
                   onChange={(e) => setFormData(prev => ({ ...prev, abstract: e.target.value }))}
-                  className="mt-1 min-h-[300px]"
+                  className="mt-1 min-h-[200px] sm:min-h-[300px]"
                 />
-                <div className="mt-1 text-sm text-gray-500">
+                <div className="mt-1 text-xs sm:text-sm text-gray-500">
                   {formData.abstract.length}/500 words maximum
                 </div>
               </div>
@@ -703,21 +703,23 @@ export const AbstractSubmission: React.FC = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
                 <Button 
                   onClick={handlePreview} 
                   disabled={isExtractingEntities || !formData.title || !formData.abstract} 
-                  className="flex-1"
+                  className="flex-1 w-full"
                 >
                   {isExtractingEntities ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Extracting Entities...
+                      <span className="hidden sm:inline">Extracting Entities...</span>
+                      <span className="sm:hidden">Extracting...</span>
                     </>
                   ) : (
                     <>
                       <Network className="h-4 w-4 mr-2" />
-                      Extract & Preview
+                      <span className="hidden sm:inline">Extract & Preview</span>
+                      <span className="sm:hidden">Preview</span>
                     </>
                   )}
                 </Button>
@@ -727,16 +729,16 @@ export const AbstractSubmission: React.FC = () => {
         </div>
 
         {/* Right Pane - OCR Picture Upload */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                 <Scan className="h-5 w-5" />
                 OCR Text Extraction
               </CardTitle>
-              <CardDescription>Upload an image containing text to automatically extract and add to your abstract</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">Upload an image containing text to automatically extract and add to your abstract</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4">
               {/* OCR Usage Tips */}
               <Card className="border-blue-200 bg-blue-50">
                 <CardContent className="p-4">
@@ -832,31 +834,31 @@ export const AbstractSubmission: React.FC = () => {
 
       {/* Submission Preview Modal with Entity Extraction */}
       <Dialog open={showSubmitModal} onOpenChange={setShowSubmitModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <CheckCircle className="h-5 w-5 text-green-600" />
               Preview & Submit Abstract
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               Review your abstract and extracted entities before final submission
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 py-4">
+          <div className="space-y-4 sm:space-y-6 py-4">
             {/* Abstract Details */}
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">{formData.title}</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 break-words">{formData.title}</h3>
                 {formData.authors && (
-                  <p className="text-sm text-gray-600 mt-1">{formData.authors} • {formData.year}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 mt-1">{formData.authors} • {formData.year}</p>
                 )}
               </div>
 
               <div>
                 <Label className="text-sm font-medium text-gray-700">Abstract</Label>
-                <div className="mt-2 p-4 bg-gray-50 rounded-lg border">
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap text-justify">
+                <div className="mt-2 p-3 sm:p-4 bg-gray-50 rounded-lg border">
+                  <p className="text-xs sm:text-sm text-gray-700 whitespace-pre-wrap text-justify break-words">
                     {formData.abstract}
                   </p>
                 </div>
@@ -867,7 +869,7 @@ export const AbstractSubmission: React.FC = () => {
                   <Label className="text-sm font-medium text-gray-700">Keywords</Label>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {formData.keywords.map((keyword, index) => (
-                      <Badge key={index} variant="outline" className="bg-blue-50 text-blue-700">
+                      <Badge key={index} variant="outline" className="bg-blue-50 text-blue-700 text-xs">
                         {keyword}
                       </Badge>
                     ))}
