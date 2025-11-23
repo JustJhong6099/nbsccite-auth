@@ -631,11 +631,11 @@ export const EntityVisualization: React.FC = () => {
                       ref={svgRef} 
                       width={dimensions.width} 
                       height={dimensions.height}
-                      className="w-full h-full"
+                      className="w-full h-auto min-h-[400px] max-h-[600px]"
                     >
                     </svg>
                     {/* Instructions overlay */}
-                    <div className="absolute top-4 left-4 bg-white/90 p-3 rounded-lg shadow-sm border max-w-xs">
+                    <div className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-white/90 p-2 sm:p-3 rounded-lg shadow-sm border max-w-[200px] sm:max-w-xs">
                       <h4 className="text-sm font-medium mb-2">Interactive Controls:</h4>
                       <ul className="text-xs text-gray-600 space-y-1">
                         <li>• Click abstract centers (blue) to view details</li>

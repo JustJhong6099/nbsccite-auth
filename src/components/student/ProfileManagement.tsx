@@ -259,12 +259,12 @@ export const ProfileManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Profile Management</h2>
-          <p className="text-gray-600">Manage your personal information and research profile</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Profile Management</h2>
+          <p className="text-sm sm:text-base text-gray-600">Manage your personal information and research profile</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           {isEditing ? (
             <>
               <Button onClick={handleSave} disabled={isSaving}>
@@ -300,7 +300,7 @@ export const ProfileManagement: React.FC = () => {
       </div>
 
       {/* Profile Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Profile Overview Card */}
         <Card className="lg:col-span-1">
           <CardHeader>

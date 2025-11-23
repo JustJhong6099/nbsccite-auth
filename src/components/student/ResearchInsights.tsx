@@ -885,10 +885,10 @@ export const ResearchInsights: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Research Insights</h2>
-          <p className="text-gray-600">Discover patterns and opportunities in your research portfolio</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Research Insights</h2>
+          <p className="text-sm sm:text-base text-gray-600">Discover patterns and opportunities in your research portfolio</p>
         </div>
         
         {/* Classification Guide Button */}
@@ -904,7 +904,7 @@ export const ResearchInsights: React.FC = () => {
 
       {/* Classification Guide Modal */}
       <Dialog open={isGuideModalOpen} onOpenChange={setIsGuideModalOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-blue-900">
               <Brain className="h-5 w-5" />
@@ -1252,7 +1252,7 @@ export const ResearchInsights: React.FC = () => {
             <CardContent>
               {/* Search and Filters */}
               <div className="mb-6 space-y-4">
-                <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   {/* Search Input */}
                   <div className="flex-1 relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -1405,7 +1405,7 @@ export const ResearchInsights: React.FC = () => {
 
       {/* Emerging Technology Details Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           {selectedTech && (
             <>
               <DialogHeader>
