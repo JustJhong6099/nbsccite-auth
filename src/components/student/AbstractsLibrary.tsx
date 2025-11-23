@@ -893,7 +893,7 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Search and Filter Section */}
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
@@ -989,7 +989,7 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
               <div className="grid grid-cols-1 gap-4">
             {filteredAbstracts.map((abstract) => (
               <Card key={abstract.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="space-y-3">
                     {/* Title and Year */}
                     <div className="flex items-start justify-between gap-4">
@@ -1110,7 +1110,7 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
 
       {/* Abstract Detail Modal */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl">{selectedAbstract?.title}</DialogTitle>
             <DialogDescription className="flex items-center gap-4 pt-2">
@@ -1341,9 +1341,9 @@ export const AbstractsLibrary: React.FC<AbstractsLibraryProps> = ({ isFacultyMod
                       <CardContent className="p-4">
                         <div className="flex justify-center items-center min-h-[400px] border-2 border-gray-200 rounded-lg bg-white relative">
                           {/* Instructions Overlay - Top Left */}
-                          <div className="absolute top-4 left-4 z-10 pointer-events-none">
+                          <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-10 pointer-events-none max-w-[200px] sm:max-w-none">
                             <Card className="bg-white/90 backdrop-blur-sm border-blue-200 shadow-lg">
-                              <CardContent className="p-3">
+                              <CardContent className="p-2 sm:p-3">
                                 <ul className="space-y-1 text-xs text-gray-700">
                                   <li className="flex items-center gap-2">
                                     <span className="text-blue-600 font-bold">•</span>

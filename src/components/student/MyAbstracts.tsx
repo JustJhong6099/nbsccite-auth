@@ -633,7 +633,7 @@ export const MyAbstracts: React.FC = () => {
                   ) : (
                     filteredAbstracts.map((abstract) => (
                 <Card key={abstract.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-3">
