@@ -1080,24 +1080,24 @@ export const ResearchInsights: React.FC = () => {
         </Card>
       ) : (
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <div className="flex items-center justify-between mb-2">
-          <TabsList className="grid w-full grid-cols-3 max-w-2xl">
-            <TabsTrigger value="themes" className="flex items-center gap-2">
-              <Brain className="h-4 w-4" />
-              Research Themes
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-0 sm:justify-between mb-2">
+          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-0 sm:max-w-2xl h-auto">
+            <TabsTrigger value="themes" className="flex items-center justify-center gap-2 py-2.5 sm:py-2 text-sm">
+              <Brain className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">Research Themes</span>
             </TabsTrigger>
-            <TabsTrigger value="trends" className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Trend Analysis
+            <TabsTrigger value="trends" className="flex items-center justify-center gap-2 py-2.5 sm:py-2 text-sm">
+              <Activity className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">Trend Analysis</span>
             </TabsTrigger>
-            <TabsTrigger value="emerging" className="flex items-center gap-2">
-              <Zap className="h-4 w-4" />
-              Emerging Technologies
+            <TabsTrigger value="emerging" className="flex items-center justify-center gap-2 py-2.5 sm:py-2 text-sm">
+              <Zap className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">Emerging Technologies</span>
             </TabsTrigger>
           </TabsList>
           
           {/* Real-Time Indicator Badge */}
-          <Badge variant="outline" className="ml-auto flex items-center gap-1 border-green-300 text-green-700 bg-green-50">
+          <Badge variant="outline" className="sm:ml-auto flex items-center gap-1 border-green-300 text-green-700 bg-green-50 self-start sm:self-auto">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
