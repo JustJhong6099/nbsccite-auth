@@ -582,7 +582,13 @@ export const AbstractSubmission: React.FC = () => {
       });
       setExtractedEntities(null); // Clear extracted entities from memory
       setOcrImage(null);
-      handleRemoveApprovalSheet(); // Clear approval sheet
+      
+      // Clear approval sheet without showing notification (already submitted)
+      setApprovalSheet(null);
+      if (approvalSheetPreview) {
+        URL.revokeObjectURL(approvalSheetPreview);
+        setApprovalSheetPreview(null);
+      }
     } catch (error: any) {
       console.error('Submission error:', error);
       toast.error(error.message || "Failed to submit abstract");
