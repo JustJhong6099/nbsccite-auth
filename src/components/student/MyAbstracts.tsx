@@ -25,7 +25,8 @@ import {
   Tag,
   Network,
   Info,
-  RefreshCw
+  RefreshCw,
+  FileCheck
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -92,6 +93,7 @@ export const MyAbstracts: React.FC = () => {
   const [extractedEntities, setExtractedEntities] = useState<ExtractedEntities | null>(null);
   const [tempEntityInput, setTempEntityInput] = useState({ tech: '', domain: '', methodology: '' });
   const svgRef = useRef<SVGSVGElement>(null);
+  const [loadingApprovalSheet, setLoadingApprovalSheet] = useState<string | null>(null);
 
   // Fetch abstracts from database
   useEffect(() => {
@@ -183,6 +185,52 @@ export const MyAbstracts: React.FC = () => {
     });
     setIsEditMode(false);
     setIsViewDialogOpen(true);
+  };
+
+  const handleViewApprovalSheet = async (abstractId: string) => {
+    try {
+      setLoadingApprovalSheet(abstractId);
+
+      // Fetch approval sheet data from database
+      const { data: approvalSheetData, error: fetchError } = await supabase
+        .from('approval_sheets')
+        .select('*')
+        .eq('abstract_id', abstractId)
+        .single();
+
+      if (fetchError) {
+        if (fetchError.code === 'PGRST116') {
+          toast.error('No approval sheet found for this abstract');
+        } else {
+          throw fetchError;
+        }
+        return;
+      }
+
+      if (!approvalSheetData) {
+        toast.error('No approval sheet found for this abstract');
+        return;
+      }
+
+      // Get signed URL for the file
+      const { data: urlData, error: urlError } = await supabase
+        .storage
+        .from('approval-sheets')
+        .createSignedUrl(approvalSheetData.file_path, 60); // URL valid for 60 seconds
+
+      if (urlError) throw urlError;
+
+      if (urlData?.signedUrl) {
+        // Open in new tab
+        window.open(urlData.signedUrl, '_blank');
+        toast.success('Opening approval sheet...');
+      }
+    } catch (error: any) {
+      console.error('Error viewing approval sheet:', error);
+      toast.error('Failed to load approval sheet');
+    } finally {
+      setLoadingApprovalSheet(null);
+    }
   };
 
   const handleEditAbstract = () => {
@@ -658,6 +706,13 @@ export const MyAbstracts: React.FC = () => {
                               <DropdownMenuItem onClick={() => handleViewAbstract(abstract)}>
                                 <Eye className="h-4 w-4 mr-2" />
                                 View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleViewApprovalSheet(abstract.id)}
+                                disabled={loadingApprovalSheet === abstract.id}
+                              >
+                                <FileCheck className="h-4 w-4 mr-2" />
+                                {loadingApprovalSheet === abstract.id ? 'Loading...' : 'View Approval Sheet'}
                               </DropdownMenuItem>
                               {abstract.status === 'draft' && (
                                 <DropdownMenuItem>
